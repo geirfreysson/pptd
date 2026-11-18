@@ -78,6 +78,9 @@ When a change alters behaviour, update the docs in the same change:
   names like `main` on components (a Play button that did got squashed to zero width).
 - The skill's `SKILL.md` frontmatter must be strict YAML (quote a description that contains
   `: `). Claude Code tolerates bad YAML; pi drops the skill without saying so.
+- The agent terminal is xterm.js, which sends a bare `\r` for Shift+Enter and supports neither
+  the Kitty keyboard protocol nor modifyOtherKeys. `renderer.js` remaps Shift+Enter itself
+  (`attachCustomKeyEventHandler`): `ESC[13;2u` to pi, `ESC CR` to Claude Code.
 - To test pi without a real model, point `PI_CODING_AGENT_DIR` at a scratch folder with a
   `models.json` for a local fake OpenAI-compatible server, and run pi with `-p … </dev/null`
   (pi waits for piped stdin otherwise).

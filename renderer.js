@@ -227,6 +227,14 @@ function ensureTerm() {
   fit = new FitAddon.FitAddon();
   term.loadAddon(fit);
   term.open($('xterm'));
+  // xterm.js sends a bare \r for Shift+Enter and speaks neither the Kitty keyboard protocol
+  // nor modifyOtherKeys, so pi can't tell it from Enter. Send a sequence each agent reads as
+  // "insert newline": CSI-u Shift+Enter for pi, ESC CR (Option+Enter) for Claude Code.
+  term.attachCustomKeyEventHandler((e) => {
+    if (e.key !== 'Enter' || !e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return true;
+    if (e.type === 'keydown' && live) v.ptyInput(agentName === 'Pi' ? '\x1b[13;2u' : '\x1b\r');
+    return false;
+  });
   term.onData((d) => { if (live) v.ptyInput(d); });
   term.onResize(({ cols, rows }) => v.ptyResize(cols, rows));
   new ResizeObserver(() => { if (body.classList.contains('term-open')) safeFit(); }).observe($('xterm'));

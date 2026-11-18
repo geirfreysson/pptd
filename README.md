@@ -152,6 +152,7 @@ the default brand is (or that there isn't one yet).
 | In a slideshow: Enter / Space | next slide (Shift+Enter, Backspace: previous) |
 | In a slideshow: Esc | end the slideshow |
 | ⌥⌘S / ⌘J | slides drawer / agent terminal |
+| In the agent terminal: Shift+Enter | new line in the prompt (Enter sends it) |
 | ⌘Z | undo the last dropped image or video |
 | ⌘R | reload the deck |
 | ⌘N | new empty window (each window has its own deck and agent session) |
