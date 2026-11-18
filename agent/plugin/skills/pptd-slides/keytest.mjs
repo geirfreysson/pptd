@@ -31,12 +31,22 @@ const visible = `[...document.querySelectorAll('.slide')].filter(s => getCompute
 let ok = true;
 const check = async (label, want) => { const got = await ev(visible); const pass = got === want; ok &&= pass; console.log(`${pass ? 'PASS' : 'FAIL'} ${label}: visible=${got} (want ${want})`); };
 await new Promise(r => setTimeout(r, 500));
+// Steps adapt to the deck's length (wrapping at the end is the radio group's normal behaviour).
+const n = await ev(`document.querySelectorAll('.slide').length`);
+const at = (i) => `s${((i - 1) % n) + 1}`;
 await check('start', 's1');
-await key('ArrowRight', 39); await check('ArrowRight', 's2');
-await key('ArrowRight', 39); await check('ArrowRight', 's3');
-await key('ArrowLeft', 37);  await check('ArrowLeft', 's2');
-await ev(`document.querySelector('#s2 .controls label[for=r3]').click()`); await check('click ›', 's3');
-await key('ArrowRight', 39); await check('ArrowRight after click', 's4');
+if (n > 1) {
+  await key('ArrowRight', 39); await check('ArrowRight', at(2));
+  await key('ArrowRight', 39); await check('ArrowRight', at(3));
+  await key('ArrowLeft', 37);  await check('ArrowLeft', at(2));
+  // Click the › label on slide 2 (or the last slide's ‹ on a 2-slide deck), then arrow on.
+  const nextLabel = await ev(`!!document.querySelector('#s2 .controls label[for=r${n > 2 ? 3 : 1}]')`);
+  if (nextLabel) {
+    await ev(`document.querySelector('#s2 .controls label[for=r${n > 2 ? 3 : 1}]').click()`);
+    await check('click label', n > 2 ? 's3' : 's1');
+    await key('ArrowRight', 39); await check('ArrowRight after click', at(n > 2 ? 4 : 2));
+  } else { ok = false; console.log('FAIL no ‹ › label on slide 2'); }
+}
 console.log('script tags:', await ev(`document.scripts.length`), '(must be 0)');
 ok &&= (await ev(`document.scripts.length`)) === 0;
 ws.close(); chrome.kill(); process.exit(ok ? 0 : 1);

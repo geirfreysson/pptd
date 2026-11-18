@@ -32,9 +32,31 @@ The app icon is `build/icon.icns`, made from `build/source-icon.png` by `npm run
 (white rounded square with macOS padding; needs Python with Pillow). `npm start` keeps its
 settings in `PPTD Dev`, so it can run next to an installed PPTD.app.
 
-The build is ad-hoc signed (no Apple Developer certificate), so it runs on this Mac. On
-another Mac, Gatekeeper will block it until you right-click → Open, or until the build is signed
-and notarized with a Developer ID.
+Local builds are ad-hoc signed, so they run on the Mac that built them. Releases are signed
+and notarized by GitHub Actions (below).
+
+### Signed releases
+
+`.github/workflows/release-macos.yml` builds an Apple Silicon DMG signed with a Developer ID,
+with hardened runtime (`build/entitlements.mac.plist`), notarized and stapled. Push a tag that
+matches `package.json` (`git tag v0.3.0 && git push --tags`) to publish a GitHub release, or run
+the workflow by hand to get the DMG as a build artifact. It needs these repository secrets:
+
+| Secret | Value |
+|---|---|
+| `CSC_LINK` | base64 of the Developer ID Application `.p12` certificate |
+| `CSC_KEY_PASSWORD` | the `.p12` export password |
+| `APPLE_API_KEY_BASE64` | base64 of the App Store Connect API key (`AuthKey_….p8`) |
+| `APPLE_API_KEY_ID` | that key's ID |
+| `APPLE_API_ISSUER` | the App Store Connect issuer ID |
+
+```sh
+gh secret set CSC_LINK < <(base64 -i DeveloperID.p12)
+gh secret set CSC_KEY_PASSWORD
+gh secret set APPLE_API_KEY_BASE64 < <(base64 -i AuthKey_XXXXXXXXXX.p8)
+gh secret set APPLE_API_KEY_ID
+gh secret set APPLE_API_ISSUER
+```
 
 The app registers as an *alternate* handler for `.html`, so it appears in Finder's
 **Open With** menu without taking over as the default browser. (macOS can't associate a
@@ -53,6 +75,9 @@ npm run check -- path/to/deck.pptd.html
 
 - **Slides drawer** (left, ⌥⌘S): a picture of every slide. It scrolls on its own; click a slide
   to show it. Pictures refresh whenever the file changes.
+- **New presentations**: press ⌘J and ask for one ("make a 6-slide deck about our Q3
+  results"). With no deck open, the agent works in `~/Documents/PPTD`; the app opens the new
+  deck as soon as the agent saves it.
 - **Agent** (bottom, ⌘J): Claude Code in a terminal, started in the deck's folder. Each message
   you send carries the slide on screen, so "make the headline shorter" applies to that slide
   unless you name another one. The agent edits the file; the app reloads it straight away and
@@ -70,8 +95,9 @@ Agents started from the app load a bundled Claude Code plugin (`agent/plugin`) w
 slide skill `pptd-slides`. It is brand-neutral and maintained in this repo:
 
 - `SKILL.md`: slide structure, layout, diagrams, writing, checks.
-- `PPTD.md`: working inside the app (current slide, live reload, media, brand files).
-- `template.html`: the starting deck. All brand colours and the font are in one `:root` block.
+- `PPTD.md`: working inside the app (current slide, new decks, branding, media).
+- `template.html`: the starting deck. Its brand is one `<style id="pptd-brand">` block.
+- `brand-template.md`: the shape of the default brand file.
 - `pptd-spec.md`, `pptd-check.mjs`: copied from `docs/` and `tools/` by `npm run sync-skill`,
   which also runs before every build.
 
@@ -79,17 +105,20 @@ Claude Code must be installed (`claude` on your login-shell PATH, or set `PPTD_C
 
 ## Branding
 
-Brand rules live in a Markdown **brand file**, outside the app, so they never ship with it and
-updates never overwrite them. The agent is told which one applies with every message.
+Branding is something you tell the agent; the app has no brand settings.
 
-1. `brand.md` in the deck's folder: a project or client brand, kept next to its decks.
-2. Your default brand: `~/Library/Application Support/PPTD/brand.md`.
-3. Neither: the skill's neutral palette.
+- **First presentation:** the agent asks what branding your decks should use, with examples
+  ("Google colours", hex codes, "black and white, minimal", "no preference"). Your answer
+  becomes your **default brand**, saved as `~/Library/Application Support/PPTD/brand.md`.
+- **Every deck carries its own brand** in its HTML: `<meta name="pptd-brand" content="…">` and
+  a `<style id="pptd-brand">` block with the brand's colour tokens and rules (spec §8). New decks
+  copy the default in, so changing the default later doesn't restyle existing decks.
+- **A different brand for one deck:** ask ("use red and grey for this one"). Only that deck
+  changes.
+- **Change the default:** ask ("make this my default brand").
 
-**File › Edit Brand…** opens the brand in effect (creating your default from a template the
-first time). **Edit Default Brand…** and **New Brand for This Folder** do what they say. A brand
-file has paste-ready `:root` tokens plus plain-language rules for logos, type and wording;
-logo files sit next to it. Changes apply from the agent's next message.
+With every message the agent is told whether the deck on screen has its own brand and where
+the default brand is (or that there isn't one yet).
 
 ## Controls
 
@@ -114,8 +143,14 @@ logo files sit next to it. Changes apply from the agent's next message.
 - `lib/thumbs.js`: renders slide pictures in a hidden offscreen window.
 - `lib/media.js`: embeds images/video into a slide's `<section>`.
 - `lib/agent.js`: finds `claude`, starts it in a pty (node-pty) with the plugin, system prompt
-  and a `UserPromptSubmit` hook that adds the current slide and brand file to each message.
-- `lib/brand.js`: brand-file lookup; `lib/brand-template.md` is the blank brand file.
+  and hooks: `UserPromptSubmit` adds the deck, slide and brand to each message; `PostToolUse`
+  reports files it writes. The app also watches the agent's folder, and opens decks it creates.
+- `lib/brand.js`: reads a deck's brand block and finds the default brand.
 - Navigation checks the next or previous `input.slide-radio`, which is the switching
   mechanism the skill uses. Other HTML files still open; arrow keys are then left to the page.
 - Decks run sandboxed with no Node access. Web links open in your default browser.
+
+## Licence
+
+GPL-3.0-or-later (see `LICENSE`). You may use, change and share PPTD; if you distribute a
+modified version, you must share its source under the same licence.

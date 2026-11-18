@@ -21,24 +21,65 @@ the deck next to this terminal.
   edits (adding, removing or reordering slides), update all the numbering listed in SKILL.md §3,
   then run `node <this skill folder>/pptd-check.mjs <deck>` (absolute path, from the deck's
   folder; the app pre-approves exactly that command) and fix every FAIL.
-- New decks: save as `<name>.pptd.html` and add `<meta name="pptd" content="1">` to `<head>`.
+- New decks: see "New presentations" below. They keep `<meta name="pptd" content="1">`.
 - Slide design follows SKILL.md (≤40 words per slide, headline states the conclusion) and the
-  brand file, if one applies.
+  deck's brand.
+
+## New presentations
+
+- The user creates presentations by asking you ("make a 6-slide deck about our Q3 results").
+  There's no New button.
+- Start from `template.html` in this folder. Save as `<name>.pptd.html` in the folder the
+  `<pptd-current-slide>` note gives (or one the user names). PPTD opens it as soon as you
+  save, so write the file once with all slides, then refine it with edits.
+- Give it the brand first (below), then the content.
 
 ## Brand
 
-- Each message's note also carries a `<pptd-brand>` line: either the path of the brand file
-  that applies to this deck, or a statement that none does.
-- The app looks for `brand.md` in the deck's folder first, then for the user's default brand
-  file. The first one found applies.
-- When one applies, read it (once per session, and again if the note names a different file)
-  and follow it: its `:root` tokens go into the deck's brand tokens block, and its rules on
-  logos, wording and layout override SKILL.md. Files it refers to (a logo, say) are relative
-  to the brand file's folder.
-- New decks get the brand from the start. Existing decks keep their look unless the user
-  asks you to apply the brand.
-- Don't edit the brand file unless the user asks you to.
-- With no brand file, keep the template's neutral tokens.
+Branding is handled by talking to you; the app has no brand settings.
+
+- **Each deck carries its own brand**, so it looks the same wherever it's opened:
+  `<meta name="pptd-brand" content="Brand name">` and a `<style id="pptd-brand">` block that
+  holds the brand's `:root` tokens, plus its rules in a leading CSS comment (the template
+  shows the shape). It comes after the main `<style>`, so its tokens win.
+- **The default brand** is a Markdown file (its path is in the `<pptd-brand>` note). Every
+  new deck copies it in: its name into the meta, its tokens and a one-line summary of its
+  rules into the brand block. Its rules on logos, wording and layout apply when designing.
+- **A different brand for one deck:** if the user asks ("use Google colours for this one"),
+  change only that deck's meta and brand block. The default stays as it is.
+- **Change the default:** only when the user asks ("make this my default brand"). Rewrite
+  the default brand file; existing decks keep their own brand.
+- The deck on screen keeps its brand unless the user asks to change it. A deck with no brand
+  block keeps its current look; when asked to brand it, add the meta and the block, and point
+  its hard-coded colours at the tokens.
+- Files a brand mentions (a logo, say) are next to the default brand file. Embed them in the
+  deck as `data:` URIs.
+
+### First presentation (no default brand yet)
+
+When the `<pptd-brand>` note says no default brand has been set up and the user asks for a
+new presentation, ask about branding **before** building anything. One short message, for
+example:
+
+> Before I make your first presentation: what branding should your decks use? For example:
+> - "Google colours"
+> - "navy #1b2a4a, teal #0f9d8a, coral #ff6f59"
+> - "black and white, minimal"
+> - "our logo is ~/Desktop/logo.svg, colours from it"
+> - "no preference" (PPTD's neutral style)
+
+Then:
+
+1. Write the default brand file at the path in the note, following `brand-template.md` in this
+   folder: turn the answer into the colour tokens (pick readable `--ink`/`--paper` contrast and
+   soft variants yourself), plus any rules the user gave. Fill in what they didn't say sensibly.
+   "No preference" means the template's neutral tokens, with Name: PPTD neutral.
+2. Tell the user, briefly: this is now their **default brand** for new presentations; any
+   presentation can have a **different brand** just by asking (e.g. "use red and grey for
+   this one"); and they can ask you to change the default at any time.
+3. Then build the presentation they asked for, with that brand.
+
+Don't ask again once a default brand exists. Don't run this for edits to an existing deck.
 
 ## Images and video
 

@@ -4,26 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="One-sentence description of the deck.">
+  <meta name="pptd" content="1">
+  <meta name="pptd-brand" content="PPTD neutral">
   <title>Deck title | Subtitle</title>
   <style>
-    /* ---------- Brand tokens ----------
-       Every brand-dependent colour and the font live here. To apply a brand, replace
-       this block with the one from the brand file; nothing else in the CSS needs changing.
-       Default: the neutral PPTD palette. */
+    /* Non-brand tokens. The brand's own tokens (colours, font) are in <style id="pptd-brand">
+       below, which comes last so it wins. */
     :root {
-      --ink: #1c2230;        /* headings, body text, primary marks */
-      --ink-2: #434b5c;      /* secondary text */
-      --muted: #6b7385;      /* captions, footers, axis labels */
-      --paper: #f7f7f5;      /* slide background */
       --white: #fff;
-      --accent: #4361ee;     /* accents, arrows, top bar, highlighted nodes */
-      --accent-soft: #eef1fe;/* callouts, hover rows */
-      --highlight: #f25c3b;  /* title rule, step numbers, deadlines. Sparingly */
-      --title-bg: linear-gradient(125deg, #12151d 0%, #1c2230 58%, #2b3a8c 100%);
-      --title-eyebrow: #b9c4ff;
-      --title-soft: #e3e6ee; /* lead text on title slides */
-      --title-footer: #a9b0c0;
-      --font: Inter, "Segoe UI", system-ui, Arial, sans-serif;
       /* Status colours: the same meaning on every slide, whatever the brand. */
       --green: #16856c;  --green-soft: #e5f4ef;   /* ready / signed off */
       --amber: #b66a12;  --amber-soft: #fff1da;   /* in progress / to agree */
@@ -131,6 +119,26 @@
       .deck { width: 13.333in; height: auto; overflow: visible; box-shadow: none; }
       .slide { display: flex !important; position: relative; width: 13.333in; height: 7.5in; overflow: hidden; break-after: page; animation: none; }
       .controls, .progress { display: none !important; }
+    }
+  </style>
+  <!-- PPTD brand block: this deck's brand. The meta names it; the style holds its tokens and,
+       in the comment, its rules. Replace both to rebrand the deck. -->
+  <style id="pptd-brand">
+    /* Brand: PPTD neutral.
+       Rules: no logo. Title and closing slides on --title-bg; content slides on --paper. */
+    :root {
+      --ink: #1c2230;        /* headings, body text, primary marks */
+      --ink-2: #434b5c;      /* secondary text */
+      --muted: #6b7385;      /* captions, footers, axis labels */
+      --paper: #f7f7f5;      /* slide background */
+      --accent: #4361ee;     /* accents, arrows, top bar, highlighted nodes */
+      --accent-soft: #eef1fe;/* callouts, hover rows */
+      --highlight: #f25c3b;  /* title rule, step numbers, deadlines. Sparingly */
+      --title-bg: linear-gradient(125deg, #12151d 0%, #1c2230 58%, #2b3a8c 100%);
+      --title-eyebrow: #b9c4ff;
+      --title-soft: #e3e6ee; /* lead text on title slides */
+      --title-footer: #a9b0c0;
+      --font: Inter, "Segoe UI", system-ui, Arial, sans-serif;
     }
   </style>
 </head>

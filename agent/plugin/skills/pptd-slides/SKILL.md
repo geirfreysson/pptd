@@ -23,20 +23,20 @@ unless the user asks.
 - `keytest.mjs /abs/path/deck.html`: presses real arrow keys and clicks ‹ › in headless
   Chrome, and checks there are zero `<script>` tags. Exits non-zero on failure.
 - `pptd-check.mjs deck.pptd.html`: PPTD conformance checker. `pptd-spec.md`: the format.
+- `brand-template.md`: the shape of the user's default brand file.
 
 ## 1. Branding
 
-All brand-dependent styling is in the template's **`:root` brand tokens** block: `--ink`,
+Each deck carries its brand: `<meta name="pptd-brand" content="Name">` and a
+`<style id="pptd-brand">` block after the main `<style>`, holding the brand tokens `--ink`,
 `--ink-2`, `--muted`, `--paper`, `--accent`, `--accent-soft`, `--highlight`, `--title-bg`,
-`--title-eyebrow`, `--title-soft`, `--title-footer` and `--font`. The rest of the CSS only
-uses these variables.
+`--title-eyebrow`, `--title-soft`, `--title-footer` and `--font`, with the brand's rules in a
+leading CSS comment. The rest of the CSS only uses these variables. (`PPTD.md` covers where
+brands come from: the user's default brand, or what they ask for.)
 
-- **If a brand file applies** (the app names it in a `<pptd-brand>` note; see `PPTD.md`):
-  read it before designing anything and follow it. Put its colours and font into the
-  `:root` brand tokens block. Its rules on logos, wording and layout override this skill.
-- **If no brand file applies:** keep the template's neutral default tokens. Don't invent brand
-  colours, and don't imitate a company's branding the user hasn't supplied.
-- Don't add logos or other copyrighted assets unless the user or the brand file supplies the file.
+- Follow the deck's brand. Don't invent brand colours, and don't imitate a company's branding
+  unless the user asks for it.
+- Don't add logos or other copyrighted assets unless the user or the brand supplies the file.
   Embed supplied images as `data:` URIs (see `PPTD.md`, "Images and video").
 - Title and closing slides use `.title-slide` (`--title-bg`, `--highlight` top bar and rule).
 - Content slides: paper background, an 8px `--ink`→`--accent` bar at the top, an `.eyebrow`
@@ -46,6 +46,7 @@ uses these variables.
 - Status colours (`--green`, `--amber`, and `--ink` for proven) are not brand colours and mean
   the same on every slide: green = signed off/ready, ink = proven/proof of concept/agreed,
   amber = in progress/to agree.
+- Check contrast: body text on `--paper` and white text on `--title-bg` must stay readable.
 
 ## 2. Teams compatibility (the important part)
 

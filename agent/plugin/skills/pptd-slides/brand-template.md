@@ -1,21 +1,18 @@
 # Brand
 
 <!--
-  PPTD brand file. The agent in the PPTD app reads it before designing slides.
-
-  Where it applies:
-  - brand.md in a deck's folder applies to the decks in that folder.
-  - Your default brand file (PPTD › File › Edit Brand…) applies everywhere else.
-
-  Write it for the agent, in plain language. Files you mention (a logo, say) are
-  looked up next to this file. Delete these comments when you're done.
+  PPTD default brand: used for every NEW presentation. The agent writes this file from
+  what the user says about branding; the user doesn't edit it by hand (but can).
+  Each deck copies the brand into its own <meta name="pptd-brand"> and
+  <style id="pptd-brand"> when it is created, so changing this file later doesn't
+  restyle existing decks.
 -->
 
 Name: (your organisation or project)
 
 ## Colours
 
-Paste-ready tokens for the deck's `:root` brand block. Change the values; keep the names.
+Tokens for the deck's `<style id="pptd-brand">` block. Keep the names; set the values.
 
 ```css
 :root {
@@ -38,7 +35,8 @@ Colour names to use in conversation (e.g. "our navy"): …
 
 ## Logo and assets
 
-- (e.g. `logo.svg` next to this file: bottom-left of title slides only, 12% of slide width.)
+- (e.g. `logo.svg` next to this file: bottom-left of title slides only, 12% of slide width.
+  Embed it in decks as a data: URI.)
 - (Or: no logo on slides.)
 
 ## Typography

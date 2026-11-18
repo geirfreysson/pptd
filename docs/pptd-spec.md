@@ -181,14 +181,40 @@ writes this markup when media is dropped on a slide; agents adding media SHOULD 
 | Video: MP4 (H.264/AAC) or WebM, `controls`, no `autoplay` | SHOULD |
 | Total file size: a short clip only; warn above 25 MB of video | SHOULD |
 
+### Brand
+
+A deck records the brand it was made with, so it keeps its look wherever it is opened and an
+agent editing it knows which brand to follow:
+
+```html
+<meta name="pptd-brand" content="Acme">
+<style> … the deck's CSS, using var(--ink), var(--accent) … </style>
+<style id="pptd-brand">
+  /* Brand: Acme. Rules: logo bottom-left on title slides only; sentence-case headlines. */
+  :root { --ink: #1b2a41; --accent: #0a84ff; --paper: #f6f7f9; --font: "Segoe UI", Arial, sans-serif; … }
+</style>
+```
+
+| Requirement | Level |
+|---|---|
+| `<meta name="pptd-brand" content="…">` in `<head>` names the brand | SHOULD |
+| One `<style id="pptd-brand">` holds the brand's `:root` tokens, after the main `<style>` so it wins | SHOULD |
+| The rest of the CSS takes brand colours and the font from those tokens, not hard-coded values | SHOULD |
+| The brand's rules (logo use, wording) are summarised in a CSS comment at the top of the block | MAY |
+
+Token names used by the bundled template: `--ink`, `--ink-2`, `--muted`, `--paper`,
+`--accent`, `--accent-soft`, `--highlight`, `--title-bg`, `--title-eyebrow`, `--title-soft`,
+`--title-footer`, `--font`.
+
 ## 9. Versioning
 
 - This is version **1**. A future version will bump `content` in the marker, and the app
   will keep playing v1 files.
 - Unknown `content` values: the app tries to play the file as v1.
-- Reserved, so do not use them for other purposes: the class names `notes` and `pptd-*`, and
-  `data-pptd-*` attributes. `pptd-media`, `pptd-image`, `pptd-video` and `<style id="pptd-media">`
-  are already defined above.
+- Reserved, so do not use them for other purposes: the class names `notes` and `pptd-*`,
+  `data-pptd-*` attributes, and `pptd-*` meta names and element ids. `pptd-media`,
+  `pptd-image`, `pptd-video`, `<style id="pptd-media">`, `<meta name="pptd-brand">` and
+  `<style id="pptd-brand">` are already defined above.
 
 ## 10. Conformance checklist for agents
 

@@ -182,7 +182,6 @@ async function openFile(file) {
     dialog.showErrorBox('File not found', file);
     return;
   }
-  const switching = currentFile && currentFile !== file;
   currentFile = file;
   state = { index: 0, total: 0, label: null };
   restoreIndex = null;
@@ -192,7 +191,6 @@ async function openFile(file) {
   win.setRepresentedFilename?.(file);
   deckView.setVisible(true);
   watch(file);
-  if (switching && agent?.alive) toast('The agent session is still set up for the previous deck. Restart it to switch.');
   await deckView.webContents.loadFile(file);
   deckView.webContents.focus();
 }
@@ -229,7 +227,6 @@ function watch(file) {
   const dir = path.dirname(file), base = path.basename(file);
   try {
     watcher = fs.watch(dir, (_event, name) => {
-      if (name === brand.BRAND_NAME) { refreshAgentNote(); return; }
       if (name && name !== base) return;
       clearTimeout(reloadTimer);
       reloadTimer = setTimeout(reloadFromDisk, 200);
@@ -443,58 +440,97 @@ async function updateThumbs() {
   }
 }
 
-// ---------------------------------------------------------------- brand
+// ---------------------------------------------------------------- agent
 
-// The agent's per-prompt note names the brand file in effect; rewrite it when that may change.
+// Where the agent starts when no deck is open; new presentations go here by default.
+const workspaceDir = () => process.env.PPTD_WORKSPACE || path.join(app.getPath('documents'), 'PPTD');
+
+// The agent's per-prompt note (slide on screen, brand); rewrite it when either may change.
 function refreshAgentNote() { agent?.writeState({ deck: currentFile, ...state }); }
 
-// 'current': the brand in effect for the open deck (else the default).
-// 'default': the user's default brand. 'folder': brand.md next to the open deck,
-// started from the default brand if there is one.
-function editBrand(which) {
-  let file;
+// The default brand is written by the agent; refresh the note as soon as it appears.
+let brandWatcher = null;
+function watchDefaultBrand() {
+  const dir = path.dirname(brand.userBrandFile());
   try {
-    if (which === 'folder') {
-      if (!currentFile) return;
-      const def = brand.userBrandFile();
-      file = brand.ensureBrandFile(brand.folderBrandFile(currentFile), fs.existsSync(def) ? def : brand.TEMPLATE);
-    } else if (which === 'current' && brand.findBrand(currentFile)) {
-      file = brand.findBrand(currentFile).file;
-    } else {
-      file = brand.ensureBrandFile(brand.userBrandFile());
-    }
-  } catch (e) {
-    return toast(`Can't create the brand file: ${e.message}`, 'error');
-  }
-  refreshAgentNote();
-  shell.openPath(file).then((err) => { if (err) shell.showItemInFolder(file); });
-  const b = brand.findBrand(currentFile);
-  toast(b?.file === file || !currentFile ? `Editing ${file.replace(app.getPath('home'), '~')}. The agent picks up changes on its next message.`
-    : `Editing the default brand. brand.md in this deck's folder takes precedence here.`);
+    fs.mkdirSync(dir, { recursive: true });
+    brandWatcher = fs.watch(dir, (_e, name) => { if (!name || name === 'brand.md') refreshAgentNote(); });
+  } catch {}
 }
 
-// ---------------------------------------------------------------- agent
+// The agent's PostToolUse hook appends `"file_path": "…"` for every file it writes or edits.
+// A .pptd.html that isn't on screen is a deck the agent just made (or switched to): open it.
+let eventsWatcher = null, eventsOffset = 0;
+function watchAgentEvents(file) {
+  fs.writeFileSync(file, '');
+  eventsOffset = 0;
+  eventsWatcher?.close();
+  eventsWatcher = fs.watch(file, () => {
+    let text = '';
+    try {
+      const buf = fs.readFileSync(file);
+      text = buf.subarray(eventsOffset).toString('utf8');
+      eventsOffset = buf.length;
+    } catch { return; }
+    for (const line of text.split('\n')) {
+      let p;
+      try { p = JSON.parse(`{${line}}`).file_path; } catch { continue; }
+      if (typeof p !== 'string' || !/\.pptd\.html$/i.test(p) || !path.isAbsolute(p)) continue;
+      if (p !== currentFile && fs.existsSync(p)) openFile(p);
+    }
+  });
+}
+
+// Decks written in the agent's folder by any means (it often uses shell commands, which
+// the hook can't see): open the one it touched, if it isn't already on screen.
+let cwdWatcher = null;
+const cwdTimers = new Map();
+function watchAgentFolder(dir) {
+  cwdWatcher?.close();
+  const since = Date.now() - 1000;
+  try {
+    cwdWatcher = fs.watch(dir, (_e, name) => {
+      if (!name || !/\.pptd\.html$/i.test(name) || name.startsWith('.')) return;
+      const file = path.join(dir, name);
+      clearTimeout(cwdTimers.get(file));
+      cwdTimers.set(file, setTimeout(() => {
+        cwdTimers.delete(file);
+        if (file === currentFile) return;
+        try { if (fs.statSync(file).mtimeMs >= since) openFile(file); } catch {}
+      }, 400));
+    });
+  } catch { cwdWatcher = null; }
+}
 
 function ensureAgent() {
   if (agent) return agent;
+  const dir = path.join(app.getPath('userData'), 'agent');
+  fs.mkdirSync(dir, { recursive: true });
   agent = new AgentSession({
-    stateFile: path.join(app.getPath('userData'), 'agent', `current-slide-${process.pid}.txt`),
+    stateFile: path.join(dir, `current-slide-${process.pid}.txt`),
+    eventsFile: path.join(dir, `events-${process.pid}.txt`),
     onData: (d) => send('pty-data', d),
     onExit: (e) => {
       send('pty-exit', e);
       if (restartAgent) { const s = restartAgent; restartAgent = null; startAgent(s); }
     },
   });
+  watchAgentEvents(agent.eventsFile);
+  if (!brandWatcher) watchDefaultBrand();
   return agent;
 }
 
+// With a deck open, the agent starts in its folder; otherwise in ~/Documents/PPTD,
+// ready to create one. It isn't tied to that deck: each prompt says what's on screen.
 async function startAgent({ cols, rows } = {}) {
-  if (!currentFile) return toast('Open a presentation first.', 'error');
   const a = ensureAgent();
   if (a.alive) return;
-  a.writeState({ deck: currentFile, ...state });
-  send('pty-start', { deck: displayName(currentFile) });
-  await a.start(currentFile, cols, rows);
+  const cwd = currentFile ? path.dirname(currentFile) : workspaceDir();
+  try { fs.mkdirSync(cwd, { recursive: true }); } catch {}
+  a.lastState = { deck: currentFile, ...state };
+  send('pty-start', { deck: currentFile ? displayName(currentFile) : null });
+  watchAgentFolder(cwd);
+  await a.start(cwd, cols, rows);
 }
 
 // ---------------------------------------------------------------- menu
@@ -536,10 +572,6 @@ function buildMenu() {
         { type: 'separator' },
         { label: 'Reveal in Finder', enabled: hasFile, click: () => shell.showItemInFolder(currentFile) },
         { type: 'separator' },
-        { label: 'Edit Brand…', click: () => editBrand('current') },
-        { label: 'Edit Default Brand…', click: () => editBrand('default') },
-        { label: 'New Brand for This Folder', enabled: hasFile, click: () => editBrand('folder') },
-        { type: 'separator' },
         isMac ? { role: 'close', accelerator: 'CmdOrCtrl+Shift+W' } : { label: 'Quit', click: confirmQuit },
       ],
     },
@@ -568,7 +600,7 @@ function buildMenu() {
       label: 'View',
       submenu: [
         { label: 'Slides Drawer', accelerator: 'CmdOrCtrl+Alt+S', click: () => send('toggle', 'drawer') },
-        { label: 'Agent Terminal', accelerator: 'CmdOrCtrl+J', enabled: hasFile, click: () => send('toggle', 'agent') },
+        { label: 'Agent Terminal', accelerator: 'CmdOrCtrl+J', click: () => send('toggle', 'agent') },
         { type: 'separator' },
         { label: 'Reload Presentation', accelerator: 'CmdOrCtrl+R', enabled: hasFile, click: reloadFromDisk },
         { label: 'Developer Tools (Presentation)', accelerator: 'Alt+CmdOrCtrl+I', enabled: hasFile, click: () => deckView.webContents.toggleDevTools() },
@@ -662,7 +694,7 @@ app.on('before-quit', () => { quitting = true; });
 
 app.on('will-quit', () => {
   agent?.stop();
-  try { fs.rmSync(path.join(app.getPath('userData'), 'agent', `current-slide-${process.pid}.txt`), { force: true }); } catch {}
+  for (const f of [agent?.stateFile, agent?.eventsFile]) { if (f) try { fs.rmSync(f, { force: true }); } catch {} }
 });
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });

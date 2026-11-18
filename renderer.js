@@ -74,7 +74,7 @@ v.onState((s) => {
   body.classList.toggle('has-deck', has);
   $('file').textContent = s.file || '';
   $('file').title = s.path || '';
-  for (const id of ['prev', 'next', 'play', 'playMenu', 'agentBtn']) $(id).disabled = !has;
+  for (const id of ['prev', 'next', 'play', 'playMenu']) $(id).disabled = !has;
   if (has && s.total) {
     $('counter').textContent = `${s.index + 1} / ${s.total}`;
     $('prev').disabled = s.index <= 0;
@@ -180,7 +180,6 @@ const size = () => ({ cols: term.cols, rows: term.rows });
 
 function toggleAgent(force) {
   const open = force ?? !body.classList.contains('term-open');
-  if (open && !cur.file) return;
   body.classList.toggle('term-open', open);
   $('agentBtn').classList.toggle('on', open);
   requestAnimationFrame(() => {
@@ -214,10 +213,10 @@ $('restart').addEventListener('click', () => {
 function updateTermTitle() {
   $('dot').classList.toggle('live', live);
   $('stop').disabled = !live;
-  const deck = cur.file ? escapeHtml(cur.file) : 'no deck';
+  const doing = cur.file ? `editing ${escapeHtml(cur.file)}` : 'ask for a new presentation';
   const slide = cur.total ? `<span class="slide-pill">slide ${cur.index + 1} of ${cur.total}</span>` : '';
   $('termTitle').innerHTML = live
-    ? `<strong>Claude</strong> · editing ${deck}${slide}`
+    ? `<strong>Claude</strong> · ${doing}${slide}`
     : `Agent · ${started ? 'stopped' : 'not started'}`;
   $('termTitle').title = live ? 'Requests that don\'t name a slide apply to the slide on screen.' : '';
 }
