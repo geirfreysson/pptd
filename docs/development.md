@@ -66,9 +66,8 @@ Running the workflow by hand builds all three without releasing (the files are k
 workflow artifacts). Each build runs `tools/verify-release-bundle.mjs` on the packaged app:
 pi, this OS's ripgrep and fd (which must run), the skill, and node-pty's native module.
 
-The macOS build is signed with a Developer ID and notarized only when these repository
-secrets exist; without them it is ad-hoc signed and users have to allow it in
-System Settings › Privacy & Security the first time.
+The macOS job requires these repository secrets. It fails before packaging if any is
+missing, so every published macOS build is Developer ID signed, notarized and stapled.
 
 | Secret | Value |
 |---|---|
@@ -85,6 +84,11 @@ gh secret set APPLE_API_KEY_BASE64 < <(base64 -i AuthKey_XXXXXXXXXX.p8)
 gh secret set APPLE_API_KEY_ID
 gh secret set APPLE_API_ISSUER
 ```
+
+The certificate and App Store Connect key may be shared with another app released by the
+same Apple developer account. GitHub repository secrets are write-only, so copy them from
+the original local `.p12` and `.p8` files (or export the Developer ID identity from Keychain
+Access); they cannot be read back from another repository.
 
 ## The agent's context
 

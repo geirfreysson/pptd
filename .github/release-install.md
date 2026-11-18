@@ -9,9 +9,8 @@
 Each file has a `.sha256` next to it. The files without a version number are the same
 build, with a link that always points at the latest release.
 
-- **macOS:** open the DMG and drag PPTD to Applications. If this build isn't notarized, macOS
-  says it can't check it for malicious software: open System Settings › Privacy & Security
-  and choose **Open Anyway** (once), or run `xattr -dr com.apple.quarantine /Applications/PPTD.app`.
+- **macOS:** open the DMG and drag PPTD to Applications. The app is Developer ID signed and
+  notarized by Apple.
 - **Windows:** the installer isn't signed yet, so SmartScreen may warn: choose
   **More info › Run anyway**. It installs for the current user, no admin rights needed.
 - **Linux:** `chmod +x PPTD-*.AppImage` and run it, or `sudo apt install ./PPTD-*-linux-amd64.deb`.
