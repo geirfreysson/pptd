@@ -23,6 +23,8 @@ unless the user asks.
 - `keytest.mjs /abs/path/deck.html`: presses real arrow keys and clicks ‹ › in headless
   Chrome, and checks there are zero `<script>` tags. Exits non-zero on failure.
 - `pptd-check.mjs deck.pptd.html`: PPTD conformance checker. `pptd-spec.md`: the format.
+- `pptd-deck.mjs`: adds, removes and reorders slides with all the numbering done for you
+  (§3). Use it for every structural change; you only write slide content.
 - `brand-template.md`: the shape of the user's default brand file.
 
 ## 1. Branding
@@ -96,11 +98,35 @@ Teams opens shared HTML in a sandboxed preview. Learned the hard way:
   `autofocus`, so the first arrow press may need one click first.
 - First slide uses `<span class="nav-ph">` instead of ‹, last slide instead of ›.
 
-**When adding, removing or reordering slides, update all of these:** the radio list, the
-`#rN:checked ~ #sN` selector list, every section's `id`/`aria-label`, each `‹ › for=`
-target, every `N / total` counter and every progress width (`N/total × 100%`). Do it with a
-small script and then run `keytest.mjs`. When renumbering with a regex, match only
-`<section …>` tags, or it will also rewrite CSS attribute selectors.
+**Adding, removing or reordering slides: use `pptd-deck.mjs`** (in this folder; run it
+with `node` and its absolute path, from the deck's folder):
+
+```sh
+node pptd-deck.mjs list   deck.pptd.html          # outline: number, id, title, words
+node pptd-deck.mjs add    deck.pptd.html --after 3   # empty slide at position 4 (0 = first)
+node pptd-deck.mjs add    deck.pptd.html --after 5 --count 2   # two empty slides, positions 6–7
+node pptd-deck.mjs move   deck.pptd.html 5 2      # slide 5 to position 2
+node pptd-deck.mjs delete deck.pptd.html 4
+```
+
+- It renumbers everything: radios, `#rN:checked ~ #sN` rules, ids, `aria-label` numbers,
+  ‹ › targets, `N / total` counters, progress widths, and per-slide CSS (`#s3 …`) and jump
+  links that refer to a moved slide. It checks the result with the checker and refuses
+  (leaving the file alone) rather than save a broken deck.
+- `add` makes an empty slide and prints a placeholder (`<!-- pptd:new-slide … -->` and
+  `<h2>New slide</h2>`). Replace those two lines with the slide's content using your normal
+  edit tool, and put the title in the section's `aria-label`. **To add several slides, add
+  them in one call** (`--count`), then fill each placeholder; each is unique, so fill them in
+  any order. Don't alternate add and fill.
+- Each position keeps its own `.controls` and `.progress`; slide content is everything else.
+  Keep per-slide chrome inside those two elements and content outside them.
+- Slide numbers change after every add, move and delete: run `list` again rather than
+  reusing numbers from before.
+- **Only if it refuses** (e.g. a deck under 3 slides, or a layout it doesn't recognise), do
+  it by hand: update the radio list, the `#rN:checked ~ #sN` selector list, every section's
+  `id`/`aria-label`, each `‹ › for=` target, every `N / total` counter and every progress
+  width (`N/total × 100%`), then run `keytest.mjs`. When renumbering with a regex, match
+  only `<section …>` tags, or it will also rewrite CSS attribute selectors.
 
 ## 4. Diagrams for complicated concepts
 

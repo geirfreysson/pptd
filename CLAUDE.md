@@ -49,9 +49,13 @@ When a change alters behaviour, update the docs in the same change:
   into a running turn, or held for the next prompt); Claude's UserPromptSubmit hook prints it
   with the next message. Both move the file aside before reading, so nothing is lost or
   repeated. Any new app-side edit to a deck should send a note too.
-- **Reordering** (`lib/reorder.js`) moves slide content and leaves positional parts in place
-  (ids, aria-label numbers, `.controls`, `.progress`, switching CSS); see spec "Reordering in
-  the app". Undo entries carry `what` (menu label), `undone` (toast) and `note` (for the agent).
+- **Structural edits** (`tools/pptd-deck.mjs`: list, add, move, delete) move slide content
+  and leave positional parts in place (ids, aria-label numbers, `.controls`, `.progress`,
+  switching CSS); see the spec section on reordering. Agents run it from the skill folder;
+  the app's drawer uses `moveSlide` + `verify`. Undo entries carry `what` (menu label),
+  `undone` (toast) and `note` (for the agent). To test changes to it, run every add, delete
+  and move on the template and a real deck and check the checker results, the ‹ ›/counter/
+  progress of every position, and that add-then-delete and move-and-back are byte-identical.
 - **Sign-in gate:** `startAgent` asks `agent/pi/login.mjs` (`{"cmd":"status"}`) whether pi has
   a usable model; if not, it shows the sign-in panel (`login-*` IPC, `#login` in the agent pane)
   and starts pi when a login finishes. The panel lives in the agent pane on purpose: the deck
@@ -68,9 +72,11 @@ When a change alters behaviour, update the docs in the same change:
   build tooling in Node (`tools/*.mjs`), not `sh`, and use `path.delimiter` and the PATH
   helpers in `lib/agent.js` (Windows spells it `Path`). Only macOS builds are set up and
   released so far.
-- **The spec and checker are duplicated.** The source copies are `docs/pptd-spec.md` and
-  `tools/pptd-check.mjs`. `npm run sync-skill` (it also runs before every build) copies them
-  into `agent/plugin/skills/pptd-slides/`. Edit the source copies, never the skill copies.
+- **The spec, checker and deck tool are duplicated.** The source copies are
+  `docs/pptd-spec.md`, `tools/pptd-check.mjs` and `tools/pptd-deck.mjs`. `npm run sync-skill`
+  (it also runs before every build) copies them into `agent/plugin/skills/pptd-slides/`. Edit
+  the source copies, never the skill copies. The two `.mjs` files also ship in the app (main
+  imports `tools/pptd-deck.mjs` for drag-to-reorder), so keep them dependency-free.
 
 ## Gotchas
 

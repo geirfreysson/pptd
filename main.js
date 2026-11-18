@@ -20,7 +20,10 @@ const { app, BrowserWindow, WebContentsView, Menu, dialog, ipcMain, shell } = re
 const path = require('path');
 const fs = require('fs');
 const media = require('./lib/media');
-const { moveSlide } = require('./lib/reorder');
+// Structural deck edits (also the agents' command-line tool); an ES module, loaded on use.
+// Packaged, it is unpacked next to app.asar (asarUnpack), so it loads as a plain file.
+const deckOps = () => import(require('url').pathToFileURL(
+  path.join(__dirname, 'tools', 'pptd-deck.mjs').replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`)).href);
 const { createThumbs } = require('./lib/thumbs');
 const { AgentSession, AGENTS } = require('./lib/agent');
 const piLogin = require('./lib/pi-login');
@@ -403,15 +406,19 @@ async function handleDrop(w, paths, slideIndex) {
 // ---------------------------------------------------------------- reorder (drag in the drawer)
 
 // from, to: 0-based positions. The slide's content moves; each position keeps its id,
-// controls and progress bar (lib/reorder.js), so the deck stays valid without renumbering.
-function moveSlideInDeck(w, from, to) {
+// controls and progress bar (tools/pptd-deck.mjs), so the deck stays valid without renumbering.
+async function moveSlideInDeck(w, from, to) {
   const total = w.state.total;
   if (!w.currentFile || !w.isRadioDeck || !Number.isInteger(from) || !Number.isInteger(to)) return;
   if (from === to || from < 0 || to < 0 || from >= total || to >= total) return;
   const file = w.currentFile;
   let html, res;
   try { html = fs.readFileSync(file, 'utf8'); } catch (e) { return toast(w, `Can't read the deck: ${e.message}`, 'error'); }
-  try { res = moveSlide(html, from + 1, to + 1); } catch (e) { return toast(w, e.message, 'error'); }
+  try {
+    const ops = await deckOps();
+    res = ops.moveSlide(html, from + 1, to + 1);
+    ops.verify(html, res.html, file);
+  } catch (e) { return toast(w, e.message, 'error'); }
   try { writeAtomic(file, res.html); } catch (e) { return toast(w, `Couldn't save the deck: ${e.message}`, 'error'); }
   const name = res.title ? `“${res.title}”` : '';
   pushUndo(w, {

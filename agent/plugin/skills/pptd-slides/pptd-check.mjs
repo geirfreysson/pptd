@@ -2,23 +2,18 @@
 // Static conformance check for PPTD v1 files (docs/pptd-spec.md).
 // Usage: node tools/pptd-check.mjs deck.pptd.html [more.pptd.html …]
 // Exit code 0 = all files pass, 1 = at least one failure.
+// Also a module: checkHtml(html, { name, size }) (used by pptd-deck.mjs and the app).
 //
 // Regex-based on purpose (no dependencies). It checks the rules a machine can check;
 // look at the slides yourself as well.
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const files = process.argv.slice(2);
-if (!files.length) {
-  console.error('usage: node tools/pptd-check.mjs <file.pptd.html> [...]');
-  process.exit(2);
-}
-
-let failed = false;
-
-for (const file of files) {
-  const html = fs.readFileSync(file, 'utf8');
+// name: the file name (for the .pptd.html rule); size: bytes (defaults to the HTML's length).
+// Returns { results: [{ ok, msg, level }], fails, warns }.
+export function checkHtml(html, { name = 'deck.pptd.html', size = Buffer.byteLength(html) } = {}) {
   const results = [];
   const check = (ok, msg, level = 'MUST') => results.push({ ok: !!ok, msg, level });
 
@@ -34,12 +29,12 @@ for (const file of files) {
   const classes = (tag) => (attr(tag, 'class') || '').split(/\s+/);
 
   // 2. File
-  check(path.basename(file).endsWith('.pptd.html'), 'file name ends in .pptd.html');
+  check(path.basename(name).endsWith('.pptd.html'), 'file name ends in .pptd.html');
   check(/^\s*<!doctype html>/i.test(html), '<!doctype html> first');
   check(/<meta\s+charset=["']?utf-8/i.test(head), '<meta charset="utf-8"> in <head>');
   check(/<html[^>]*\slang=/i.test(src), '<html lang="…">');
   check(/<title>[^<]+<\/title>/i.test(head), '<title> set', 'SHOULD');
-  check(fs.statSync(file).size < 10 * 1024 * 1024, 'under 10 MB', 'SHOULD');
+  check(size < 10 * 1024 * 1024, 'under 10 MB', 'SHOULD');
 
   // 3. Marker
   const meta = tags(/<meta\b[^>]*>/gi).find((t) => (attr(t, 'name') || '').toLowerCase() === 'pptd');
@@ -104,16 +99,28 @@ for (const file of files) {
   check(!ext.length, `no external resources${ext.length ? ': ' + ext.slice(0, 3).join(', ') : ''}`);
   check(/@media\s+print/i.test(style), '@media print block', 'SHOULD');
 
-  // Report
-  console.log(`\n${file}`);
-  for (const r of results) {
-    const tag = r.ok ? 'PASS' : r.level === 'MUST' ? 'FAIL' : 'WARN';
-    console.log(`  ${tag}  ${r.msg}`);
-  }
   const fails = results.filter((r) => !r.ok && r.level === 'MUST').length;
   const warns = results.filter((r) => !r.ok && r.level !== 'MUST').length;
-  console.log(`  → ${fails ? 'NOT CONFORMING' : 'CONFORMING'} (${fails} fail, ${warns} warn)`);
-  if (fails) failed = true;
+  return { results, fails, warns };
 }
 
-process.exit(failed ? 1 : 0);
+function main(files) {
+  if (!files.length) {
+    console.error('usage: node tools/pptd-check.mjs <file.pptd.html> [...]');
+    process.exit(2);
+  }
+  let failed = false;
+  for (const file of files) {
+    const { results, fails, warns } = checkHtml(fs.readFileSync(file, 'utf8'), { name: file, size: fs.statSync(file).size });
+    console.log(`\n${file}`);
+    for (const r of results) {
+      const tag = r.ok ? 'PASS' : r.level === 'MUST' ? 'FAIL' : 'WARN';
+      console.log(`  ${tag}  ${r.msg}`);
+    }
+    console.log(`  → ${fails ? 'NOT CONFORMING' : 'CONFORMING'} (${fails} fail, ${warns} warn)`);
+    if (fails) failed = true;
+  }
+  process.exit(failed ? 1 : 0);
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main(process.argv.slice(2));

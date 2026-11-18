@@ -181,10 +181,12 @@ writes this markup when media is dropped on a slide; agents adding media SHOULD 
 | Video: MP4 (H.264/AAC) or WebM, `controls`, no `autoplay` | SHOULD |
 | Total file size: a short clip only; warn above 25 MB of video | SHOULD |
 
-### Reordering in the app
+### Reordering, adding and removing slides (app and `pptd-deck.mjs`)
 
-The user can drag a slide to another position in the app's slide drawer. The app rewrites
-the file so that the slide's **content** moves and everything tied to a **position** stays:
+The user can drag a slide to another position in the app's slide drawer, and agents add,
+remove and reorder slides with `pptd-deck.mjs` (in the skill folder; source in `tools/`).
+Both rewrite the file so that a slide's **content** moves and everything tied to a
+**position** stays:
 
 - Each `<section>` keeps its position's `id` (`sN`) and the number in its `aria-label`
   (`Slide N: …`); the title after the number moves with the content.
@@ -192,6 +194,13 @@ the file so that the slide's **content** moves and everything tied to a **positi
 - Radios and the `#rN:checked ~ #sN` switching rules are unchanged.
 - Per-slide CSS in `<style>` blocks (`#s3 .chart`) and `for="rN"` jump links inside slide
   content are renumbered to follow the slide they refer to.
+
+When the number of slides changes, the radios and switching rules grow or shrink at the
+end, and each position's `.controls` and `.progress` are copied from the nearest old position
+with the same role (first, middle, last) and renumbered: ‹ › targets, `N / total` counters
+and progress widths (`N/total` or `(N-1)/(total-1)`, in the deck's own number format).
+Comments just before a `<section>` belong to that slide and move with it. A change that would
+add a checker failure is refused.
 
 Decks stay conforming without other changes. Keep per-slide chrome inside `.controls` or
 `.progress` so it stays with its position, and anything else inside the slide content.

@@ -39,6 +39,8 @@
       "package.json",
       "lib/**",
       "agent/**",
+      "tools/pptd-check.mjs",
+      "tools/pptd-deck.mjs",
       "node_modules/@xterm/xterm/lib/xterm.js",
       "node_modules/@xterm/xterm/css/xterm.css",
       "node_modules/@xterm/addon-fit/lib/addon-fit.js"
@@ -91,7 +93,8 @@
     ],
     "asarUnpack": [
       "agent/**",
-      "node_modules/node-pty/**"
+      "node_modules/node-pty/**",
+      "tools/pptd-*.mjs"
     ],
     "linux": {
       "extraResources": [

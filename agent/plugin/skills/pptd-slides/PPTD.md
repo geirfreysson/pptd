@@ -28,10 +28,11 @@ the deck next to this terminal.
 - Edit the `.pptd.html` file directly. The app watches it, reloads the moment you save, and
   stays on the same slide, so the user sees each change. Don't open a browser or start a server.
 - Make targeted edits to the section concerned. Don't rewrite the whole file.
-- Keep the file a conforming PPTD v1 deck (`pptd-spec.md` in this folder). After structural
-  edits (adding, removing or reordering slides), update all the numbering listed in SKILL.md §3,
-  then run `node <this skill folder>/pptd-check.mjs <deck>` (absolute path, from the deck's
-  folder; the app pre-approves exactly that command) and fix every FAIL.
+- Keep the file a conforming PPTD v1 deck (`pptd-spec.md` in this folder). **Add, remove and
+  reorder slides with `node <this skill folder>/pptd-deck.mjs`** (SKILL.md §3): it does all
+  the numbering, so you only write slide content. After other edits, run
+  `node <this skill folder>/pptd-check.mjs <deck>` and fix every FAIL. Use absolute paths,
+  from the deck's folder; the app pre-approves exactly those two commands.
 - New decks: see "New presentations" below. They keep `<meta name="pptd" content="1">`.
 - Slide design follows SKILL.md (≤40 words per slide, headline states the conclusion) and the
   deck's brand.

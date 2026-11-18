@@ -115,8 +115,9 @@ the plugin `agent/plugin`; for pi, with `--skill`). It is brand-neutral and main
 - `PPTD.md`: working inside the app (current slide, new decks, branding, media).
 - `template.html`: the starting deck. Its brand is one `<style id="pptd-brand">` block.
 - `brand-template.md`: the shape of the default brand file.
-- `pptd-spec.md`, `pptd-check.mjs`: copied from `docs/` and `tools/` by `npm run sync-skill`,
-  which also runs before every build.
+- `pptd-deck.mjs`: adds, removes and reorders slides, so the agent only writes content.
+- `pptd-spec.md`, `pptd-check.mjs`, `pptd-deck.mjs`: copied from `docs/` and `tools/` by
+  `npm run sync-skill`, which also runs before every build.
 
 Pi needs nothing installed: the app ships it (`@earendil-works/pi-coding-agent`, pinned in
 `vendor/pi`) and runs it on its own Electron runtime. Claude Code must be installed (`claude` on
@@ -153,7 +154,7 @@ the default brand is (or that there isn't one yet).
 | In a slideshow: Esc | end the slideshow |
 | ⌥⌘S / ⌘J | slides drawer / agent terminal |
 | In the agent terminal: Shift+Enter | new line in the prompt (Enter sends it) |
-| ⌘Z | undo the last dropped image or video |
+| ⌘Z | undo the last dropped image or video, or slide move |
 | ⌘R | reload the deck |
 | ⌘N | new empty window (each window has its own deck and agent session) |
 
@@ -166,7 +167,9 @@ the default brand is (or that there isn't one yet).
 - `index.html` / `renderer.js` / `preload.js`: toolbar, slides drawer, terminal (xterm.js).
 - `lib/thumbs.js`: renders slide pictures in a hidden offscreen window (one per app window).
 - `lib/media.js`: embeds images/video into a slide's `<section>`.
-- `lib/reorder.js`: moves a slide's content to another position (drag in the drawer).
+- `tools/pptd-deck.mjs`: adds, removes and reorders slides with all the numbering done
+  (`list`, `add --after N [--count K]`, `move FROM TO`, `delete N`). Agents use it from the skill; the
+  drawer's drag-to-reorder uses it too. Checks the result and refuses rather than break a deck.
 - `lib/agent.js`: starts the chosen agent in a pty (node-pty) with the skill and a system
   prompt. Each message gets the deck, slide and brand added; files it writes are reported, and
   the app opens decks it creates. The app also watches the agent's folder for new decks.
