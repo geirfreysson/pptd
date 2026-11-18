@@ -35,6 +35,9 @@ the deck next to this terminal.
   from the deck's folder; the app pre-approves those commands and `pptd-app.mjs`.
 - **Look at your work** with `node <this skill folder>/pptd-app.mjs shot <deck> <slides>`: the
   app renders the slides exactly as it shows them and prints PNG paths for you to Read.
+- **Prompt history:** a deck may have a `<template id="pptd-prompts">` in its `<head>`: the
+  app's record of the user's prompts. Leave it as it is (keep it when rewriting the file).
+  The app updates it after you finish, which changes the file on disk in that block only.
 - New decks: see "New presentations" below. They keep `<meta name="pptd" content="1">`.
 - Slide design follows SKILL.md (≤40 words per slide, headline states the conclusion, §6 type
   and alignment) and the deck's brand.

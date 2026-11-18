@@ -9,6 +9,9 @@
 //   the next prompt when idle (Claude: the UserPromptSubmit hook, next prompt only).
 // - PPTD_EVENTS_FILE: after each write or edit, the file's absolute path is appended as
 //   `"file_path": "…"`, so the app opens a deck the agent creates (Claude: PostToolUse).
+//   The prompt history's JSON lines go there too: {"type":"prompt","text"} when a run
+//   starts, {"type":"steer","text"} for messages sent while it runs, {"type":"end"} when it
+//   ends (Claude: UserPromptSubmit and Stop hooks; Claude has no steering).
 //
 // The startup header is PPTD's (pi's logo, a slides prompt); pi's list of loaded skills and
 // extensions is off via quietStartup in PPTD's pi settings (lib/agent.js).
@@ -96,7 +99,11 @@ export default function pptd(pi) {
   });
   pi.on('session_shutdown', () => { watcher?.close(); watcher = null; });
 
+  const logEvent = (ev) => { if (eventsFile) try { fs.appendFileSync(eventsFile, `${JSON.stringify(ev)}\n`); } catch {} };
+  let running = false;
+
   pi.on('before_agent_start', (event) => {
+    if (event.messageType === 'user') { running = true; logEvent({ type: 'prompt', text: event.prompt }); }
     if (!stateFile || event.messageType !== 'user') return;
     let text = '';
     try { text = fs.readFileSync(stateFile, 'utf8').trim(); } catch {}
@@ -104,6 +111,17 @@ export default function pptd(pi) {
     text = [text, takeChanges()].filter(Boolean).join('\n');
     if (!text) return;
     return { message: { customType: 'pptd', content: text, display: false } };
+  });
+
+  // Messages typed while a reply runs join that run (steered in, or queued as a follow-up).
+  pi.on('input', (event) => {
+    if (running && event.streamingBehavior && typeof event.text === 'string') logEvent({ type: 'steer', text: event.text });
+  });
+  // Settled: after any automatic retry and queued follow-ups (agent_end can come earlier).
+  pi.on('agent_settled', (event) => {
+    if (!running) return;
+    running = false;
+    logEvent({ type: 'end', outcome: event.aborted ? 'aborted' : '' });
   });
 
   pi.on('tool_result', (event, ctx) => {

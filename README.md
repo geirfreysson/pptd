@@ -109,6 +109,16 @@ npm run check -- path/to/deck.pptd.html
   clipboard, and File › **Export Slides as Images…** saves one PNG per slide, both at
   1920×1080 without the ‹ › controls. The agent screenshots slides the same way to check its
   own work (`pptd-app.mjs` in the skill): PPTD renders them itself, so no browser is launched.
+- **Prompt history** (drawer › **Prompts**, View › Prompt History): turn on View › **Save
+  Prompts in Decks** (off by default) and each prompt that changes a deck is saved in the
+  deck, one row per agent run (messages sent while the agent works join that row). The
+  prompts are stored in the file, so anyone you send the deck to can read them; File ›
+  **Remove Prompt History** deletes them. PPTD also keeps a copy of the deck after each run in
+  its own data folder (`history/`, up to 1 GB, oldest removed first; `historyMaxMB` in
+  `settings.json` changes the cap), so a row on this Mac gets a **↺** button that puts the deck
+  back as it was after that prompt. Reverting keeps the whole list: later rows are dimmed and
+  a "Reverted to #N" row is added, so you can go forward again. ⌘Z undoes a revert. Decks
+  from another computer show their prompts without ↺.
 - Edits made in any editor are picked up too: the app watches the file.
 
 ### The agent's context
@@ -177,15 +187,20 @@ the default brand is (or that there isn't one yet).
 - `lib/app-socket.js`: a local socket (`PPTD_SOCKET`, owner-only) through which the skill's
   `pptd-app.mjs` asks the running app for screenshots and the key test.
 - `lib/media.js`: embeds images/video into a slide's `<section>`.
+- `lib/history.js`: the prompt history: reads and writes the deck's
+  `<template id="pptd-prompts">`, hashes decks without it, and keeps snapshots in
+  `userData/history/<hash>.html.gz`. The agent reports each prompt and the end of each run;
+  main records the run in the decks it changed.
 - `tools/pptd-deck.mjs`: adds, removes and reorders slides with all the numbering done
   (`list`, `add --after N [--count K]`, `move FROM TO`, `delete N`). Agents use it from the skill; the
   drawer's drag-to-reorder uses it too. Checks the result and refuses rather than break a deck.
 - `lib/agent.js`: starts the chosen agent in a pty (node-pty) with the skill and a system
   prompt. Each message gets the deck, slide and brand added; files it writes are reported, and
   the app opens decks it creates. The app also watches the agent's folder for new decks.
-  Claude Code does this with `UserPromptSubmit`/`PostToolUse` hooks; pi with the extension below.
+  It also reports each prompt and the end of each run, for the prompt history. Claude Code
+  does this with `UserPromptSubmit`/`PostToolUse`/`Stop` hooks; pi with the extension below.
 - `agent/pi/pptd-extension.js`: the pi extension that adds the slide note to each prompt,
-  reports written files, draws PPTD's startup header and shows the slide on screen in pi's footer.
+  reports written files, prompts, messages sent mid-run and run ends, draws PPTD's startup header and shows the slide on screen in pi's footer.
 - `agent/pi/login.mjs` / `lib/pi-login.js`: model sign-in for pi. The helper runs pi's own login
   code and credential store; main relays its prompts to the sign-in panel and opens the browser.
 - `vendor/pi`: the bundled pi, pinned by its own lockfile. `vendor/tools/<os>-<arch>`: pinned

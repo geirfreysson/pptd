@@ -45,7 +45,11 @@ v.onToast(({ text, kind }) => {
   toastTimer = setTimeout(() => t.classList.remove('show'), kind === 'error' ? 9000 : 5000);
 });
 
-v.onToggle((what) => (what === 'drawer' ? setDrawer(!body.classList.contains('drawer-open')) : toggleAgent()));
+v.onToggle((what) => {
+  if (what === 'drawer') setDrawer(!body.classList.contains('drawer-open'));
+  else if (what === 'prompts') { setTab('prompts'); setDrawer(true); }
+  else toggleAgent();
+});
 
 // Keys while focus is in the chrome (not the terminal; the deck has its own preload).
 window.addEventListener('keydown', (e) => {
@@ -202,6 +206,98 @@ $('thumbs').addEventListener('dragend', () => {
   moving = insertAt = null;
 });
 $('thumbs').addEventListener('dragleave', (e) => { if (!$('thumbs').contains(e.relatedTarget)) clearInsert(); });
+
+// ---------------------------------------------------------------- prompt history (drawer tab)
+
+// Main sends the deck's prompt rows (lib/history.js) whenever the deck loads or reloads.
+let prompts = { deck: false, pptd: false, saving: false, start: null, rows: [] };
+const openPrompts = new Set();   // ids whose full text is shown
+
+function setTab(tab) {
+  const p = tab === 'prompts';
+  body.classList.toggle('drawer-prompts', p);
+  $('prompts').hidden = !p;
+  $('tabSlides').classList.toggle('on', !p);
+  $('tabPrompts').classList.toggle('on', p);
+  $('tabSlides').setAttribute('aria-selected', String(!p));
+  $('tabPrompts').setAttribute('aria-selected', String(p));
+  store.set('drawerTab', tab);
+  if (p) requestAnimationFrame(scrollPromptsToCurrent);
+  else requestAnimationFrame(() => markActive(true));
+}
+$('tabSlides').addEventListener('click', () => setTab('slides'));
+$('tabPrompts').addEventListener('click', () => setTab('prompts'));
+
+function when(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(+d)) return '';
+  const today = new Date().toDateString() === d.toDateString();
+  return today ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : d.toLocaleDateString([], { day: 'numeric', month: 'short', ...(d.getFullYear() !== new Date().getFullYear() && { year: 'numeric' }) });
+}
+
+function promptRow(r) {
+  const el = document.createElement('div');
+  el.className = `prompt${r.kind === 'revert' ? ' reverted' : ''}${r.kind === 'start' ? ' start' : ''}${r.current ? ' current' : ''}${r.live ? '' : ' dim'}${openPrompts.has(r.id) ? ' open' : ''}`;
+  el.dataset.id = r.id;
+  const num = document.createElement('span');
+  num.className = 'num';
+  num.textContent = r.n ?? (r.kind === 'revert' ? '↺' : '');
+  const text = document.createElement('div');
+  text.className = 'ptext';
+  text.textContent = r.text;
+  text.title = r.kind === 'prompt' ? 'Click to show it all' : '';
+  const meta = document.createElement('div');
+  meta.className = 'pmeta';
+  meta.textContent = [r.at && when(r.at), r.outcome && 'stopped early', r.kind === 'prompt' && !r.live && 'reverted'].filter(Boolean).join(' · ');
+  el.append(num, text);
+  if (r.canRevert && !r.current) {
+    const b = document.createElement('button');
+    b.className = 'revert';
+    b.textContent = '↺';
+    b.title = r.kind === 'start' ? 'Revert the deck to before the first prompt' : `Revert the deck to how it was after prompt ${r.n}`;
+    b.setAttribute('aria-label', b.title);
+    el.append(b);
+  }
+  el.append(meta);
+  return el;
+}
+
+function renderPrompts() {
+  const list = $('prompts');
+  list.textContent = '';
+  const count = prompts.rows.filter((r) => r.kind === 'prompt').length;
+  $('promptCount').textContent = count || '';
+  const note = (text) => { const n = document.createElement('div'); n.className = 'prompts-note'; n.textContent = text; list.append(n); };
+  if (!cur.file) return;
+  if (!prompts.pptd) return note('This file isn\'t a PPTD slide deck, so it has no prompt history.');
+  if (!prompts.saving) note('Prompts aren\'t being saved. Turn on View › Save Prompts in Decks to keep each prompt that changes this deck, with a way back to it. The prompts are stored in the file, so anyone you send it to can read them.');
+  if (prompts.start) list.append(promptRow(prompts.start));
+  for (const r of prompts.rows) list.append(promptRow(r));
+  if (!count && prompts.saving) note('No prompts yet. When the agent finishes a change to this deck, your prompt appears here.');
+}
+
+function scrollPromptsToCurrent() {
+  const list = $('prompts');
+  const el = list.querySelector('.prompt.current') || list.lastElementChild;
+  el?.scrollIntoView({ block: 'nearest' });
+}
+
+v.onPrompts((p) => {
+  const was = prompts.rows.length;
+  prompts = { ...prompts, ...p, rows: p.rows || [] };
+  renderPrompts();
+  if (prompts.rows.length !== was && !$('prompts').hidden) scrollPromptsToCurrent();
+});
+
+$('prompts').addEventListener('click', (e) => {
+  const row = e.target.closest('.prompt');
+  if (!row) return;
+  if (e.target.closest('.revert')) return v.revertPrompt(row.dataset.id);
+  if (!e.target.closest('.ptext') || window.getSelection()?.toString()) return;
+  row.classList.toggle('open');
+  if (row.classList.contains('open')) openPrompts.add(row.dataset.id); else openPrompts.delete(row.dataset.id);
+});
 
 // ---------------------------------------------------------------- terminal
 
@@ -536,6 +632,7 @@ document.addEventListener('drop', (e) => {
 
 // ---------------------------------------------------------------- restore layout
 
+setTab(store.get('drawerTab', 'slides') === 'prompts' ? 'prompts' : 'slides');
 if (store.get('drawer', true)) setDrawer(true); else v.drawer(false);
 updateTermTitle();
 reportStage();

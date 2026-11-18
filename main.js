@@ -30,6 +30,7 @@ const { startAppSocket } = require('./lib/app-socket');
 const { AgentSession, AGENTS } = require('./lib/agent');
 const piLogin = require('./lib/pi-login');
 const brand = require('./lib/brand');
+const history = require('./lib/history');
 
 const TOOLBAR_HEIGHT = 46;
 
@@ -84,6 +85,7 @@ function newWindowState() {
     eventsOffset: 0,
     cwdWatcher: null,
     cwdTimers: new Map(),
+    turn: null,                  // the agent run under way, for the prompt history
   };
 }
 
@@ -162,6 +164,7 @@ function createWindow(file = null) {
     }
     w.thumbsStale = true;
     if (w.drawerOpen) updateThumbs(w);
+    sendPrompts(w);
   });
 
   win.on('focus', () => { lastFocused = w; buildMenu(); });
@@ -312,6 +315,7 @@ function closeFile(w) {
   w.win.setTitle('PPTD');
   w.win.setRepresentedFilename?.('');
   sendState(w);
+  sendPrompts(w);
 }
 
 // Reload when the file changes on disk (agent edits, dropped media, your editor).
@@ -589,16 +593,19 @@ const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
 function readSettings() {
   try { return JSON.parse(fs.readFileSync(settingsFile(), 'utf8')) || {}; } catch { return {}; }
 }
+function writeSettings(patch) {
+  try {
+    fs.mkdirSync(path.dirname(settingsFile()), { recursive: true });
+    fs.writeFileSync(settingsFile(), JSON.stringify({ ...readSettings(), ...patch }, null, 2));
+  } catch (e) { console.error('settings:', e.message); }
+}
 function agentKind() {
   const k = readSettings().agent;
   return Object.hasOwn(AGENTS, k) ? k : 'pi';
 }
 function setAgentKind(kind) {
   if (!Object.hasOwn(AGENTS, kind) || kind === agentKind()) return;
-  try {
-    fs.mkdirSync(path.dirname(settingsFile()), { recursive: true });
-    fs.writeFileSync(settingsFile(), JSON.stringify({ ...readSettings(), agent: kind }, null, 2));
-  } catch (e) { console.error('settings:', e.message); }
+  writeSettings({ agent: kind });
   buildMenu();
   const running = [...windows].filter((w) => w.agent?.alive && w.agent.kind !== kind).length;
   if (running) toast(current(), `New agent sessions use ${AGENTS[kind]}. Press Restart to switch a running one.`);
@@ -621,7 +628,9 @@ function watchDefaultBrand() {
 
 // The agent's PostToolUse hook appends `"file_path": "…"` for every file it writes or edits.
 // A .pptd.html that isn't on screen is a deck the agent just made (or switched to): open it
-// in the agent's own window.
+// in the agent's own window. Lines starting with `{` are JSON events for the prompt
+// history: {"type":"prompt"} when a run starts, {"type":"steer"} for messages sent into it,
+// {"type":"end"} when it finishes (see agentEvent).
 function watchAgentEvents(w, file) {
   fs.writeFileSync(file, '');
   w.eventsOffset = 0;
@@ -634,9 +643,14 @@ function watchAgentEvents(w, file) {
       w.eventsOffset = buf.length;
     } catch { return; }
     for (const line of text.split('\n')) {
+      if (line.startsWith('{')) {
+        try { agentEvent(w, JSON.parse(line)); } catch {}
+        continue;
+      }
       let p;
       try { p = JSON.parse(`{${line}}`).file_path; } catch { continue; }
       if (typeof p !== 'string' || !/\.pptd\.html$/i.test(p) || !path.isAbsolute(p)) continue;
+      if (w.turn) noteTurnDeck(w, p, false);
       if (p !== w.currentFile && fs.existsSync(p)) openFile(w, p, { focus: false });
     }
   });
@@ -711,6 +725,144 @@ async function startAgent(w, { cols, rows } = {}) {
   send(w, 'pty-start', { deck: w.currentFile ? displayName(w.currentFile) : null, agent: AGENTS[kind] });
   watchAgentFolder(w, cwd);
   await a.start(cwd, cols, rows, kind);
+}
+
+// ---------------------------------------------------------------- prompt history
+
+// The prompts that built a deck are kept in the deck (lib/history.js, spec "Prompt
+// history"), one row per agent run that changed it, when View › Save Prompts in Decks is on.
+// Snapshots after each run stay on this Mac, so the drawer's Prompts tab can revert to them.
+
+let historyStore = null;
+const snapshots = () => historyStore ||= history.createStore(path.join(app.getPath('userData'), 'history'),
+  () => (Number(readSettings().historyMaxMB) || 1024) * 1048576);
+const savePrompts = () => readSettings().savePrompts === true;
+const isPptdDeck = (html) => /<meta\s[^>]*name=["']pptd["']/i.test(html);
+
+function toggleSavePrompts() {
+  const on = !savePrompts();
+  writeSettings({ savePrompts: on });
+  buildMenu();
+  for (const w of windows) sendPrompts(w);
+  toast(current(), on
+    ? 'Prompts are now saved in the decks they change (drawer › Prompts). They travel with the file.'
+    : 'Prompts are no longer saved in decks. History already in a deck stays until you remove it (File menu).');
+}
+
+// prompt: a run starts; steer: a message sent into it; end: it finished. A prompt while a
+// run is still open (Claude Code sends no end when interrupted) closes that run first.
+function agentEvent(w, ev) {
+  if (ev?.type === 'prompt') {
+    const text = typeof ev.text === 'string' ? ev.text : ev.hook?.prompt;
+    if (w.turn) endTurn(w, 'interrupted');
+    if (typeof text === 'string' && text.trim() && savePrompts()) {
+      w.turn = { text: text.trim(), steers: [], decks: new Map(), started: Date.now() };
+      if (w.currentFile) noteTurnDeck(w, w.currentFile, true);
+    }
+  } else if (ev?.type === 'steer') {
+    if (w.turn && typeof ev.text === 'string' && ev.text.trim()) w.turn.steers.push(ev.text.trim());
+  } else if (ev?.type === 'end') {
+    endTurn(w, ev.outcome === 'aborted' || ev.outcome === 'error' ? ev.outcome : '');
+  }
+}
+
+// A deck this run may change. known: we see it before the run touched it, so its content
+// now is the "before" state; otherwise (a file the agent already wrote) that is unknown.
+function noteTurnDeck(w, file, known) {
+  if (!w.turn || w.turn.decks.has(file)) return;
+  let before = null;
+  if (known) { try { before = fs.readFileSync(file, 'utf8'); } catch {} }
+  w.turn.decks.set(file, { before: before && isPptdDeck(before) ? before : null });
+}
+
+function endTurn(w, outcome) {
+  const t = w.turn;
+  w.turn = null;
+  if (!t || !savePrompts()) return;
+  // A deck the agent made with a shell command (no write event) is on screen by now.
+  if (w.currentFile && !t.decks.has(w.currentFile)) t.decks.set(w.currentFile, { before: null });
+  for (const [file, { before }] of t.decks) recordRun(w, file, before, t, outcome);
+}
+
+function recordRun(w, file, before, t, outcome) {
+  let now, st;
+  try { st = fs.statSync(file); now = fs.readFileSync(file, 'utf8'); } catch { return; }
+  if (!isPptdDeck(now)) return;
+  if (before != null ? history.hashOf(before) === history.hashOf(now) : st.mtimeMs < t.started - 1000) return;
+  const store = snapshots();
+  const entry = {
+    id: history.newId(), at: new Date().toISOString(), kind: 'prompt',
+    text: history.clip([t.text, ...t.steers].join('\n')),
+    hash: store.save(now), before: before != null ? store.save(before) : '', outcome,
+  };
+  // The history as it was before the run: an agent that rewrote the whole file may have
+  // dropped the block, and it comes back here.
+  const prior = history.read(before ?? now);
+  const next = history.write(now, [...prior, entry]);
+  if (next === now) return;
+  try { writeAtomic(file, next); } catch (e) { return toast(w, `Couldn't save the prompt in the deck: ${e.message}`, 'error'); }
+  w.agent?.noteChange(`PPTD saved the user's last prompt in the <template id="pptd-prompts"> block in the <head> of ${displayName(file)}, so the file changed on disk in that block only; the slides are as you left them. Keep that block as it is.`);
+}
+
+function sendPrompts(w) {
+  if (!w?.win) return;
+  const saving = savePrompts();
+  if (!w.currentFile || !w.isRadioDeck) return send(w, 'prompts', { deck: !!w.currentFile, pptd: false, saving, rows: [], start: null });
+  let html;
+  try { html = fs.readFileSync(w.currentFile, 'utf8'); } catch { return; }
+  const { start, rows } = history.rows(history.read(html), history.hashOf(html), snapshots());
+  send(w, 'prompts', { deck: true, pptd: true, saving, start, rows });
+}
+
+// Put the deck back as it was after prompt `id` ('start': before the first one). The
+// history stays whole: rows after it are dimmed, and a "Reverted to #N" row is added.
+function revertToPrompt(w, id) {
+  if (!w?.currentFile || typeof id !== 'string') return;
+  const file = w.currentFile;
+  let now;
+  try { now = fs.readFileSync(file, 'utf8'); } catch (e) { return toast(w, `Can't read the deck: ${e.message}`, 'error'); }
+  const entries = history.read(now);
+  const prompts = entries.filter((e) => e.kind === 'prompt');
+  let target, label;
+  if (id === 'start') { target = prompts[0]?.before; label = 'the start'; }
+  else {
+    const i = prompts.findIndex((e) => e.id === id);
+    target = prompts[i]?.hash; label = `#${i + 1}`;
+  }
+  const store = snapshots();
+  const snap = target && store.load(target);
+  if (!snap) return toast(w, 'That version isn\'t stored on this Mac, so the deck can\'t go back to it.', 'error');
+  if (history.hashOf(now) === target) return toast(w, `The deck is already at ${label}.`);
+  store.save(now); // the state left behind can be reverted to (or undone back to) too
+  const list = savePrompts()
+    ? [...entries, { id: history.newId(), at: new Date().toISOString(), kind: 'revert', to: id, hash: target, text: `Reverted to ${label}` }]
+    : entries;
+  const next = history.write(snap, list);
+  try { writeAtomic(file, next); } catch (e) { return toast(w, `Couldn't save the deck: ${e.message}`, 'error'); }
+  pushUndo(w, {
+    file, before: now, after: next, index: w.state.index, what: 'Revert', since: 'the revert',
+    undone: 'Undid the revert.',
+    note: `The user undid their revert of ${displayName(file)}: the deck is back as it was before it. The file changed on disk; re-read it before editing.`,
+  });
+  w.restoreIndex = w.state.index;
+  toast(w, `Reverted the deck to ${label === 'the start' ? 'before the first prompt' : `prompt ${label}`}. ⌘Z to undo.`);
+  w.agent?.noteChange(`The user reverted ${displayName(file)} in PPTD to how it was ${label === 'the start' ? 'before the first prompt in its history' : `after prompt ${label} in its history`}. Slides, their number and their content may all differ from what you saw: re-read the file before editing, and don't rely on file text from earlier in this conversation.`);
+}
+
+function removePromptHistory(w) {
+  if (!w?.currentFile) return;
+  const file = w.currentFile;
+  let now;
+  try { now = fs.readFileSync(file, 'utf8'); } catch (e) { return toast(w, `Can't read the deck: ${e.message}`, 'error'); }
+  if (!history.read(now).length && history.strip(now) === now) return toast(w, 'This deck has no prompt history.');
+  const next = history.write(now, []);
+  try { writeAtomic(file, next); } catch (e) { return toast(w, `Couldn't save the deck: ${e.message}`, 'error'); }
+  pushUndo(w, {
+    file, before: now, after: next, index: w.state.index, what: 'Remove Prompt History', since: 'the history was removed',
+    undone: 'Put the prompt history back.',
+  });
+  w.restoreIndex = w.state.index;
+  toast(w, 'Removed the prompt history from this deck. ⌘Z to undo.');
 }
 
 // ---------------------------------------------------------------- model sign-in (pi)
@@ -833,6 +985,7 @@ function buildMenu() {
         { type: 'separator' },
         { label: 'Reveal in Finder', enabled: hasFile, click: on((c) => c?.currentFile && shell.showItemInFolder(c.currentFile)) },
         { label: 'Export Slides as Images…', enabled: hasFile, click: on(exportSlideImages) },
+        { label: 'Remove Prompt History', enabled: hasFile, click: on(removePromptHistory) },
         { type: 'separator' },
         isMac ? { role: 'close', accelerator: 'CmdOrCtrl+Shift+W' } : { label: 'Quit', click: confirmQuit },
       ],
@@ -867,6 +1020,8 @@ function buildMenu() {
       submenu: [
         { label: 'Slides Drawer', accelerator: 'CmdOrCtrl+Alt+S', click: on((c) => send(c, 'toggle', 'drawer')) },
         { label: 'Agent Terminal', accelerator: 'CmdOrCtrl+J', click: on((c) => send(c, 'toggle', 'agent')) },
+        { label: 'Prompt History', click: on((c) => send(c, 'toggle', 'prompts')) },
+        { label: 'Save Prompts in Decks', type: 'checkbox', checked: savePrompts(), click: toggleSavePrompts },
         {
           label: 'Agent',
           submenu: [
@@ -937,6 +1092,7 @@ handle('open-link', (_w, url) => {
   if (url === 'https://console.anthropic.com/settings/keys') shell.openExternal(url);
 });
 handle('move-slide', (w, { from, to } = {}) => moveSlideInDeck(w, from, to));
+handle('revert-prompt', (w, id) => revertToPrompt(w, id));
 handle('pty-input', (w, data) => { if (typeof data === 'string') w.agent?.write(data); });
 handle('pty-resize', (w, { cols, rows } = {}) => w.agent?.resize(cols, rows));
 handle('focus-deck', (w) => w.deckView?.webContents.focus());

@@ -230,6 +230,41 @@ Token names used by the bundled template: `--ink`, `--ink-2`, `--muted`, `--pape
 `--accent`, `--accent-soft`, `--highlight`, `--title-bg`, `--title-eyebrow`, `--title-soft`,
 `--title-footer`, `--font`.
 
+### Prompt history
+
+When the user turns on View › Save Prompts in Decks, the app records each agent prompt that
+changed a deck in an inert `<template>` in `<head>`. Browsers don't render a template, and
+it holds no script.
+
+```html
+<template id="pptd-prompts">
+  <ol>
+    <li data-id="3fa2c81d" data-at="2026-11-18T10:42:00.000Z" data-hash="…" data-before="…">Make a 6-slide deck on Q3 results</li>
+    <li data-id="9b01e7aa" data-at="…" data-kind="revert" data-to="3fa2c81d" data-hash="…">Reverted to #1</li>
+  </ol>
+</template>
+```
+
+- One `<li>` per agent run that changed the deck, in order. Its text is the prompt, plus any
+  messages sent while the agent was working, one per line, HTML-escaped (`&`, `<`, `>`, `"`).
+- `data-hash`: the deck after that run, as the first 32 hex digits of the SHA-256 of the
+  file **with this block removed**, so adding to the block never changes the hash.
+  `data-before`: the same for the deck before the run (left out when unknown).
+- `data-outcome`: `aborted` or `interrupted` (the user stopped the run) or `error`.
+- `data-kind="revert"` rows record a revert in the app; `data-to` is the `data-id` it went
+  back to (`start`: before the first prompt). Earlier rows are never removed by a revert.
+- The app keeps the deck states themselves in its own data folder, keyed by hash; a deck
+  carries only the prompts and hashes. The app offers to revert only to states it has.
+- The app rewrites the block after each run, from the history it read before that run, so a
+  block an agent dropped comes back. Agents should leave it as it is.
+
+| Requirement | Level |
+|---|---|
+| At most one `<template id="pptd-prompts">`, in `<head>` | MUST |
+| Agents leave the block as it is | SHOULD |
+
+File › Remove Prompt History deletes the block.
+
 ## 9. Versioning
 
 - This is version **1**. A future version will bump `content` in the marker, and the app
@@ -237,8 +272,8 @@ Token names used by the bundled template: `--ink`, `--ink-2`, `--muted`, `--pape
 - Unknown `content` values: the app tries to play the file as v1.
 - Reserved, so do not use them for other purposes: the class names `notes` and `pptd-*`,
   `data-pptd-*` attributes, and `pptd-*` meta names and element ids. `pptd-media`,
-  `pptd-image`, `pptd-video`, `<style id="pptd-media">`, `<meta name="pptd-brand">` and
-  `<style id="pptd-brand">` are already defined above.
+  `pptd-image`, `pptd-video`, `<style id="pptd-media">`, `<meta name="pptd-brand">`,
+  `<style id="pptd-brand">` and `<template id="pptd-prompts">` are already defined above.
 
 ## 10. Conformance checklist for agents
 

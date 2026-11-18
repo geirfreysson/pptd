@@ -49,6 +49,16 @@ When a change alters behaviour, update the docs in the same change:
   into a running turn, or held for the next prompt); Claude's UserPromptSubmit hook prints it
   with the next message. Both move the file aside before reading, so nothing is lost or
   repeated. Any new app-side edit to a deck should send a note too.
+- **Prompt history** (`lib/history.js`, spec "Prompt history", off unless `savePrompts` is
+  true in settings). The events file carries JSON lines besides `"file_path"` ones:
+  `{"type":"prompt"}` (pi: `before_agent_start`; Claude: the UserPromptSubmit hook, as
+  `{"type":"prompt","hook":<its stdin>}`), `{"type":"steer"}` (pi `input` while running) and
+  `{"type":"end"}` (pi `agent_settled`, not `agent_end`, which comes before retries; Claude:
+  the Stop hook, which doesn't run on interrupt, so a new prompt closes an open run).
+  `w.turn` holds the run; at its end `recordRun` rewrites the block from the history read
+  *before* the run, so an agent that drops it can't lose it. Hashes exclude the block.
+  Snapshots are content-addressed in `userData/history`; a row can revert only if its
+  snapshot is there. A revert never truncates the list.
 - **Structural edits** (`tools/pptd-deck.mjs`: list, add, move, delete) move slide content
   and leave positional parts in place (ids, aria-label numbers, `.controls`, `.progress`,
   switching CSS); see the spec section on reordering. Agents run it from the skill folder;

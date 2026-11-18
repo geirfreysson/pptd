@@ -56,8 +56,31 @@
     /* ---------- drawer ---------- */
     .drawer { background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
     body:not(.drawer-open) .drawer { visibility: hidden; border: 0; }
-    .drawer-head { flex: 0 0 auto; display: flex; justify-content: space-between; align-items: baseline; padding: 12px 14px 8px;
-      color: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; }
+    .drawer-head { flex: 0 0 auto; display: flex; gap: 4px; align-items: center; padding: 8px 8px 6px; border-bottom: 1px solid var(--line); }
+    .drawer-head .tab { height: 26px; padding: 0 10px; background: none; border-color: transparent; border-radius: 6px; color: var(--muted);
+      font-size: 11px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; }
+    .drawer-head .tab:hover { background: var(--btn); }
+    .drawer-head .tab.on { background: var(--btn); border-color: var(--line); color: var(--text); }
+    .drawer-head .tab span { font-weight: 500; color: var(--muted); letter-spacing: 0; }
+    body.drawer-prompts .thumbs { display: none; }
+    /* ---------- prompt history (drawer tab) ---------- */
+    .prompts { flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain; padding: 6px 8px 16px 6px; scrollbar-width: thin; }
+    .prompts[hidden] { display: none; }
+    .prompts-note { margin: 4px 4px 8px 6px; padding: 8px 10px; border-radius: 7px; background: var(--btn); color: var(--muted); line-height: 1.45; font-size: 12px; }
+    .prompt { display: grid; grid-template-columns: 22px 1fr 26px; gap: 2px 4px; align-items: start; padding: 7px 0 7px; border-radius: 7px; }
+    .prompt + .prompt { border-top: 1px solid var(--line); border-radius: 0; }
+    .prompt .num { text-align: right; padding-top: 1px; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+    .prompt .ptext { line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; cursor: pointer; user-select: text;
+      display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+    .prompt.open .ptext { display: block; }
+    .prompt .pmeta { grid-column: 2; color: var(--muted); font-size: 11px; }
+    .prompt .revert { grid-column: 3; grid-row: 1 / span 2; width: 26px; height: 24px; padding: 0; justify-content: center; font-size: 14px;
+      background: none; border-color: transparent; color: var(--muted); }
+    .prompt .revert:hover { background: var(--btn-hover); color: var(--text); }
+    .prompt.current .num { color: var(--accent); font-weight: 700; }
+    .prompt.current .pmeta::after { content: " · now"; color: var(--accent); }
+    .prompt.dim .ptext, .prompt.dim .num { opacity: .45; }
+    .prompt.reverted .ptext, .prompt.start .ptext { color: var(--muted); font-style: italic; }
     .thumbs { flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain; padding: 4px 12px 16px 6px; scrollbar-width: thin; }
     .thumb { display: grid; grid-template-columns: 22px 1fr; gap: 4px; align-items: start; padding: 5px 0; cursor: pointer; }
     .thumb .num { text-align: right; padding-top: 2px; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
@@ -170,8 +193,12 @@
 
   <div class="main">
     <aside class="drawer" aria-label="Slides">
-      <div class="drawer-head"><span>Slides</span><span id="drawerCount"></span></div>
-      <div class="thumbs" id="thumbs"></div>
+      <div class="drawer-head" role="tablist" aria-label="Drawer">
+        <button class="tab on" id="tabSlides" role="tab" aria-selected="true" aria-controls="thumbs">Slides <span id="drawerCount"></span></button>
+        <button class="tab" id="tabPrompts" role="tab" aria-selected="false" aria-controls="prompts">Prompts <span id="promptCount"></span></button>
+      </div>
+      <div class="thumbs" id="thumbs" role="tabpanel"></div>
+      <div class="prompts" id="prompts" role="tabpanel" hidden></div>
     </aside>
 
     <div class="work">

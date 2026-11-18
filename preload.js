@@ -19,6 +19,8 @@ contextBridge.exposeInMainWorld('viewer', {
   dropPaths: (paths, slide) => ipcRenderer.send('drop-paths', { paths, slide }),
   // Reorder: 0-based positions.
   moveSlide: (from, to) => ipcRenderer.send('move-slide', { from, to }),
+  // Prompt history: put the deck back as it was after prompt `id` ('start': before the first).
+  revertPrompt: (id) => ipcRenderer.send('revert-prompt', id),
 
   agentStart: (size) => ipcRenderer.send('agent-start', size),
   agentStop: () => ipcRenderer.send('agent-stop'),
@@ -35,6 +37,7 @@ contextBridge.exposeInMainWorld('viewer', {
 
   onState: on('state'),
   onThumb: on('thumb'),
+  onPrompts: on('prompts'),
   onToast: on('toast'),
   onToggle: on('toggle'),
   onPtyData: on('pty-data'),

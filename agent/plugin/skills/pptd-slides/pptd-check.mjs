@@ -99,6 +99,13 @@ export function checkHtml(html, { name = 'deck.pptd.html', size = Buffer.byteLen
   check(!ext.length, `no external resources${ext.length ? ': ' + ext.slice(0, 3).join(', ') : ''}`);
   check(/@media\s+print/i.test(style), '@media print block', 'SHOULD');
 
+  // Prompt history (optional): one inert <template id="pptd-prompts">, in <head>.
+  const histories = [...src.matchAll(/<template\b[^>]*\bid=["']pptd-prompts["']/gi)];
+  if (histories.length) {
+    const headEnd = src.search(/<\/head\s*>/i);
+    check(histories.length === 1 && headEnd > histories[0].index, 'prompt history: one <template id="pptd-prompts"> in <head>');
+  }
+
   const fails = results.filter((r) => !r.ok && r.level === 'MUST').length;
   const warns = results.filter((r) => !r.ok && r.level !== 'MUST').length;
   return { results, fails, warns };
