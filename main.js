@@ -557,7 +557,7 @@ async function setMode(w, next) {
 
 function popupSlideshowMenu(w, x, y) {
   Menu.buildFromTemplate([
-    { label: 'Full Screen', accelerator: 'CmdOrCtrl+Shift+Enter', click: () => setMode(w, 'fullscreen') },
+    { label: 'Full Screen', accelerator: 'CmdOrCtrl+Enter', click: () => setMode(w, 'fullscreen') },
     { label: 'Fill Window', accelerator: 'CmdOrCtrl+Alt+Enter', click: () => setMode(w, 'window') },
   ]).popup({ window: w.win, x: Math.round(x), y: Math.round(y) });
 }
@@ -804,7 +804,9 @@ function buildMenu() {
     {
       label: 'Slideshow',
       submenu: [
-        { label: 'Play Full Screen', accelerator: 'CmdOrCtrl+Shift+Enter', enabled: hasFile && !inShow, click: on((c) => setMode(c, 'fullscreen')) },
+        { label: 'Play Full Screen', accelerator: 'CmdOrCtrl+Enter', enabled: hasFile && !inShow, click: on((c) => setMode(c, 'fullscreen')) },
+        // The old shortcut, kept working but not shown.
+        { label: 'Play Full Screen', accelerator: 'CmdOrCtrl+Shift+Enter', visible: false, acceleratorWorksWhenHidden: true, enabled: hasFile && !inShow, click: on((c) => setMode(c, 'fullscreen')) },
         { label: 'Play in Window', accelerator: 'CmdOrCtrl+Alt+Enter', enabled: hasFile && !inShow, click: on((c) => setMode(c, 'window')) },
         { label: 'End Slideshow', enabled: inShow, click: on((c) => setMode(c, 'normal')) },
         { type: 'separator' },

@@ -149,7 +149,7 @@ the default brand is (or that there isn't one yet).
 |---|---|
 | ‹ › toolbar buttons, ← → ↑ ↓, PageUp/PageDown | previous / next slide (stops at the ends, no wrap) |
 | Home / End | first / last slide |
-| **▶ Slideshow** (⌘⇧↩) | full-screen slideshow |
+| **▶ Slideshow** (⌘↩) | full-screen slideshow |
 | **▾ → Fill Window** (⌘⌥↩) | slideshow inside the current window (toolbar hidden) |
 | In a slideshow: Enter / Space | next slide (Shift+Enter, Backspace: previous) |
 | In a slideshow: Esc | end the slideshow |
