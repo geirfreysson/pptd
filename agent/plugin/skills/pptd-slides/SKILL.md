@@ -158,12 +158,46 @@ If a slide needs more than two sentences to explain how something works, draw it
 - Don't overstate: keep "signed off", "pilot proven", "proof of concept" and "agreed"
   distinct, and name who or what is the evidence.
 
-## 6. Check before handing over
+## 6. Type, alignment and consistency
+
+A deck looks designed when the same kind of thing looks the same everywhere. That matters more
+than any one element fitting perfectly.
+
+- **One type scale, set in the stylesheet.** Font sizes come from the classes in the
+  `<style>` block (`h2`, `.lead`, `h3`, `p`, `.tag`, `.footer`, …). Never put `font-size`,
+  `line-height`, `letter-spacing` or `white-space: nowrap` in a `style=""` attribute.
+- **Same role, same size, on every slide.** All card headings match, all big numbers
+  match, all body text matches, within a slide and across the deck. If one element needs a
+  different size, the design is wrong, not the size.
+- **Readable floors at 1280×720:** body text and card text no smaller than the template's `p`
+  size, labels and tags no smaller than the `.tag` size, nothing (SVG labels included) under
+  about 11px. Never shrink text to make it fit.
+- **When text wraps, overflows or looks cramped, fix it in this order:**
+  1. Reword: shorter words, fewer words ("3 developers" → "3 devs" only if that reads well).
+  2. Restructure: e.g. a big number with its unit as a smaller label underneath, used the
+     same way in every sibling card ("171" / "tickets", "3" / "developers").
+  3. Re-layout: fewer columns, a wider box, or split the slide.
+  4. Only then change a size, for the whole role (the class in the stylesheet), so every
+     element of that kind changes together, and check every slide that uses it.
+- **Parallel things are built alike.** Sibling cards have the same structure (tag, heading,
+  one sentence), similar text length, equal height and aligned tops. A row of stats uses the
+  same form in every cell: all numbers, or all words.
+- **Align to the grid.** Use the template's layout classes (`.grid`, `.panel`, …) and their gaps.
+  No one-off `margin`/`padding` nudges in `style=""`. Text is left-aligned unless the
+  template centres it. Edges line up across a slide.
+- **Spacing follows the template.** Keep the same distance between eyebrow, headline, lead and
+  content on every slide.
+- If the user's request can only be met by breaking these rules, say so, propose the
+  alternatives above and let them choose.
+
+## 7. Check before handing over
 
 1. `node keytest.mjs /abs/path/deck.html` → all PASS, 0 script tags.
 2. `shot.sh deck.html N out.png` for **every** slide at 1280×720, then Read each PNG:
    no overlapping or clipped text, nothing hidden behind the ‹ › controls or the footer,
-   no labels crossing chart lines. (Screenshots can look faded because of the 0.22s entry
+   no labels crossing chart lines, no heading or label that wraps on its own while its
+   siblings don't, and matching sizes and alignment for elements of the same kind (§6).
+   `grep -n 'style="[^"]*font-size' deck.pptd.html` should find nothing. (Screenshots can look faded because of the 0.22s entry
    animation; that is fine.)
 3. Spot-check a couple of slides at 1920×1080 and 1000×1000 (Teams-like frame).
 4. Optional PDF: Chrome `--print-to-pdf` works because of the `@media print` block.

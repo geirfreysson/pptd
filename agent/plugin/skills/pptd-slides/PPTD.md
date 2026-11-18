@@ -34,8 +34,13 @@ the deck next to this terminal.
   `node <this skill folder>/pptd-check.mjs <deck>` and fix every FAIL. Use absolute paths,
   from the deck's folder; the app pre-approves exactly those two commands.
 - New decks: see "New presentations" below. They keep `<meta name="pptd" content="1">`.
-- Slide design follows SKILL.md (≤40 words per slide, headline states the conclusion) and the
-  deck's brand.
+- Slide design follows SKILL.md (≤40 words per slide, headline states the conclusion, §6 type
+  and alignment) and the deck's brand.
+- **When the user says something looks wrong** (a line wraps, a box is cramped, things don't
+  line up), fix the cause without making that element different from its siblings. Don't
+  shrink one element's font or add one-off inline styles. Reword, restructure or re-layout
+  (SKILL.md §6), then screenshot the slide and compare it with its neighbours before saying
+  it's done.
 
 ## New presentations
 
