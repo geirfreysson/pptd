@@ -247,7 +247,7 @@ Before handing a deck over:
 1. File is named `*.pptd.html` and contains `<meta name="pptd" content="1">`.
 2. `node tools/pptd-check.mjs <file>` reports **PASS** on every check.
 3. Number of radios = number of sections = the `N` in every `n / N` counter.
-4. Every slide was looked at at 1280×720 (e.g. headless Chrome screenshot) with no clipped
+4. Every slide was looked at at 1280×720 (e.g. the skill's `pptd-app.mjs shot`, or a browser) with no clipped
    or overlapping text.
 5. Opening it in the PPTD app shows the slides with no in-page ‹ › and the toolbar counter
    is correct.

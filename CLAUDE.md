@@ -78,6 +78,12 @@ When a change alters behaviour, update the docs in the same change:
   the source copies, never the skill copies. The two `.mjs` files also ship in the app (main
   imports `tools/pptd-deck.mjs` for drag-to-reorder), so keep them dependency-free.
 
+- **Screenshots come from the app, never Chrome.** `lib/shot.js` renders slides and runs the
+  key test in an offscreen window; the menu uses it directly and agents reach it through
+  `lib/app-socket.js` (env `PPTD_SOCKET`, JSON line protocol) with the skill's
+  `pptd-app.mjs`. Don't bring back a headless-Chrome script: Chrome launched under PPTD tries
+  to modify its own bundle, and macOS blames PPTD ("prevented from modifying apps").
+
 ## Gotchas
 
 - `index.html` CSS: `.main` is the layout grid under the toolbar. Don't reuse generic class
@@ -95,6 +101,9 @@ When a change alters behaviour, update the docs in the same change:
 - To test pi without a real model, point `PI_CODING_AGENT_DIR` at a scratch folder with a
   `models.json` for a local fake OpenAI-compatible server, and run pi with `-p … </dev/null`
   (pi waits for piped stdin otherwise).
+- A standalone Electron test script that destroys its only window quits the app (Electron's
+  default without a `window-all-closed` handler), so the next load fails with `ERR_FAILED (-2)`.
+  Add `app.on('window-all-closed', () => {})` to such scripts; main.js already has one.
 - Running `npx @electron/asar extract-file` writes into the current directory. Run it from
   the scratchpad, not the repo, or it overwrites repo files.
 

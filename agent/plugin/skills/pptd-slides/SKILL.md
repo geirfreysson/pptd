@@ -19,9 +19,14 @@ unless the user asks.
 
 - `template.html`: starting point. Copy it, keep the `<style>` block, and replace the six
   example slides (title, cards, HTML flow, SVG worked example, status matrix, thank you).
-- `shot.sh deck.html N out.png [WxH]`: screenshot slide N in headless Chrome.
-- `keytest.mjs /abs/path/deck.html`: presses real arrow keys and clicks ‹ › in headless
-  Chrome, and checks there are zero `<script>` tags. Exits non-zero on failure.
+- `pptd-app.mjs`: asks the running PPTD app (which renders decks itself, no browser needed):
+  - `node pptd-app.mjs shot deck.pptd.html [3|2,5|1-4|all] [--size WxH] [--out DIR]`
+    screenshots slides (default: all, 1280×720) and prints one PNG path per slide. Read the
+    PNGs to see the slides.
+  - `node pptd-app.mjs keys deck.pptd.html` presses real arrow keys and clicks ‹ ›, and checks
+    there are zero `<script>` tags. Exits non-zero on failure.
+
+  Don't launch Google Chrome or another browser for screenshots or tests.
 - `pptd-check.mjs deck.pptd.html`: PPTD conformance checker. `pptd-spec.md`: the format.
 - `pptd-deck.mjs`: adds, removes and reorders slides with all the numbering done for you
   (§3). Use it for every structural change; you only write slide content.
@@ -125,7 +130,7 @@ node pptd-deck.mjs delete deck.pptd.html 4
 - **Only if it refuses** (e.g. a deck under 3 slides, or a layout it doesn't recognise), do
   it by hand: update the radio list, the `#rN:checked ~ #sN` selector list, every section's
   `id`/`aria-label`, each `‹ › for=` target, every `N / total` counter and every progress
-  width (`N/total × 100%`), then run `keytest.mjs`. When renumbering with a regex, match
+  width (`N/total × 100%`), then run `pptd-app.mjs keys`. When renumbering with a regex, match
   only `<section …>` tags, or it will also rewrite CSS attribute selectors.
 
 ## 4. Diagrams for complicated concepts
@@ -192,14 +197,14 @@ than any one element fitting perfectly.
 
 ## 7. Check before handing over
 
-1. `node keytest.mjs /abs/path/deck.html` → all PASS, 0 script tags.
-2. `shot.sh deck.html N out.png` for **every** slide at 1280×720, then Read each PNG:
+1. `node pptd-app.mjs keys deck.pptd.html` → all PASS, 0 script tags.
+2. `node pptd-app.mjs shot deck.pptd.html` (every slide at 1280×720), then Read each PNG:
    no overlapping or clipped text, nothing hidden behind the ‹ › controls or the footer,
    no labels crossing chart lines, no heading or label that wraps on its own while its
    siblings don't, and matching sizes and alignment for elements of the same kind (§6).
-   `grep -n 'style="[^"]*font-size' deck.pptd.html` should find nothing. (Screenshots can look faded because of the 0.22s entry
-   animation; that is fine.)
-3. Spot-check a couple of slides at 1920×1080 and 1000×1000 (Teams-like frame).
-4. Optional PDF: Chrome `--print-to-pdf` works because of the `@media print` block.
+   `grep -n 'style="[^"]*font-size' deck.pptd.html` should find nothing. After a change to one
+   slide, shoot that slide and its neighbours (`shot deck 2-4`) rather than the whole deck.
+3. Spot-check a couple of slides with `--size 1920x1080` and `--size 1000x1000` (Teams-like frame).
+4. PDF: the `@media print` block lets any browser print the deck; the user does that themselves.
 5. `node pptd-check.mjs deck.pptd.html` → CONFORMING.
 6. Tell the user the file path. Commit only if asked.

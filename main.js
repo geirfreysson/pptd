@@ -16,7 +16,7 @@
 // their in-page ‹ › controls and drive the radios ourselves. Other HTML files
 // still load; navigation then falls back to sending arrow keys to the page.
 
-const { app, BrowserWindow, WebContentsView, Menu, dialog, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, WebContentsView, Menu, dialog, ipcMain, shell, clipboard, ClipboardItem } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const media = require('./lib/media');
@@ -25,6 +25,8 @@ const media = require('./lib/media');
 const deckOps = () => import(require('url').pathToFileURL(
   path.join(__dirname, 'tools', 'pptd-deck.mjs').replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`)).href);
 const { createThumbs } = require('./lib/thumbs');
+const { captureSlides } = require('./lib/shot');
+const { startAppSocket } = require('./lib/app-socket');
 const { AgentSession, AGENTS } = require('./lib/agent');
 const piLogin = require('./lib/pi-login');
 const brand = require('./lib/brand');
@@ -660,6 +662,9 @@ function watchAgentFolder(w, dir) {
   } catch { w.cwdWatcher = null; }
 }
 
+// The agent's tools reach the app through this socket (lib/app-socket.js).
+let appSocket = null;
+
 let agentSeq = 0;
 function ensureAgent(w) {
   if (w.agent) return w.agent;
@@ -669,6 +674,7 @@ function ensureAgent(w) {
   w.agent = new AgentSession({
     stateFile: path.join(dir, `current-slide-${tag}.txt`),
     eventsFile: path.join(dir, `events-${tag}.txt`),
+    socket: appSocket?.file,
     onData: (d) => send(w, 'pty-data', d),
     onExit: (e) => {
       send(w, 'pty-exit', e);
@@ -762,6 +768,43 @@ function confirmQuit() {
   app.quit();
 }
 
+// ---------------------------------------------------------------- slide images
+
+// Slide images for people: the 16:9 slide alone at 1920×1080, without the ‹ › controls.
+const EXPORT_SIZE = { width: 1920, height: 1080, controls: false, cropToDeck: true };
+
+async function copySlideImage(w) {
+  if (!w?.currentFile) return;
+  if (!w.isRadioDeck || !w.state.total) return toast(w, 'Only PPTD slide decks can be copied as images.', 'error');
+  try {
+    const [shot] = await captureSlides(w.currentFile, { ...EXPORT_SIZE, slides: [w.state.index] });
+    // Electron 45's clipboard is the W3C-style async API (no writeImage).
+    await clipboard.write([new ClipboardItem({ 'image/png': new Blob([shot.image.toPNG()], { type: 'image/png' }) })]);
+    toast(w, `Copied slide ${shot.index + 1} as an image.`);
+  } catch (e) { toast(w, `Couldn't copy the slide: ${e.message}`, 'error'); }
+}
+
+async function exportSlideImages(w) {
+  if (!w?.currentFile) return;
+  if (!w.isRadioDeck || !w.state.total) return toast(w, 'Only PPTD slide decks can be exported as images.', 'error');
+  const file = w.currentFile;
+  const { canceled, filePaths } = await dialog.showOpenDialog(w.win, {
+    title: 'Export Slides as Images', buttonLabel: 'Export',
+    message: 'Choose a folder for one PNG per slide (1920×1080).',
+    defaultPath: path.dirname(file), properties: ['openDirectory', 'createDirectory'],
+  });
+  if (canceled || !filePaths[0]) return;
+  const dir = filePaths[0];
+  const base = path.basename(file).replace(/\.pptd\.html?$|\.html?$/i, '');
+  try {
+    toast(w, 'Exporting slides…');
+    const shots = await captureSlides(file, EXPORT_SIZE);
+    const pad = Math.max(2, String(shots.length).length);
+    for (const s of shots) fs.writeFileSync(path.join(dir, `${base}-${String(s.index + 1).padStart(pad, '0')}.png`), s.image.toPNG());
+    toast(w, `Saved ${shots.length} slide image${shots.length === 1 ? '' : 's'} to ${path.basename(dir)}.`);
+  } catch (e) { toast(w, `Couldn't export the slides: ${e.message}`, 'error'); }
+}
+
 function buildMenu() {
   const w = current();
   const hasFile = !!w?.currentFile;
@@ -789,6 +832,7 @@ function buildMenu() {
         { label: 'Close Presentation', accelerator: 'CmdOrCtrl+W', enabled: hasFile, click: on(closeFile) },
         { type: 'separator' },
         { label: 'Reveal in Finder', enabled: hasFile, click: on((c) => c?.currentFile && shell.showItemInFolder(c.currentFile)) },
+        { label: 'Export Slides as Images…', enabled: hasFile, click: on(exportSlideImages) },
         { type: 'separator' },
         isMac ? { role: 'close', accelerator: 'CmdOrCtrl+Shift+W' } : { label: 'Quit', click: confirmQuit },
       ],
@@ -799,6 +843,8 @@ function buildMenu() {
         { label: `Undo ${w?.undoStack.at(-1)?.what || ''}`.trim(), accelerator: 'CmdOrCtrl+Z', enabled: !!w?.undoStack.length, click: on(undoInsert) },
         { type: 'separator' },
         { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' },
+        { type: 'separator' },
+        { label: 'Copy Slide as Image', accelerator: 'CmdOrCtrl+Shift+C', enabled: hasFile, click: on(copySlideImage) },
       ],
     },
     {
@@ -941,6 +987,7 @@ app.whenReady().then(() => {
   if (!app.isPackaged && process.platform === 'darwin') {
     try { app.dock.setIcon(path.join(__dirname, 'build', 'icon.png')); } catch {}
   }
+  appSocket = startAppSocket(app.getPath('userData'));
   buildMenu();
   createWindow(pendingFile ? path.resolve(pendingFile) : null);
   pendingFile = null;
@@ -950,6 +997,7 @@ app.whenReady().then(() => {
 app.on('before-quit', () => { quitting = true; });
 
 app.on('will-quit', () => {
+  appSocket?.close();
   for (const w of windows) if (w.agent) { w.agent.stop(); removeAgentFiles(w.agent); }
 });
 

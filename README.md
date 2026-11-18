@@ -105,6 +105,10 @@ npm run check -- path/to/deck.pptd.html
   as a centred, rounded image or a video with controls, on that slide. Photos are scaled to
   2560 px and HEIC is converted to JPEG. Videos over 25 MB ask first. **⌘Z** undoes the last drop.
   Dropping a file on the terminal pastes its path instead.
+- **Slide images:** Edit › **Copy Slide as Image** (⇧⌘C) puts the current slide on the
+  clipboard, and File › **Export Slides as Images…** saves one PNG per slide, both at
+  1920×1080 without the ‹ › controls. The agent screenshots slides the same way to check its
+  own work (`pptd-app.mjs` in the skill): PPTD renders them itself, so no browser is launched.
 - Edits made in any editor are picked up too: the app watches the file.
 
 ### The agent's context
@@ -156,6 +160,7 @@ the default brand is (or that there isn't one yet).
 | ⌥⌘S / ⌘J | slides drawer / agent terminal |
 | In the agent terminal: Shift+Enter | new line in the prompt (Enter sends it) |
 | ⌘Z | undo the last dropped image or video, or slide move |
+| ⇧⌘C | copy the current slide as an image (1920×1080) |
 | ⌘R | reload the deck |
 | ⌘N | new empty window (each window has its own deck and agent session) |
 
@@ -167,6 +172,10 @@ the default brand is (or that there isn't one yet).
   group can't wrap from last to first) and dropped files.
 - `index.html` / `renderer.js` / `preload.js`: toolbar, slides drawer, terminal (xterm.js).
 - `lib/thumbs.js`: renders slide pictures in a hidden offscreen window (one per app window).
+- `lib/shot.js`: full-size slide screenshots and the keyboard-navigation test, in a hidden
+  offscreen window (Copy Slide as Image, Export Slides as Images, and the agent's tool).
+- `lib/app-socket.js`: a local socket (`PPTD_SOCKET`, owner-only) through which the skill's
+  `pptd-app.mjs` asks the running app for screenshots and the key test.
 - `lib/media.js`: embeds images/video into a slide's `<section>`.
 - `tools/pptd-deck.mjs`: adds, removes and reorders slides with all the numbering done
   (`list`, `add --after N [--count K]`, `move FROM TO`, `delete N`). Agents use it from the skill; the
