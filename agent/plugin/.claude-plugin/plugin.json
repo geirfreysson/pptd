@@ -1,0 +1,5 @@
+{
+  "name": "pptd",
+  "version": "0.3.0",
+  "description": "Slide-building skill for agents launched from the PPTD app (PowerPoint is dead)."
+}

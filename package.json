@@ -1,0 +1,78 @@
+{
+  "name": "pptd",
+  "productName": "PPTD",
+  "version": "0.3.0",
+  "description": "PPTD (PowerPoint is dead): play and edit single-file HTML presentations.",
+  "main": "main.js",
+  "bin": {
+    "pptd": "bin/pptd"
+  },
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --mac --dir",
+    "dist": "electron-builder --mac",
+    "check": "node tools/pptd-check.mjs",
+    "postinstall": "chmod +x node_modules/node-pty/prebuilds/*/spawn-helper",
+    "sync-skill": "sh tools/sync-skill.sh",
+    "prebuild": "sh tools/sync-skill.sh",
+    "predist": "sh tools/sync-skill.sh",
+    "icon": "python3 tools/make-icon.py"
+  },
+  "devDependencies": {
+    "electron": "45.3.3",
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "com.pptd.app",
+    "productName": "PPTD",
+    "files": [
+      "main.js",
+      "preload.js",
+      "deck-preload.js",
+      "index.html",
+      "renderer.js",
+      "package.json",
+      "lib/**",
+      "agent/**",
+      "node_modules/@xterm/xterm/lib/xterm.js",
+      "node_modules/@xterm/xterm/css/xterm.css",
+      "node_modules/@xterm/addon-fit/lib/addon-fit.js"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        "dmg"
+      ],
+      "identity": "-",
+      "hardenedRuntime": false,
+      "icon": "build/icon.icns"
+    },
+    "fileAssociations": [
+      {
+        "ext": "html",
+        "name": "PPTD presentation",
+        "description": "PPTD presentation (*.pptd.html)",
+        "role": "Viewer",
+        "rank": "Alternate"
+      }
+    ],
+    "asarUnpack": [
+      "agent/**",
+      "node_modules/node-pty/**"
+    ]
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "0.11.0",
+    "@xterm/xterm": "6.0.0",
+    "node-pty": "1.1.0"
+  },
+  "allowScripts": {
+    "node-pty": false,
+    "electron-winstaller": false
+  }
+}

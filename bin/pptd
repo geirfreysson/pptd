@@ -1,0 +1,26 @@
+#!/bin/sh
+# Open a presentation in PPTD from the command line.
+#
+#   pptd path/to/deck.pptd.html
+#
+# If PPTD is already running, the file opens in its window.
+# Uses the dev version in this repo; falls back to the installed app.
+# Install the command once with: npm link   (or symlink this file onto your PATH)
+
+set -e
+if [ $# -gt 0 ]; then
+  if [ ! -f "$1" ]; then echo "pptd: no such file: $1" >&2; exit 1; fi
+  FILE="$(cd "$(dirname "$1")" && pwd -P)/$(basename "$1")"
+fi
+
+SELF="$(readlink -f "$0" 2>/dev/null || echo "$0")"
+REPO="$(cd "$(dirname "$SELF")/.." && pwd -P)"
+ELECTRON="$REPO/node_modules/.bin/electron"
+
+if [ -x "$ELECTRON" ]; then
+  nohup "$ELECTRON" "$REPO" ${FILE:+"$FILE"} >/dev/null 2>&1 &
+elif [ -n "$FILE" ]; then
+  open -a "PPTD" "$FILE"
+else
+  open -a "PPTD"
+fi

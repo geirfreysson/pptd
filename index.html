@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>PPTD</title>
+  <link rel="stylesheet" href="node_modules/@xterm/xterm/css/xterm.css">
+  <style>
+    :root {
+      --bg: #17181b; --bar: #26282c; --panel: #1d1f22; --line: #34363c; --text: #e6e7ea; --muted: #989ba3;
+      --btn: #33353b; --btn-hover: #3f424a; --accent: #14a19e; --accent-hover: #17b5b1; --accent-soft: rgba(20,161,158,.16);
+      --danger: #e5484d; --drawer-w: 232px; --term-h: 300px; --toolbar-h: 46px;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden;
+      font: 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; user-select: none; }
+    body { display: grid; grid-template-rows: var(--toolbar-h) 1fr; }
+
+    /* ---------- toolbar ---------- */
+    .toolbar { display: flex; align-items: center; gap: 8px; padding: 0 12px; background: var(--bar);
+      border-bottom: 1px solid var(--line); min-width: 0; }
+    .group { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .left { flex: 1 1 0; } .center { flex: 0 0 auto; } .right { flex: 1 1 0; justify-content: flex-end; }
+    .file { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+    button { font: inherit; color: var(--text); background: var(--btn); border: 1px solid var(--line);
+      height: 30px; padding: 0 12px; border-radius: 7px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+    button:hover:not(:disabled) { background: var(--btn-hover); }
+    button:disabled { opacity: .4; cursor: default; }
+    button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    button.on { background: var(--accent-soft); border-color: var(--accent); color: #bff0ee; }
+    .icon { width: 34px; padding: 0; justify-content: center; font-size: 17px; }
+    .icon svg { width: 17px; height: 17px; }
+    .counter { min-width: 64px; text-align: center; color: var(--muted); font-variant-numeric: tabular-nums; }
+    kbd { font: 11px ui-monospace, Menlo, monospace; color: var(--muted); }
+    button kbd { opacity: .8; }
+
+    .split { display: inline-flex; }
+    .split button { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .split button:hover:not(:disabled) { background: var(--accent-hover); }
+    .split .main { border-radius: 7px 0 0 7px; }
+    .split .drop { border-radius: 0 7px 7px 0; padding: 0 8px; border-left: 1px solid rgba(0,0,0,.25); }
+
+    .toast { max-width: 46ch; padding: 5px 12px; border-radius: 999px; font-size: 12px; white-space: nowrap; overflow: hidden;
+      text-overflow: ellipsis; background: var(--accent-soft); color: #bff0ee; border: 1px solid rgba(20,161,158,.5);
+      opacity: 0; transform: translateY(-4px); transition: opacity .18s, transform .18s; pointer-events: none; }
+    .toast.show { opacity: 1; transform: none; pointer-events: auto; }
+    .toast.error { background: rgba(229,72,77,.14); color: #ffb3b5; border-color: rgba(229,72,77,.5); }
+
+    /* ---------- body ---------- */
+    .main { display: grid; grid-template-columns: 0 1fr; min-height: 0; }
+    body.drawer-open .main { grid-template-columns: var(--drawer-w) 1fr; }
+    .work { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+    #stage { flex: 1 1 auto; position: relative; min-height: 120px; }
+
+    /* ---------- drawer ---------- */
+    .drawer { background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+    body:not(.drawer-open) .drawer { visibility: hidden; border: 0; }
+    .drawer-head { flex: 0 0 auto; display: flex; justify-content: space-between; align-items: baseline; padding: 12px 14px 8px;
+      color: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; }
+    .thumbs { flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain; padding: 4px 12px 16px 6px; scrollbar-width: thin; }
+    .thumb { display: grid; grid-template-columns: 22px 1fr; gap: 4px; align-items: start; padding: 5px 0; cursor: pointer; }
+    .thumb .num { text-align: right; padding-top: 2px; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+    .thumb .pic { position: relative; aspect-ratio: 16 / 9; border-radius: 6px; overflow: hidden; background: #2a2c31;
+      outline: 1px solid var(--line); transition: outline-color .12s; }
+    .thumb .pic img { pointer-events: none; display: block; width: 100%; height: 100%; object-fit: cover; }
+    .thumb .pic:not(:has(img))::after { content: ""; position: absolute; inset: 0;
+      background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.05) 50%, transparent 70%) 0 0 / 200% 100%;
+      animation: shimmer 1.2s linear infinite; }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+    .thumb:hover .pic { outline-color: #5a5d66; }
+    .thumb.active .num { color: var(--text); font-weight: 600; }
+    .thumb.active .pic { outline: 2px solid var(--accent); }
+    .thumb.dropping .pic { outline: 2px dashed var(--accent); }
+    .thumb.dropping .pic::before { content: "Add here"; position: absolute; inset: 0; z-index: 1; pointer-events: none; display: grid; place-items: center;
+      background: rgba(20,161,158,.35); color: #fff; font-weight: 600; }
+    .drawer-empty { padding: 14px; color: var(--muted); line-height: 1.5; }
+
+    /* ---------- terminal ---------- */
+    .divider { flex: 0 0 6px; cursor: row-resize; background: var(--bar); border-top: 1px solid var(--line); }
+    .divider:hover, .divider.dragging { background: var(--accent); }
+    .term { flex: 0 0 var(--term-h); display: flex; flex-direction: column; background: #131416; min-height: 0; }
+    body:not(.term-open) .divider, body:not(.term-open) .term { display: none; }
+    .term-head { flex: 0 0 34px; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 12px; background: var(--panel);
+      border-bottom: 1px solid var(--line); min-width: 0; }
+    .term-head .title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+    .term-head .title strong { color: var(--text); font-weight: 600; }
+    .term-head .slide-pill { color: #bff0ee; background: var(--accent-soft); border-radius: 999px; padding: 2px 8px; margin-left: 6px; font-size: 12px; }
+    .term-head button { height: 24px; padding: 0 9px; font-size: 12px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #5a5d66; flex: 0 0 auto; }
+    .dot.live { background: #3fb950; box-shadow: 0 0 0 3px rgba(63,185,80,.18); }
+    #xterm { flex: 1 1 auto; min-height: 0; padding: 6px 4px 4px 10px; }
+    #xterm .xterm { height: 100%; }
+    #xterm .xterm-viewport { scrollbar-width: thin; }
+
+    /* ---------- empty state ---------- */
+    .empty { position: absolute; inset: 0; display: grid; place-items: center; }
+    body.has-deck .empty { display: none; }
+    .drop-zone { width: min(560px, 80%); padding: 48px 32px; text-align: center; border: 2px dashed var(--line);
+      border-radius: 14px; color: var(--muted); line-height: 1.7; }
+    .drop-zone strong { color: var(--text); font-size: 16px; display: block; margin-bottom: 6px; }
+    .wordmark { font-size: 34px; font-weight: 800; letter-spacing: -.04em; color: var(--text); line-height: 1; }
+    .tagline { color: var(--muted); margin: 6px 0 26px; font-style: italic; }
+    .drop-zone kbd { border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+    body.dragging .drop-zone { border-color: var(--accent); background: var(--accent-soft); }
+  </style>
+</head>
+<body>
+  <header class="toolbar">
+    <div class="group left">
+      <button class="icon" id="drawerBtn" title="Slides drawer (⌥⌘S)" aria-label="Show slides drawer">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="3.5" width="15" height="13" rx="2"/><path d="M7.5 3.5v13"/><path d="M4.4 6.5h1.4M4.4 9h1.4M4.4 11.5h1.4" stroke-linecap="round"/></svg>
+      </button>
+      <button id="open" title="Open presentation (⌘O)">Open…</button>
+      <span class="file" id="file"></span>
+      <span class="toast" id="toast" role="status" aria-live="polite"></span>
+    </div>
+    <div class="group center">
+      <button class="icon" id="prev" title="Previous slide (←)" aria-label="Previous slide" disabled>‹</button>
+      <span class="counter" id="counter"></span>
+      <button class="icon" id="next" title="Next slide (→)" aria-label="Next slide" disabled>›</button>
+    </div>
+    <div class="group right">
+      <button id="agentBtn" title="Agent terminal (⌘J)" disabled>
+        <svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4-4 4M10 14h6"/></svg>
+        Agent
+      </button>
+      <div class="split">
+        <button class="main" id="play" title="Slideshow, full screen (⌘⇧↩)" disabled>▶ Slideshow</button>
+        <button class="drop" id="playMenu" title="Slideshow options" aria-label="Slideshow options" disabled>▾</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="main">
+    <aside class="drawer" aria-label="Slides">
+      <div class="drawer-head"><span>Slides</span><span id="drawerCount"></span></div>
+      <div class="thumbs" id="thumbs"></div>
+    </aside>
+
+    <div class="work">
+      <div id="stage">
+        <div class="empty">
+          <div class="drop-zone">
+            <div class="wordmark">PPTD</div>
+            <div class="tagline">PowerPoint is dead.</div>
+            <strong>Drop a presentation here</strong>
+            or click <em>Open…</em> (<kbd>⌘O</kbd>)<br>
+            Then drop images or video on a slide to add them.<br><br>
+            <kbd>←</kbd> <kbd>→</kbd> change slides · <kbd>⌥⌘S</kbd> slides drawer · <kbd>⌘J</kbd> agent
+          </div>
+        </div>
+      </div>
+      <div class="divider" id="divider" role="separator" aria-orientation="horizontal" aria-label="Resize terminal"></div>
+      <section class="term" id="term" aria-label="Agent terminal">
+        <div class="term-head">
+          <span class="dot" id="dot"></span>
+          <span class="title" id="termTitle">Agent</span>
+          <button id="restart" title="Start a fresh session">Restart</button>
+          <button id="stop" title="End the session">Stop</button>
+          <button id="hide" title="Hide (session keeps running) ⌘J">Hide</button>
+        </div>
+        <div id="xterm"></div>
+      </section>
+    </div>
+  </div>
+
+  <script src="node_modules/@xterm/xterm/lib/xterm.js"></script>
+  <script src="node_modules/@xterm/addon-fit/lib/addon-fit.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>
