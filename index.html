@@ -38,7 +38,7 @@
     .split { display: inline-flex; }
     .split button { background: var(--accent); border-color: var(--accent); color: #fff; }
     .split button:hover:not(:disabled) { background: var(--accent-hover); }
-    .split .main { border-radius: 7px 0 0 7px; }
+    .split .primary { border-radius: 7px 0 0 7px; }
     .split .drop { border-radius: 0 7px 7px 0; padding: 0 8px; border-left: 1px solid rgba(0,0,0,.25); }
 
     .toast { max-width: 46ch; padding: 5px 12px; border-radius: 999px; font-size: 12px; white-space: nowrap; overflow: hidden;
@@ -75,6 +75,13 @@
     .thumb.dropping .pic::before { content: "Add here"; position: absolute; inset: 0; z-index: 1; pointer-events: none; display: grid; place-items: center;
       background: rgba(20,161,158,.35); color: #fff; font-weight: 600; }
     .drawer-empty { padding: 14px; color: var(--muted); line-height: 1.5; }
+    /* Reordering: drag a slide; a line shows where it lands. */
+    .thumb { position: relative; }
+    .thumb.moving { opacity: .4; }
+    .thumb.insert-before::before, .thumb.insert-after::after { content: ""; position: absolute; left: 26px; right: 0; height: 3px;
+      border-radius: 2px; background: var(--accent); pointer-events: none; }
+    .thumb.insert-before::before { top: -2px; }
+    .thumb.insert-after::after { bottom: -2px; }
 
     /* ---------- terminal ---------- */
     .divider { flex: 0 0 6px; cursor: row-resize; background: var(--bar); border-top: 1px solid var(--line); }
@@ -92,6 +99,35 @@
     #xterm { flex: 1 1 auto; min-height: 0; padding: 6px 4px 4px 10px; }
     #xterm .xterm { height: 100%; }
     #xterm .xterm-viewport { scrollbar-width: thin; }
+
+    /* ---------- model sign-in (pi), over the terminal ---------- */
+    .term { position: relative; }
+    .login { position: absolute; top: 34px; left: 0; right: 0; bottom: 0; z-index: 2; overflow: auto; background: #131416;
+      display: flex; justify-content: center; align-items: flex-start; padding: 18px 20px; user-select: text; }
+    .login[hidden] { display: none; }
+    .login-box { width: min(760px, 100%); }
+    .login h2 { margin: 0 0 4px; font-size: 15px; font-weight: 600; }
+    .login .hint { margin: 0 0 14px; color: var(--muted); line-height: 1.5; }
+    .login-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+    .login-choice { height: auto; padding: 12px 14px; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left;
+      white-space: normal; border-radius: 10px; background: var(--panel); }
+    .login-choice strong { font-weight: 600; }
+    .login-choice span { color: var(--muted); font-size: 12px; }
+    .login-choice .ok { color: #3fb950; }
+    .login-choice.primary { border-color: var(--accent); background: var(--accent-soft); }
+    .login-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
+    .login-row.end { justify-content: flex-end; }
+    .login button.go { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .login button.go:hover:not(:disabled) { background: var(--accent-hover); }
+    .login button.link { background: none; border: 0; padding: 0; height: auto; color: #7fd8d5; text-decoration: underline; }
+    .login input { font: 13px ui-monospace, Menlo, monospace; color: var(--text); background: var(--panel); border: 1px solid var(--line);
+      border-radius: 7px; height: 30px; padding: 0 10px; flex: 1 1 260px; min-width: 0; }
+    .login input:focus { outline: 2px solid var(--accent); outline-offset: 0; }
+    .login .note { color: var(--muted); margin: 10px 0 0; line-height: 1.5; }
+    .login .err { color: #ffb3b5; }
+    .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--line); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -1px; margin-right: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     /* ---------- empty state ---------- */
     .empty { position: absolute; inset: 0; display: grid; place-items: center; }
@@ -126,7 +162,7 @@
         Agent
       </button>
       <div class="split">
-        <button class="main" id="play" title="Slideshow, full screen (⌘⇧↩)" disabled>▶ Slideshow</button>
+        <button class="primary" id="play" title="Slideshow, full screen (⌘⇧↩)" disabled>▶ Slideshow</button>
         <button class="drop" id="playMenu" title="Slideshow options" aria-label="Slideshow options" disabled>▾</button>
       </div>
     </div>
@@ -161,6 +197,7 @@
           <button id="hide" title="Hide (session keeps running) ⌘J">Hide</button>
         </div>
         <div id="xterm"></div>
+        <div class="login" id="login" hidden><div class="login-box" id="loginBox"></div></div>
       </section>
     </div>
   </div>

@@ -1,6 +1,6 @@
 ---
 name: pptd-slides
-description: Build and edit PPTD presentations (*.pptd.html) shown in the PPTD app: slide structure, layout, diagrams, media, branding via brand files, and the PPTD conformance rules. Use for any change to a slide or deck.
+description: "Build and edit PPTD presentations (*.pptd.html) shown in the PPTD app: slide structure, layout, diagrams, media, branding via brand files, and the PPTD conformance rules. Use for any change to a slide or deck."
 ---
 
 > **Inside the PPTD app, read `PPTD.md` in this folder first.** It covers the current slide,

@@ -18,7 +18,8 @@ pptd path/to/deck.pptd.html
 ```
 
 `pptd` (in `bin/`) starts the dev version in this repo, or the installed app if
-`node_modules` is missing. If PPTD is already running, the file opens in its window.
+`node_modules` is missing. If PPTD is already running, the file opens in its front window, or the window already
+showing it.
 Relative paths are resolved from the folder you run it in.
 
 ## Build the native app
@@ -74,15 +75,31 @@ npm run check -- path/to/deck.pptd.html
 ## Editing with the app
 
 - **Slides drawer** (left, ⌥⌘S): a picture of every slide. It scrolls on its own; click a slide
-  to show it. Pictures refresh whenever the file changes.
+  to show it. Pictures refresh whenever the file changes. **Drag a slide** to move it; a line
+  shows where it lands. ⌘Z undoes the move. The slide's content moves while each position keeps
+  its arrows, counter and progress bar, so the deck stays valid. The agent is told about the
+  move (and about dropped media), so it re-reads the deck instead of trusting slide numbers it
+  saw earlier.
 - **New presentations**: press ⌘J and ask for one ("make a 6-slide deck about our Q3
   results"). With no deck open, the agent works in `~/Documents/PPTD`; the app opens the new
   deck as soon as the agent saves it.
-- **Agent** (bottom, ⌘J): Claude Code in a terminal, started in the deck's folder. Each message
+- **Agent** (bottom, ⌘J): a coding agent in a terminal, started in the deck's folder. Each message
   you send carries the slide on screen, so "make the headline shorter" applies to that slide
   unless you name another one. The agent edits the file; the app reloads it straight away and
   stays on the same slide. **Hide** keeps the session; **Stop**/**Restart** end it or start a new one.
-  The first time in a folder, Claude Code asks whether you trust it.
+- **Choosing the agent** (View › Agent): **Pi** is built in and is the default, so nothing needs
+  installing. If Pi has no AI model to use when you open the agent, the agent pane shows a
+  sign-in panel: **Sign in with ChatGPT** (Plus/Pro), **Sign in with Claude** (Pro/Max), or an
+  **Anthropic API key**. Pi starts as soon as you're signed in. View › Agent › Sign In to a Model
+  for Pi… opens it again later. PPTD's Pi keeps its sign-ins, settings and sessions in its own
+  folder (`PPTD/pi` in your application-data folder, e.g. `~/Library/Application Support/PPTD/pi`),
+  apart from any pi you run yourself, so your own pi extensions and instructions don't affect it.
+  An API key in your shell profile, such as `ANTHROPIC_API_KEY`, also works.
+- **What the agent knows:** every message you send carries the deck and the slide on screen (and
+  the brand), so "make this shorter" means that slide. Pi's footer shows it live
+  (`PPTD · deck · slide 3 of 7`). **Claude Code**
+  uses your installed `claude`; the first time in a folder, it asks whether you trust it. The
+  choice applies to new sessions; press **Restart** to switch a running one.
 - **Drop images or video** on the slide (or on a slide in the drawer): the app embeds them
   as a centred, rounded image or a video with controls, on that slide. Photos are scaled to
   2560 px and HEIC is converted to JPEG. Videos over 25 MB ask first. **⌘Z** undoes the last drop.
@@ -91,8 +108,8 @@ npm run check -- path/to/deck.pptd.html
 
 ### The agent's context
 
-Agents started from the app load a bundled Claude Code plugin (`agent/plugin`) with the
-slide skill `pptd-slides`. It is brand-neutral and maintained in this repo:
+Agents started from the app load the bundled slide skill `pptd-slides` (for Claude Code, as
+the plugin `agent/plugin`; for pi, with `--skill`). It is brand-neutral and maintained in this repo:
 
 - `SKILL.md`: slide structure, layout, diagrams, writing, checks.
 - `PPTD.md`: working inside the app (current slide, new decks, branding, media).
@@ -101,7 +118,11 @@ slide skill `pptd-slides`. It is brand-neutral and maintained in this repo:
 - `pptd-spec.md`, `pptd-check.mjs`: copied from `docs/` and `tools/` by `npm run sync-skill`,
   which also runs before every build.
 
-Claude Code must be installed (`claude` on your login-shell PATH, or set `PPTD_CLAUDE`).
+Pi needs nothing installed: the app ships it (`@earendil-works/pi-coding-agent`, pinned in
+`vendor/pi`) and runs it on its own Electron runtime. Claude Code must be installed (`claude` on
+your login-shell PATH, or set `PPTD_CLAUDE`). Machines without Node still get a `node` for the
+skill's checker: the app's runtime, last on the agent's PATH. pi also gets the bundled ripgrep
+and fd first on its PATH, so nothing is downloaded at first launch.
 
 ## Branding
 
@@ -133,18 +154,30 @@ the default brand is (or that there isn't one yet).
 | ⌥⌘S / ⌘J | slides drawer / agent terminal |
 | ⌘Z | undo the last dropped image or video |
 | ⌘R | reload the deck |
+| ⌘N | new empty window (each window has its own deck and agent session) |
 
 ## How it works
 
-- `main.js`: window, layout, slideshow modes, file watching, media drops, undo, menu.
+- `main.js`: windows, layout, slideshow modes, file watching, media drops, undo, menu. Each
+  window (⌘N) has its own deck, undo history, thumbnails and agent session.
 - `deck-preload.js`: runs inside the deck. Catches navigation keys (so the deck's own radio
   group can't wrap from last to first) and dropped files.
 - `index.html` / `renderer.js` / `preload.js`: toolbar, slides drawer, terminal (xterm.js).
-- `lib/thumbs.js`: renders slide pictures in a hidden offscreen window.
+- `lib/thumbs.js`: renders slide pictures in a hidden offscreen window (one per app window).
 - `lib/media.js`: embeds images/video into a slide's `<section>`.
-- `lib/agent.js`: finds `claude`, starts it in a pty (node-pty) with the plugin, system prompt
-  and hooks: `UserPromptSubmit` adds the deck, slide and brand to each message; `PostToolUse`
-  reports files it writes. The app also watches the agent's folder, and opens decks it creates.
+- `lib/reorder.js`: moves a slide's content to another position (drag in the drawer).
+- `lib/agent.js`: starts the chosen agent in a pty (node-pty) with the skill and a system
+  prompt. Each message gets the deck, slide and brand added; files it writes are reported, and
+  the app opens decks it creates. The app also watches the agent's folder for new decks.
+  Claude Code does this with `UserPromptSubmit`/`PostToolUse` hooks; pi with the extension below.
+- `agent/pi/pptd-extension.js`: the pi extension that adds the slide note to each prompt,
+  reports written files, draws PPTD's startup header and shows the slide on screen in pi's footer.
+- `agent/pi/login.mjs` / `lib/pi-login.js`: model sign-in for pi. The helper runs pi's own login
+  code and credential store; main relays its prompts to the sign-in panel and opens the browser.
+- `vendor/pi`: the bundled pi, pinned by its own lockfile. `vendor/tools/<os>-<arch>`: pinned
+  ripgrep and fd for pi (its grep tool and `@` file completion), so pi never downloads them.
+  `tools/vendor-pi.mjs` installs both (checking each download's SHA-256) after `npm install` and
+  before builds; they ship as `Resources/pi` and `Resources/pi/bin`, with their licences.
 - `lib/brand.js`: reads a deck's brand block and finds the default brand.
 - Navigation checks the next or previous `input.slide-radio`, which is the switching
   mechanism the skill uses. Other HTML files still open; arrow keys are then left to the page.

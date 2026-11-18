@@ -12,6 +12,17 @@ the deck next to this terminal.
 - A slide the user names ("slide 5", "the closing slide", "the chart") takes precedence.
 - Requests about the whole deck ("fix the typos everywhere") apply to every slide.
 
+## Changes the user makes in the app
+
+- The user can reorder slides by dragging them in the app's slide drawer, and add images or
+  video by dropping them on a slide. The app saves those changes itself and tells you in a
+  `<pptd-user-edit>` note, which can arrive with a message or in the middle of your work.
+- After such a note, what you read earlier is stale: **re-read the deck before editing it**.
+  After a move, slide numbers and `<section id="sN">` ids refer to positions, so "slide 3"
+  earlier in the conversation may now be a different slide. Go by the slide's content.
+- A moved slide's content moves, while each position keeps its id, `.controls` and `.progress`,
+  so the deck needs no renumbering after a move. Don't undo the user's change.
+
 ## Editing
 
 - Edit the `.pptd.html` file directly. The app watches it, reloads the moment you save, and

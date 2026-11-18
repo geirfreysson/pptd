@@ -115,6 +115,7 @@ function buildThumbs(clear) {
     item.dataset.index = i;
     item.setAttribute('role', 'button');
     item.setAttribute('aria-label', `Slide ${i + 1}`);
+    item.draggable = true;
     item.innerHTML = `<span class="num">${i + 1}</span><div class="pic"></div>`;
     if (old[i]) { const img = new Image(); img.alt = ''; img.src = old[i]; item.querySelector('.pic').appendChild(img); }
     list.appendChild(item);
@@ -145,6 +146,62 @@ $('thumbs').addEventListener('click', (e) => {
   const t = e.target.closest('.thumb');
   if (t) v.nav(Number(t.dataset.index), { focus: true });
 });
+
+// Reorder by dragging a slide in the drawer. Slide drags carry their own type, so the
+// file-drop handlers below ignore them (they only act on 'Files').
+const SLIDE_TYPE = 'application/x-pptd-slide';
+let moving = null; // index of the slide being dragged
+let insertAt = null; // gap it would land in: 0 = before the first slide, total = after the last
+
+function clearInsert() {
+  $('thumbs').querySelectorAll('.insert-before, .insert-after').forEach((t) => t.classList.remove('insert-before', 'insert-after'));
+}
+function showInsert(gap) {
+  clearInsert();
+  insertAt = gap;
+  const thumbs = $('thumbs').querySelectorAll('.thumb');
+  // No line where the slide already is (dropping there changes nothing).
+  if (gap == null || gap === moving || gap === moving + 1) return;
+  if (gap < thumbs.length) thumbs[gap].classList.add('insert-before');
+  else thumbs[thumbs.length - 1]?.classList.add('insert-after');
+}
+// Which gap the pointer is nearest: above or below the middle of the thumb under it.
+function gapAt(e) {
+  const thumbs = [...$('thumbs').querySelectorAll('.thumb')];
+  for (let i = 0; i < thumbs.length; i++) {
+    const r = thumbs[i].getBoundingClientRect();
+    if (e.clientY < r.top + r.height / 2) return i;
+  }
+  return thumbs.length;
+}
+
+$('thumbs').addEventListener('dragstart', (e) => {
+  const t = e.target.closest?.('.thumb');
+  if (!t) return;
+  moving = Number(t.dataset.index);
+  e.dataTransfer.setData(SLIDE_TYPE, String(moving));
+  e.dataTransfer.effectAllowed = 'move';
+  t.classList.add('moving');
+});
+$('thumbs').addEventListener('dragover', (e) => {
+  if (moving == null || ![...e.dataTransfer.types].includes(SLIDE_TYPE)) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  showInsert(gapAt(e));
+});
+$('thumbs').addEventListener('drop', (e) => {
+  if (moving == null || ![...e.dataTransfer.types].includes(SLIDE_TYPE)) return;
+  e.preventDefault();
+  const from = moving, gap = gapAt(e);
+  const to = gap > from ? gap - 1 : gap;
+  if (to !== from) v.moveSlide(from, to);
+});
+$('thumbs').addEventListener('dragend', () => {
+  $('thumbs').querySelector('.thumb.moving')?.classList.remove('moving');
+  clearInsert();
+  moving = insertAt = null;
+});
+$('thumbs').addEventListener('dragleave', (e) => { if (!$('thumbs').contains(e.relatedTarget)) clearInsert(); });
 
 // ---------------------------------------------------------------- terminal
 
@@ -192,7 +249,7 @@ function toggleAgent(force) {
   });
 }
 
-v.onPtyStart(() => { live = true; updateTermTitle(); });
+v.onPtyStart((e) => { live = true; agentName = e?.agent || 'Agent'; updateTermTitle(); });
 v.onPtyData((d) => term?.write(d));
 v.onPtyExit((e) => {
   live = false;
@@ -210,17 +267,181 @@ $('restart').addEventListener('click', () => {
   term.focus();
 });
 
+let agentName = 'Agent';
 function updateTermTitle() {
   $('dot').classList.toggle('live', live);
   $('stop').disabled = !live;
   const doing = cur.file ? `editing ${escapeHtml(cur.file)}` : 'ask for a new presentation';
   const slide = cur.total ? `<span class="slide-pill">slide ${cur.index + 1} of ${cur.total}</span>` : '';
   $('termTitle').innerHTML = live
-    ? `<strong>Claude</strong> · ${doing}${slide}`
-    : `Agent · ${started ? 'stopped' : 'not started'}`;
+    ? `<strong>${escapeHtml(agentName)}</strong> · ${doing}${slide}`
+    : !$('login').hidden ? 'Agent · sign in to start' : `Agent · ${started ? 'stopped' : 'not started'}`;
   $('termTitle').title = live ? 'Requests that don\'t name a slide apply to the slide on screen.' : '';
 }
 const escapeHtml = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// ---------------------------------------------------------------- model sign-in (pi)
+
+// Shown in the agent pane (the deck view covers the stage, never this pane) when pi has
+// no model to use, or from View › Agent. Main runs the sign-in; this only asks and shows.
+const login = { providers: {}, starting: false, url: null, provider: null };
+const el = (tag, props = {}, ...kids) => {
+  const n = Object.assign(document.createElement(tag), props);
+  for (const k of kids) if (k != null) n.append(k);
+  return n;
+};
+const loginBox = () => $('loginBox');
+
+function setLoginOpen(open) {
+  $('login').hidden = !open;
+  if (open) {
+    body.classList.add('term-open');
+    $('agentBtn').classList.add('on');
+    requestAnimationFrame(reportStage);
+  }
+  updateTermTitle();
+}
+
+function loginChoices() {
+  const p = login.providers;
+  const choice = (title, sub, signedIn, onClick, primary) => {
+    const b = el('button', { className: `login-choice${primary ? ' primary' : ''}`, type: 'button' },
+      el('strong', { textContent: title }),
+      el('span', { textContent: sub }),
+      signedIn ? el('span', { className: 'ok', textContent: '✓ Signed in' }) : null);
+    b.addEventListener('click', onClick);
+    return b;
+  };
+  const box = loginBox();
+  box.replaceChildren(
+    el('h2', { textContent: 'Choose the AI model for Pi' }),
+    el('p', { className: 'hint', textContent: 'Pi is the agent that builds and edits your slides. Sign in once; it remembers.' }),
+    el('div', { className: 'login-choices' },
+      choice('Sign in with ChatGPT', 'ChatGPT Plus or Pro', p['openai-codex'], () => beginOAuth('openai-codex', 'ChatGPT'), true),
+      choice('Sign in with Claude', 'Claude Pro or Max', p.anthropic, () => beginOAuth('anthropic', 'Claude')),
+      choice('Use an Anthropic API key', 'Pay as you go, from the Anthropic console', false, loginKeyForm)),
+    loginFooter(),
+  );
+  box.querySelector('button')?.focus();
+}
+
+function loginFooter() {
+  const row = el('div', { className: 'login-row end' });
+  if (login.starting) {
+    const claude = el('button', { type: 'button', textContent: 'Use Claude Code instead', title: 'Run your installed Claude Code as the agent' });
+    claude.addEventListener('click', () => v.loginUseClaude());
+    row.append(claude);
+  }
+  const close = el('button', { type: 'button', textContent: login.starting ? 'Not now' : 'Close' });
+  close.addEventListener('click', closeLogin);
+  row.append(close);
+  return row;
+}
+
+function closeLogin() {
+  v.loginCancel();
+  setLoginOpen(false);
+  if (login.starting) {
+    ensureTerm();
+    safeFit();
+    term.write('\x1b[2mPi needs an AI model to work with. Press Restart to sign in, or choose Claude Code in View › Agent.\x1b[0m\r\n');
+  }
+}
+
+function loginKeyForm() {
+  const input = el('input', { type: 'password', placeholder: 'sk-ant-…', autocomplete: 'off', spellcheck: false, 'aria-label': 'Anthropic API key' });
+  const save = el('button', { className: 'go', type: 'button', textContent: 'Save key' });
+  const back = el('button', { type: 'button', textContent: 'Back' });
+  const get = el('button', { className: 'link', type: 'button', textContent: 'Get a key' });
+  const submit = () => {
+    const key = input.value.trim();
+    if (!key) { input.focus(); return; }
+    login.provider = 'Claude';
+    loginWaiting('Saving your key…', false);
+    v.loginStart({ provider: 'anthropic', method: 'api_key', key });
+  };
+  save.addEventListener('click', submit);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+  back.addEventListener('click', loginChoices);
+  get.addEventListener('click', () => v.openLink('https://console.anthropic.com/settings/keys'));
+  loginBox().replaceChildren(
+    el('h2', { textContent: 'Anthropic API key' }),
+    el('p', { className: 'hint' }, 'Paste a key from the Anthropic console (', get, '). Pi keeps it in ~/.pi/agent on this computer.'),
+    el('div', { className: 'login-row' }, input, save, back),
+  );
+  input.focus();
+}
+
+function beginOAuth(provider, name) {
+  login.provider = name;
+  login.url = null;
+  loginWaiting(`Finish signing in to ${name} in your browser…`, true);
+  v.loginStart({ provider, method: 'oauth' });
+}
+
+function loginWaiting(text, browser) {
+  const cancel = el('button', { type: 'button', textContent: 'Cancel' });
+  cancel.addEventListener('click', () => { v.loginCancel(); loginChoices(); });
+  const row = el('div', { className: 'login-row' });
+  if (browser) {
+    const again = el('button', { type: 'button', textContent: 'Open the sign-in page again', id: 'loginAgain', disabled: true });
+    again.addEventListener('click', () => { if (login.url) v.loginOpenUrl(); });
+    row.append(again);
+  }
+  row.append(cancel);
+  loginBox().replaceChildren(
+    el('h2', {}, el('span', { className: 'spinner' }), text),
+    el('p', { className: 'hint', id: 'loginMsg', textContent: browser ? 'A browser window opens for you to sign in. Come back here when it says you are done.' : '' }),
+    el('div', { id: 'loginPrompt' }),
+    row,
+  );
+}
+
+function loginPrompt({ id, kind, message, placeholder }) {
+  const slot = $('loginPrompt');
+  if (!slot) return;
+  const input = el('input', { type: kind === 'secret' ? 'password' : 'text', placeholder: placeholder || '', spellcheck: false, autocomplete: 'off' });
+  const go = el('button', { type: 'button', textContent: 'Continue' });
+  const submit = () => { const val = input.value.trim(); if (val) { v.loginAnswer(id, val); slot.replaceChildren(el('p', { className: 'note', textContent: 'Checking…' })); } };
+  go.addEventListener('click', submit);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+  slot.dataset.id = id;
+  slot.replaceChildren(
+    el('p', { className: 'note', textContent: /browser/i.test(message) ? 'Browser didn’t come back here? Paste the code, or the address the browser ended on:' : message }),
+    el('div', { className: 'login-row' }, input, go),
+  );
+}
+
+function loginError(text) {
+  const again = el('button', { className: 'go', type: 'button', textContent: 'Try again' });
+  again.addEventListener('click', loginChoices);
+  loginBox().replaceChildren(
+    el('h2', { textContent: `Couldn’t sign in${login.provider ? ` to ${login.provider}` : ''}` }),
+    el('p', { className: 'hint err', textContent: text || 'Sign-in failed.' }),
+    el('div', { className: 'login-row' }, again, loginFooter()),
+  );
+}
+
+v.onLoginShow(({ providers, starting }) => {
+  login.providers = providers || {};
+  login.starting = !!starting;
+  if (starting) started = true;
+  setLoginOpen(true);
+  loginChoices();
+});
+v.onLoginEvent((e) => {
+  if (!e || $('login').hidden) return;
+  if (e.type === 'auth_url') { login.url = e.url; const b = $('loginAgain'); if (b) b.disabled = false; }
+  else if (e.type === 'device_code') { const m = $('loginMsg'); if (m) m.textContent = `Enter the code ${e.userCode} on the page that opened.`; }
+  else if (e.type === 'info' || e.type === 'progress') { const m = $('loginMsg'); if (m && e.message) m.textContent = e.message; }
+  else if (e.type === 'prompt') loginPrompt(e);
+  else if (e.type === 'prompt_closed') { const slot = $('loginPrompt'); if (slot?.dataset.id === e.id) slot.replaceChildren(); }
+  else if (e.type === 'error') loginError(e.error);
+});
+v.onLoginHide(() => {
+  setLoginOpen(false);
+  if (body.classList.contains('term-open')) { ensureTerm(); safeFit(); term.focus(); }
+});
 
 // Resize the terminal by dragging the divider.
 (() => {

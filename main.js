@@ -4,6 +4,9 @@
 //   BrowserWindow    index.html: toolbar, slide drawer (left), agent terminal (bottom)
 //   WebContentsView  the deck, placed over the "#stage" rectangle reported by index.html
 //
+// Each window is independent: its own deck, slideshow mode, thumbnails, undo stack and
+// agent session. That state lives in a per-window object `w` (see newWindowState).
+//
 // Modes:
 //   "normal"     toolbar + drawer + terminal visible, deck in the stage
 //   "window"     slideshow filling the current window
@@ -17,8 +20,10 @@ const { app, BrowserWindow, WebContentsView, Menu, dialog, ipcMain, shell } = re
 const path = require('path');
 const fs = require('fs');
 const media = require('./lib/media');
-const { renderThumbs, disposeThumbs } = require('./lib/thumbs');
-const { AgentSession } = require('./lib/agent');
+const { moveSlide } = require('./lib/reorder');
+const { createThumbs } = require('./lib/thumbs');
+const { AgentSession, AGENTS } = require('./lib/agent');
+const piLogin = require('./lib/pi-login');
 const brand = require('./lib/brand');
 
 const TOOLBAR_HEIGHT = 46;
@@ -31,32 +36,64 @@ const frameCss = (bg) => `
   .deck { box-shadow: ${bg === '#000' ? 'none' : '0 6px 28px rgba(0,0,0,.45)'} !important; }
 `;
 const EDIT_BG = '#17181b';
+const EMPTY_STATE = () => ({ index: 0, total: 0, label: null });
 
-let win = null;
-let deckView = null;
-let currentFile = null;
-let pendingFile = null;          // file passed before the window existed
-let mode = 'normal';
-let isRadioDeck = false;
-let frameCssKey = null;
-let state = { index: 0, total: 0, label: null };
-let restoreIndex = null;         // slide to return to after a reload
-let stageRect = null;            // where index.html wants the deck (normal mode)
-let watcher = null;
-let reloadTimer = null;
-let drawerOpen = false;
-let thumbsStale = true;
-let undoStack = [];
-let agent = null;
-let restartAgent = null;         // {cols, rows} when a restart is pending
+const windows = new Set();       // every open window's state object
+const byContents = new Map();    // webContents id (app UI or deck view) -> window state
+let lastFocused = null;          // menu actions apply to this window
+let pendingFile = null;          // file passed before the first window existed
 let quitting = false;            // set by before-quit; no more dialogs after that
+
+// The window menu actions and app-level events (Finder, CLI) act on.
+const current = () => {
+  const f = BrowserWindow.getFocusedWindow();
+  const w = f && byContents.get(f.webContents.id);
+  return w || (lastFocused && windows.has(lastFocused) ? lastFocused : [...windows].at(-1)) || null;
+};
+const fromSender = (e) => byContents.get(e.sender.id) || null;
 
 // ---------------------------------------------------------------- window
 
-function createWindow() {
-  win = new BrowserWindow({
+function newWindowState() {
+  return {
+    win: null,
+    deckView: null,
+    thumbs: createThumbs(),
+    currentFile: null,
+    pendingFile: null,           // file to open once index.html has loaded
+    mode: 'normal',
+    isRadioDeck: false,
+    frameCssKey: null,
+    state: EMPTY_STATE(),
+    restoreIndex: null,          // slide to return to after a reload
+    stageRect: null,             // where index.html wants the deck (normal mode)
+    watcher: null,
+    reloadTimer: null,
+    settleTimer: null,
+    drawerOpen: false,
+    thumbsStale: true,
+    undoStack: [],
+    agent: null,
+    restartAgent: null,          // {cols, rows} when a restart is pending
+    eventsWatcher: null,
+    eventsOffset: 0,
+    cwdWatcher: null,
+    cwdTimers: new Map(),
+  };
+}
+
+function createWindow(file = null) {
+  const w = newWindowState();
+  w.pendingFile = file;
+
+  // New windows cascade from the one in front instead of stacking exactly on top of it.
+  const from = current()?.win;
+  const offset = from && !from.isFullScreen() ? (() => { const [x, y] = from.getPosition(); return { x: x + 24, y: y + 24 }; })() : {};
+
+  const win = w.win = new BrowserWindow({
     width: 1440,
     height: 900,
+    ...offset,
     minWidth: 760,
     minHeight: 480,
     backgroundColor: '#1e1f22',
@@ -71,7 +108,7 @@ function createWindow() {
 
   win.loadFile(path.join(__dirname, 'index.html'));
 
-  deckView = new WebContentsView({
+  const deckView = w.deckView = new WebContentsView({
     webPreferences: {
       preload: path.join(__dirname, 'deck-preload.js'),
       contextIsolation: true,
@@ -84,6 +121,10 @@ function createWindow() {
   win.contentView.addChildView(deckView);
 
   const wc = deckView.webContents;
+  const ids = [win.webContents.id, wc.id];
+  for (const id of ids) byContents.set(id, w);
+  windows.add(w);
+  lastFocused = w;
 
   // Decks are local files: never open new windows, send web links to the browser.
   wc.setWindowOpenHandler(({ url }) => {
@@ -98,55 +139,81 @@ function createWindow() {
 
   wc.on('dom-ready', async () => {
     // A PPTD deck has a <meta name="pptd"> marker and/or slide radios.
-    isRadioDeck = await wc.executeJavaScript(
+    w.isRadioDeck = await wc.executeJavaScript(
       `!!document.querySelector('meta[name=pptd], input.slide-radio, input[type=radio][name=slide]')`);
-    if (isRadioDeck) {
+    if (w.isRadioDeck) {
       await wc.insertCSS(HIDE_CONTROLS_CSS);
-      frameCssKey = await wc.insertCSS(frameCss(mode === 'normal' ? EDIT_BG : '#000'));
+      w.frameCssKey = await wc.insertCSS(frameCss(w.mode === 'normal' ? EDIT_BG : '#000'));
     } else {
-      frameCssKey = null;
+      w.frameCssKey = null;
     }
-    wc.send('mode', mode);
-    if (restoreIndex != null && isRadioDeck) {
-      const i = restoreIndex; restoreIndex = null;
-      await navigate(i, { focus: false });
+    wc.send('mode', w.mode);
+    if (w.restoreIndex != null && w.isRadioDeck) {
+      const i = w.restoreIndex; w.restoreIndex = null;
+      await navigate(w, i, { focus: false });
     } else {
-      restoreIndex = null;
-      await refreshState();
+      w.restoreIndex = null;
+      await refreshState(w);
     }
-    thumbsStale = true;
-    if (drawerOpen) updateThumbs();
+    w.thumbsStale = true;
+    if (w.drawerOpen) updateThumbs(w);
   });
 
-  win.on('resize', layout);
-  win.on('enter-full-screen', layout);
+  win.on('focus', () => { lastFocused = w; buildMenu(); });
+  win.on('resize', () => layout(w));
+  win.on('enter-full-screen', () => layout(w));
   win.on('leave-full-screen', () => {
     // User left full screen another way (green button, Ctrl+Cmd+F): end the show.
-    if (mode === 'fullscreen') setMode('normal');
-    layout();
-    settleLayout();
+    if (w.mode === 'fullscreen') setMode(w, 'normal');
+    layout(w);
+    settleLayout(w);
   });
   // Closing the window yourself asks first. A quit already under way (⌘Q after
   // confirming, logout, `kill`) never waits on a dialog.
   win.on('close', (e) => {
-    if (quitting || !agent?.alive) return;
-    if (!confirmEndSession('Close')) e.preventDefault(); else agent.stop();
+    if (quitting || !w.agent?.alive) return;
+    if (!confirmEndSession(w, 'Close')) e.preventDefault();
   });
-  win.on('closed', () => { win = null; deckView = null; disposeThumbs(); unwatch(); });
+  win.on('closed', () => {
+    disposeWindow(w);
+    for (const id of ids) byContents.delete(id);
+    windows.delete(w);
+    if (lastFocused === w) lastFocused = null;
+    buildMenu();
+  });
 
   win.webContents.once('did-finish-load', () => {
-    sendState();
-    if (pendingFile) { openFile(pendingFile); pendingFile = null; }
+    sendState(w);
+    if (w.pendingFile) { const f = w.pendingFile; w.pendingFile = null; openFile(w, f); }
   });
 
-  layout();
+  layout(w);
+  buildMenu();
+  return w;
 }
 
-function layout() {
+function disposeWindow(w) {
+  w.win = null;
+  w.deckView = null;
+  w.thumbs.dispose();
+  unwatch(w);
+  clearTimeout(w.settleTimer);
+  w.eventsWatcher?.close();
+  w.cwdWatcher?.close();
+  for (const t of w.cwdTimers.values()) clearTimeout(t);
+  w.login?.cancel();
+  if (w.agent) {
+    w.agent.stop();
+    removeAgentFiles(w.agent);
+  }
+}
+
+function layout(w) {
+  const { win, deckView } = w;
   if (!win || !deckView) return;
-  const [w, h] = win.getContentSize();
-  if (mode !== 'normal') { deckView.setBounds({ x: 0, y: 0, width: w, height: h }); return; }
-  const r = stageRect || { x: 0, y: TOOLBAR_HEIGHT, width: w, height: h - TOOLBAR_HEIGHT };
+  const [width, height] = win.getContentSize();
+  if (w.mode !== 'normal') { deckView.setBounds({ x: 0, y: 0, width, height }); return; }
+  const r = w.stageRect || { x: 0, y: TOOLBAR_HEIGHT, width, height: height - TOOLBAR_HEIGHT };
   deckView.setBounds({
     x: Math.round(r.x), y: Math.round(r.y),
     width: Math.max(0, Math.round(r.width)), height: Math.max(0, Math.round(r.height)),
@@ -155,90 +222,110 @@ function layout() {
 
 // Bounds set while macOS animates out of full screen can leave the page at its old
 // size. Re-apply them once the window has settled, with a 1px nudge so the page resizes.
-let settleTimer = null;
-function settleLayout() {
-  clearTimeout(settleTimer);
-  settleTimer = setTimeout(() => {
-    if (!deckView) return;
-    layout();
-    const b = deckView.getBounds();
-    deckView.setBounds({ ...b, width: Math.max(0, b.width - 1) });
-    deckView.setBounds(b);
+function settleLayout(w) {
+  clearTimeout(w.settleTimer);
+  w.settleTimer = setTimeout(() => {
+    if (!w.deckView) return;
+    layout(w);
+    const b = w.deckView.getBounds();
+    w.deckView.setBounds({ ...b, width: Math.max(0, b.width - 1) });
+    w.deckView.setBounds(b);
   }, 120);
 }
 
-const send = (channel, payload) => { if (win && !win.isDestroyed()) win.webContents.send(channel, payload); };
-const toast = (text, kind = 'info') => send('toast', { text, kind });
+const send = (w, channel, payload) => { if (w?.win && !w.win.isDestroyed()) w.win.webContents.send(channel, payload); };
+const toast = (w, text, kind = 'info') => send(w, 'toast', { text, kind });
 
 // ---------------------------------------------------------------- files
 
 // "Q3 review.pptd.html" -> "Q3 review"
 const displayName = (file) => path.basename(file).replace(/(\.pptd)?\.html?$/i, '');
 
-async function openFile(file) {
-  if (!win) { pendingFile = file; return; }
+const windowShowing = (file) => [...windows].find((w) => w.currentFile === file) || null;
+
+function focusWindow(w) {
+  if (!w?.win) return;
+  if (w.win.isMinimized()) w.win.restore();
+  w.win.show();
+  w.win.focus();
+}
+
+// A file from Finder, the command line or the agent: if it's already open somewhere,
+// bring that window forward instead of showing the same deck twice.
+function openAnywhere(file, preferred = current()) {
+  file = path.resolve(file);
+  const showing = windowShowing(file);
+  if (showing) return focusWindow(showing);
+  if (preferred) return openFile(preferred, file);
+  createWindow(file);
+}
+
+async function openFile(w, file) {
+  if (!w.win) { w.pendingFile = file; return; }
   file = path.resolve(file);
   if (!fs.existsSync(file)) {
     dialog.showErrorBox('File not found', file);
     return;
   }
-  currentFile = file;
-  state = { index: 0, total: 0, label: null };
-  restoreIndex = null;
-  undoStack = [];
+  const showing = windowShowing(file);
+  if (showing && showing !== w) return focusWindow(showing);
+  w.currentFile = file;
+  w.state = EMPTY_STATE();
+  w.restoreIndex = null;
+  w.undoStack = [];
   app.addRecentDocument(file);
-  win.setTitle(displayName(file));
-  win.setRepresentedFilename?.(file);
-  deckView.setVisible(true);
-  watch(file);
-  await deckView.webContents.loadFile(file);
-  deckView.webContents.focus();
+  w.win.setTitle(displayName(file));
+  w.win.setRepresentedFilename?.(file);
+  w.deckView.setVisible(true);
+  watch(w, file);
+  await w.deckView.webContents.loadFile(file);
+  w.deckView?.webContents.focus();
 }
 
-async function showOpenDialog() {
-  if (!win) return;
-  const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+async function showOpenDialog(w) {
+  if (!w?.win) return;
+  const { canceled, filePaths } = await dialog.showOpenDialog(w.win, {
     title: 'Open presentation',
     properties: ['openFile'],
     filters: [{ name: 'PPTD presentation (.pptd.html)', extensions: ['html', 'htm'] }],
   });
-  if (!canceled && filePaths[0]) openFile(filePaths[0]);
+  if (!canceled && filePaths[0]) openFile(w, filePaths[0]);
 }
 
-function closeFile() {
-  if (!deckView) return;
-  if (mode !== 'normal') setMode('normal');
-  unwatch();
-  disposeThumbs();
-  currentFile = null;
-  state = { index: 0, total: 0, label: null };
-  undoStack = [];
-  deckView.webContents.loadURL('about:blank');
-  deckView.setVisible(false);
-  win.setTitle('PPTD');
-  win.setRepresentedFilename?.('');
-  sendState();
+function closeFile(w) {
+  if (!w?.deckView) return;
+  if (w.mode !== 'normal') setMode(w, 'normal');
+  unwatch(w);
+  w.thumbs.dispose();
+  w.currentFile = null;
+  w.state = EMPTY_STATE();
+  w.undoStack = [];
+  w.deckView.webContents.loadURL('about:blank');
+  w.deckView.setVisible(false);
+  w.win.setTitle('PPTD');
+  w.win.setRepresentedFilename?.('');
+  sendState(w);
 }
 
 // Reload when the file changes on disk (agent edits, dropped media, your editor).
 // Watch the folder, not the file: editors and agents often replace the file atomically.
-function watch(file) {
-  unwatch();
+function watch(w, file) {
+  unwatch(w);
   const dir = path.dirname(file), base = path.basename(file);
   try {
-    watcher = fs.watch(dir, (_event, name) => {
+    w.watcher = fs.watch(dir, (_event, name) => {
       if (name && name !== base) return;
-      clearTimeout(reloadTimer);
-      reloadTimer = setTimeout(reloadFromDisk, 200);
+      clearTimeout(w.reloadTimer);
+      w.reloadTimer = setTimeout(() => reloadFromDisk(w), 200);
     });
-  } catch { watcher = null; }
+  } catch { w.watcher = null; }
 }
-function unwatch() { clearTimeout(reloadTimer); watcher?.close(); watcher = null; }
+function unwatch(w) { clearTimeout(w.reloadTimer); w.watcher?.close(); w.watcher = null; }
 
-function reloadFromDisk() {
-  if (!currentFile || !deckView || !fs.existsSync(currentFile)) return;
-  if (restoreIndex == null) restoreIndex = state.index;
-  deckView.webContents.reloadIgnoringCache();
+function reloadFromDisk(w) {
+  if (!w?.currentFile || !w.deckView || !fs.existsSync(w.currentFile)) return;
+  if (w.restoreIndex == null) w.restoreIndex = w.state.index;
+  w.deckView.webContents.reloadIgnoringCache();
 }
 
 function writeAtomic(file, text) {
@@ -250,21 +337,22 @@ function writeAtomic(file, text) {
 
 // ---------------------------------------------------------------- media drop
 
-async function handleDrop(paths, slideIndex) {
+async function handleDrop(w, paths, slideIndex) {
   if (!paths?.length) return;
   const decks = paths.filter((p) => /\.html?$/i.test(p));
   const items = paths.filter((p) => media.kindOf(p));
   const other = paths.filter((p) => !decks.includes(p) && !items.includes(p));
-  if (decks.length && !items.length) return openFile(decks[0]);
-  if (other.length) toast(`Can't add ${other.map((p) => path.basename(p)).join(', ')}: use an image (PNG, JPEG, GIF, WebP, SVG, HEIC) or a video (MP4, MOV, WebM).`, 'error');
+  if (decks.length && !items.length) return openFile(w, decks[0]);
+  if (other.length) toast(w, `Can't add ${other.map((p) => path.basename(p)).join(', ')}: use an image (PNG, JPEG, GIF, WebP, SVG, HEIC) or a video (MP4, MOV, WebM).`, 'error');
   if (!items.length) return;
-  if (!currentFile) return toast('Open a presentation first, then drop images or video onto a slide.', 'error');
-  if (!isRadioDeck || !state.total) return toast('Media can only be added to PPTD slide decks.', 'error');
+  if (!w.currentFile) return toast(w, 'Open a presentation first, then drop images or video onto a slide.', 'error');
+  if (!w.isRadioDeck || !w.state.total) return toast(w, 'Media can only be added to PPTD slide decks.', 'error');
 
-  const target = Number.isInteger(slideIndex) ? slideIndex : state.index;
+  const file = w.currentFile;
+  const target = Number.isInteger(slideIndex) ? slideIndex : w.state.index;
   const n = target + 1;
   let html;
-  try { html = fs.readFileSync(currentFile, 'utf8'); } catch (e) { return toast(`Can't read the deck: ${e.message}`, 'error'); }
+  try { html = fs.readFileSync(file, 'utf8'); } catch (e) { return toast(w, `Can't read the deck: ${e.message}`, 'error'); }
   const before = html;
   const notes = [];
   let added = 0;
@@ -282,7 +370,7 @@ async function handleDrop(paths, slideIndex) {
         const size = fs.statSync(p).size;
         if (size > media.VIDEO_WARN_BYTES) {
           const mb = (size / 1048576).toFixed(0);
-          const choice = dialog.showMessageBoxSync(win, {
+          const choice = dialog.showMessageBoxSync(w.win, {
             type: 'warning', buttons: ['Embed Anyway', 'Cancel'], defaultId: 1, cancelId: 1,
             message: `${path.basename(p)} is ${mb} MB.`,
             detail: `Embedding it makes the deck about ${(size * 1.34 / 1048576).toFixed(0)} MB larger, because PPTD decks are single files. Large decks are slow to open and to share. A shorter or compressed clip is usually better.`,
@@ -295,35 +383,72 @@ async function handleDrop(paths, slideIndex) {
       html = media.insertFigure(html, n, fig);
       added++;
     } catch (e) {
-      toast(`${path.basename(p)}: ${e.message}`, 'error');
+      toast(w, `${path.basename(p)}: ${e.message}`, 'error');
     }
   }
   if (!added) return;
 
-  try { writeAtomic(currentFile, html); } catch (e) { return toast(`Couldn't save the deck: ${e.message}`, 'error'); }
-  undoStack.push({ file: currentFile, before, after: html, index: target });
-  if (undoStack.length > 20) undoStack.shift();
-  restoreIndex = target;
-  buildMenu();
+  try { writeAtomic(file, html); } catch (e) { return toast(w, `Couldn't save the deck: ${e.message}`, 'error'); }
   const what = items.length === 1 ? (media.kindOf(items[0]) === 'image' ? 'image' : 'video') : `${added} items`;
-  toast(`Added ${what} to slide ${n}${notes.length ? ` (${notes.join(', ')})` : ''}. ⌘Z to undo.`);
+  pushUndo(w, {
+    file, before, after: html, index: target, what: 'Add Media', since: 'the media was added',
+    undone: `Removed media from slide ${n}.`,
+    note: `The user removed the ${what} they had just added to slide ${n} (<section id="s${n}">) of ${displayName(file)}; the file changed on disk.`,
+  });
+  w.restoreIndex = target;
+  toast(w, `Added ${what} to slide ${n}${notes.length ? ` (${notes.join(', ')})` : ''}. ⌘Z to undo.`);
+  w.agent?.noteChange(`The user added ${what === 'image' ? 'an image' : what === 'video' ? 'a video' : what} to slide ${n} (<section id="s${n}">) of ${displayName(file)} in PPTD; the file changed on disk. Re-read that slide before editing it.`);
 }
 
-function undoInsert() {
-  const last = undoStack.at(-1);
+// ---------------------------------------------------------------- reorder (drag in the drawer)
+
+// from, to: 0-based positions. The slide's content moves; each position keeps its id,
+// controls and progress bar (lib/reorder.js), so the deck stays valid without renumbering.
+function moveSlideInDeck(w, from, to) {
+  const total = w.state.total;
+  if (!w.currentFile || !w.isRadioDeck || !Number.isInteger(from) || !Number.isInteger(to)) return;
+  if (from === to || from < 0 || to < 0 || from >= total || to >= total) return;
+  const file = w.currentFile;
+  let html, res;
+  try { html = fs.readFileSync(file, 'utf8'); } catch (e) { return toast(w, `Can't read the deck: ${e.message}`, 'error'); }
+  try { res = moveSlide(html, from + 1, to + 1); } catch (e) { return toast(w, e.message, 'error'); }
+  try { writeAtomic(file, res.html); } catch (e) { return toast(w, `Couldn't save the deck: ${e.message}`, 'error'); }
+  const name = res.title ? `“${res.title}”` : '';
+  pushUndo(w, {
+    file, before: html, after: res.html, index: from, what: 'Move Slide', since: 'the slide was moved',
+    undone: `Moved ${name || 'the slide'} back to position ${from + 1}.`,
+    note: `The user undid their slide move: ${name || 'the slide'} is back at position ${from + 1} and all slides are in their earlier order. The file changed on disk; re-read it before editing.`,
+  });
+  w.restoreIndex = to;
+  toast(w, `Moved slide ${from + 1}${name ? ` ${name}` : ''} to position ${to + 1}. ⌘Z to undo.`);
+  const [lo, hi] = from < to ? [from + 1, to + 1] : [to + 1, from + 1];
+  w.agent?.noteChange(`The user moved slide ${from + 1}${name ? ` (${name})` : ''} to position ${to + 1} in ${displayName(file)} using PPTD. Slides ${lo} to ${hi} now have different numbers and section ids (<section id="sN">): the slide content moved, while each position kept its id, controls and progress bar. The file changed on disk: re-read it before editing, and don't rely on slide numbers, ids or file text from earlier in this conversation.`);
+}
+
+// ---------------------------------------------------------------- undo (media drops, slide moves)
+
+function pushUndo(w, entry) {
+  w.undoStack.push(entry);
+  if (w.undoStack.length > 20) w.undoStack.shift();
+  buildMenu();
+}
+
+function undoInsert(w) {
+  const last = w?.undoStack.at(-1);
   if (!last) return;
   let now;
   try { now = fs.readFileSync(last.file, 'utf8'); } catch { now = null; }
   if (now !== last.after) {
-    undoStack = [];
+    w.undoStack = [];
     buildMenu();
-    return toast("Can't undo: the deck has changed since the media was added.", 'error');
+    return toast(w, `Can't undo: the deck has changed since ${last.since || 'then'}.`, 'error');
   }
-  undoStack.pop();
+  w.undoStack.pop();
   writeAtomic(last.file, last.before);
-  restoreIndex = last.index;
+  w.restoreIndex = last.index;
   buildMenu();
-  toast(`Removed media from slide ${last.index + 1}.`);
+  toast(w, last.undone);
+  if (last.note) w.agent?.noteChange(last.note);
 }
 
 // ---------------------------------------------------------------- navigation
@@ -347,12 +472,12 @@ const NAV_JS = (target) => `(() => {
   return { index: i, total: r.length, label: sec ? sec.getAttribute('aria-label') : null };
 })()`;
 
-async function navigate(target, { focus = false } = {}) {
-  if (!currentFile || !deckView) return;
-  const wc = deckView.webContents;
-  if (isRadioDeck) {
+async function navigate(w, target, { focus = false } = {}) {
+  if (!w?.currentFile || !w.deckView) return;
+  const wc = w.deckView.webContents;
+  if (w.isRadioDeck) {
     const res = await wc.executeJavaScript(NAV_JS(target)).catch(() => null);
-    if (res) { state = res; sendState(); }
+    if (res) { w.state = res; sendState(w); }
     if (focus) wc.focus();
     return;
   }
@@ -364,78 +489,80 @@ async function navigate(target, { focus = false } = {}) {
   wc.sendInputEvent({ type: 'keyUp', keyCode });
 }
 
-async function refreshState() {
-  if (!isRadioDeck) { state = { index: 0, total: 0, label: null }; sendState(); return; }
-  const res = await deckView.webContents.executeJavaScript(NAV_JS('stay')).catch(() => null);
-  state = res || { index: 0, total: 0, label: null };
-  sendState();
+async function refreshState(w) {
+  if (!w.isRadioDeck || !w.deckView) { w.state = EMPTY_STATE(); sendState(w); return; }
+  const res = await w.deckView.webContents.executeJavaScript(NAV_JS('stay')).catch(() => null);
+  w.state = res || EMPTY_STATE();
+  sendState(w);
 }
 
 let lastMenuKey = '';
-function sendState() {
-  if (!win) return;
-  const menuKey = `${!!currentFile}|${mode}|${undoStack.length > 0}`;
-  if (menuKey !== lastMenuKey) { lastMenuKey = menuKey; buildMenu(); }
-  agent?.writeState({ deck: currentFile, ...state });
-  send('state', {
-    file: currentFile ? displayName(currentFile) : null,
-    path: currentFile,
-    index: state.index,
-    total: state.total,
-    label: state.label,
-    mode,
+function sendState(w) {
+  if (!w.win) return;
+  if (w === current()) {
+    const menuKey = `${!!w.currentFile}|${w.mode}|${w.undoStack.at(-1)?.what || ''}`;
+    if (menuKey !== lastMenuKey) buildMenu();
+  }
+  w.agent?.writeState({ deck: w.currentFile, ...w.state });
+  send(w, 'state', {
+    file: w.currentFile ? displayName(w.currentFile) : null,
+    path: w.currentFile,
+    index: w.state.index,
+    total: w.state.total,
+    label: w.state.label,
+    mode: w.mode,
   });
 }
 
-function keyAction(action) {
-  if (!currentFile) return;
-  if (action === 'exit') { if (mode !== 'normal') setMode('normal'); }
-  else if (['next', 'prev', 'first', 'last'].includes(action)) navigate(action);
+function keyAction(w, action) {
+  if (!w?.currentFile) return;
+  if (action === 'exit') { if (w.mode !== 'normal') setMode(w, 'normal'); }
+  else if (['next', 'prev', 'first', 'last'].includes(action)) navigate(w, action);
 }
 
 // ---------------------------------------------------------------- slideshow
 
-async function setMode(next) {
-  if (!win || !deckView) return;
-  if (next !== 'normal' && !currentFile) return;
-  const prev = mode;
+async function setMode(w, next) {
+  if (!w?.win || !w.deckView) return;
+  if (next !== 'normal' && !w.currentFile) return;
+  const prev = w.mode;
   if (prev === next) return;
-  mode = next;
+  w.mode = next;
 
-  if (next === 'fullscreen') win.setFullScreen(true);
-  else if (prev === 'fullscreen' && win.isFullScreen()) win.setFullScreen(false);
+  if (next === 'fullscreen') w.win.setFullScreen(true);
+  else if (prev === 'fullscreen' && w.win.isFullScreen()) w.win.setFullScreen(false);
 
-  const wc = deckView.webContents;
-  deckView.setBackgroundColor(next === 'normal' ? EDIT_BG : '#000000');
-  if (isRadioDeck) {
-    if (frameCssKey) await wc.removeInsertedCSS(frameCssKey).catch(() => {});
-    frameCssKey = await wc.insertCSS(frameCss(next === 'normal' ? EDIT_BG : '#000'));
+  const wc = w.deckView.webContents;
+  w.deckView.setBackgroundColor(next === 'normal' ? EDIT_BG : '#000000');
+  if (w.isRadioDeck) {
+    if (w.frameCssKey) await wc.removeInsertedCSS(w.frameCssKey).catch(() => {});
+    w.frameCssKey = await wc.insertCSS(frameCss(next === 'normal' ? EDIT_BG : '#000'));
   }
 
-  layout();
-  settleLayout();
-  wc.send('mode', mode);
+  layout(w);
+  settleLayout(w);
+  wc.send('mode', w.mode);
   wc.focus();
-  sendState();
+  sendState(w);
 }
 
-function popupSlideshowMenu(x, y) {
+function popupSlideshowMenu(w, x, y) {
   Menu.buildFromTemplate([
-    { label: 'Full Screen', accelerator: 'CmdOrCtrl+Shift+Enter', click: () => setMode('fullscreen') },
-    { label: 'Fill Window', accelerator: 'CmdOrCtrl+Alt+Enter', click: () => setMode('window') },
-  ]).popup({ window: win, x: Math.round(x), y: Math.round(y) });
+    { label: 'Full Screen', accelerator: 'CmdOrCtrl+Shift+Enter', click: () => setMode(w, 'fullscreen') },
+    { label: 'Fill Window', accelerator: 'CmdOrCtrl+Alt+Enter', click: () => setMode(w, 'window') },
+  ]).popup({ window: w.win, x: Math.round(x), y: Math.round(y) });
 }
 
 // ---------------------------------------------------------------- thumbnails
 
-async function updateThumbs() {
-  if (!currentFile || !isRadioDeck || !thumbsStale) return;
-  thumbsStale = false;
-  const file = currentFile;
+async function updateThumbs(w) {
+  if (!w.currentFile || !w.isRadioDeck || !w.thumbsStale) return;
+  w.thumbsStale = false;
+  const file = w.currentFile;
   try {
-    await renderThumbs(file, (t) => { if (file === currentFile) send('thumb', t); });
+    await w.thumbs.render(file, (t) => { if (file === w.currentFile) send(w, 'thumb', t); });
   } catch (e) {
-    thumbsStale = true;
+    w.thumbsStale = true;
     console.error('thumbnails:', e.message);
   }
 }
@@ -445,114 +572,195 @@ async function updateThumbs() {
 // Where the agent starts when no deck is open; new presentations go here by default.
 const workspaceDir = () => process.env.PPTD_WORKSPACE || path.join(app.getPath('documents'), 'PPTD');
 
-// The agent's per-prompt note (slide on screen, brand); rewrite it when either may change.
-function refreshAgentNote() { agent?.writeState({ deck: currentFile, ...state }); }
+// Which agent new sessions run: 'pi' (bundled, the default) or 'claude'. Kept in
+// userData/settings.json; chosen in View › Agent.
+const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
+function readSettings() {
+  try { return JSON.parse(fs.readFileSync(settingsFile(), 'utf8')) || {}; } catch { return {}; }
+}
+function agentKind() {
+  const k = readSettings().agent;
+  return Object.hasOwn(AGENTS, k) ? k : 'pi';
+}
+function setAgentKind(kind) {
+  if (!Object.hasOwn(AGENTS, kind) || kind === agentKind()) return;
+  try {
+    fs.mkdirSync(path.dirname(settingsFile()), { recursive: true });
+    fs.writeFileSync(settingsFile(), JSON.stringify({ ...readSettings(), agent: kind }, null, 2));
+  } catch (e) { console.error('settings:', e.message); }
+  buildMenu();
+  const running = [...windows].filter((w) => w.agent?.alive && w.agent.kind !== kind).length;
+  if (running) toast(current(), `New agent sessions use ${AGENTS[kind]}. Press Restart to switch a running one.`);
+}
 
-// The default brand is written by the agent; refresh the note as soon as it appears.
+// The agent's per-prompt note (slide on screen, brand); rewrite it when either may change.
+function refreshAgentNote(w) { w.agent?.writeState({ deck: w.currentFile, ...w.state }); }
+
+// The default brand is written by the agent; refresh every note as soon as it appears.
 let brandWatcher = null;
 function watchDefaultBrand() {
   const dir = path.dirname(brand.userBrandFile());
   try {
     fs.mkdirSync(dir, { recursive: true });
-    brandWatcher = fs.watch(dir, (_e, name) => { if (!name || name === 'brand.md') refreshAgentNote(); });
+    brandWatcher = fs.watch(dir, (_e, name) => {
+      if (!name || name === 'brand.md') for (const w of windows) refreshAgentNote(w);
+    });
   } catch {}
 }
 
 // The agent's PostToolUse hook appends `"file_path": "…"` for every file it writes or edits.
-// A .pptd.html that isn't on screen is a deck the agent just made (or switched to): open it.
-let eventsWatcher = null, eventsOffset = 0;
-function watchAgentEvents(file) {
+// A .pptd.html that isn't on screen is a deck the agent just made (or switched to): open it
+// in the agent's own window.
+function watchAgentEvents(w, file) {
   fs.writeFileSync(file, '');
-  eventsOffset = 0;
-  eventsWatcher?.close();
-  eventsWatcher = fs.watch(file, () => {
+  w.eventsOffset = 0;
+  w.eventsWatcher?.close();
+  w.eventsWatcher = fs.watch(file, () => {
     let text = '';
     try {
       const buf = fs.readFileSync(file);
-      text = buf.subarray(eventsOffset).toString('utf8');
-      eventsOffset = buf.length;
+      text = buf.subarray(w.eventsOffset).toString('utf8');
+      w.eventsOffset = buf.length;
     } catch { return; }
     for (const line of text.split('\n')) {
       let p;
       try { p = JSON.parse(`{${line}}`).file_path; } catch { continue; }
       if (typeof p !== 'string' || !/\.pptd\.html$/i.test(p) || !path.isAbsolute(p)) continue;
-      if (p !== currentFile && fs.existsSync(p)) openFile(p);
+      if (p !== w.currentFile && fs.existsSync(p)) openFile(w, p);
     }
   });
 }
 
 // Decks written in the agent's folder by any means (it often uses shell commands, which
 // the hook can't see): open the one it touched, if it isn't already on screen.
-let cwdWatcher = null;
-const cwdTimers = new Map();
-function watchAgentFolder(dir) {
-  cwdWatcher?.close();
+function watchAgentFolder(w, dir) {
+  w.cwdWatcher?.close();
   const since = Date.now() - 1000;
   try {
-    cwdWatcher = fs.watch(dir, (_e, name) => {
+    w.cwdWatcher = fs.watch(dir, (_e, name) => {
       if (!name || !/\.pptd\.html$/i.test(name) || name.startsWith('.')) return;
       const file = path.join(dir, name);
-      clearTimeout(cwdTimers.get(file));
-      cwdTimers.set(file, setTimeout(() => {
-        cwdTimers.delete(file);
-        if (file === currentFile) return;
-        try { if (fs.statSync(file).mtimeMs >= since) openFile(file); } catch {}
+      clearTimeout(w.cwdTimers.get(file));
+      w.cwdTimers.set(file, setTimeout(() => {
+        w.cwdTimers.delete(file);
+        // Another window showing it already reloads it; don't steal it.
+        if (file === w.currentFile || windowShowing(file)) return;
+        try { if (fs.statSync(file).mtimeMs >= since) openFile(w, file); } catch {}
       }, 400));
     });
-  } catch { cwdWatcher = null; }
+  } catch { w.cwdWatcher = null; }
 }
 
-function ensureAgent() {
-  if (agent) return agent;
+let agentSeq = 0;
+function ensureAgent(w) {
+  if (w.agent) return w.agent;
   const dir = path.join(app.getPath('userData'), 'agent');
   fs.mkdirSync(dir, { recursive: true });
-  agent = new AgentSession({
-    stateFile: path.join(dir, `current-slide-${process.pid}.txt`),
-    eventsFile: path.join(dir, `events-${process.pid}.txt`),
-    onData: (d) => send('pty-data', d),
+  const tag = `${process.pid}-${++agentSeq}`;
+  w.agent = new AgentSession({
+    stateFile: path.join(dir, `current-slide-${tag}.txt`),
+    eventsFile: path.join(dir, `events-${tag}.txt`),
+    onData: (d) => send(w, 'pty-data', d),
     onExit: (e) => {
-      send('pty-exit', e);
-      if (restartAgent) { const s = restartAgent; restartAgent = null; startAgent(s); }
+      send(w, 'pty-exit', e);
+      if (w.restartAgent && w.win) { const s = w.restartAgent; w.restartAgent = null; startAgent(w, s); }
     },
   });
-  watchAgentEvents(agent.eventsFile);
+  watchAgentEvents(w, w.agent.eventsFile);
   if (!brandWatcher) watchDefaultBrand();
-  return agent;
+  return w.agent;
+}
+
+function removeAgentFiles(a) {
+  for (const f of [a.stateFile, a.stateFile && `${a.stateFile}.json`, a.stateFile && a.changesFile, a.eventsFile]) { if (f) try { fs.rmSync(f, { force: true }); } catch {} }
 }
 
 // With a deck open, the agent starts in its folder; otherwise in ~/Documents/PPTD,
 // ready to create one. It isn't tied to that deck: each prompt says what's on screen.
-async function startAgent({ cols, rows } = {}) {
-  const a = ensureAgent();
-  if (a.alive) return;
-  const cwd = currentFile ? path.dirname(currentFile) : workspaceDir();
+async function startAgent(w, { cols, rows } = {}) {
+  const a = ensureAgent(w);
+  if (a.alive || w.checkingLogin) return;
+  const kind = agentKind();
+  // pi with no model to use: show the sign-in panel instead, and start once signed in.
+  if (kind === 'pi') {
+    w.checkingLogin = true;
+    const st = await piLogin.piStatus();
+    w.checkingLogin = false;
+    if (!w.win || a.alive) return;
+    if (st && !st.ready) { showLogin(w, st, { cols, rows }); return; }
+  }
+  w.pendingAgent = null;
+  const cwd = w.currentFile ? path.dirname(w.currentFile) : workspaceDir();
   try { fs.mkdirSync(cwd, { recursive: true }); } catch {}
-  a.lastState = { deck: currentFile, ...state };
-  send('pty-start', { deck: currentFile ? displayName(currentFile) : null });
-  watchAgentFolder(cwd);
-  await a.start(cwd, cols, rows);
+  a.lastState = { deck: w.currentFile, ...w.state };
+  send(w, 'pty-start', { deck: w.currentFile ? displayName(w.currentFile) : null, agent: AGENTS[kind] });
+  watchAgentFolder(w, cwd);
+  await a.start(cwd, cols, rows, kind);
+}
+
+// ---------------------------------------------------------------- model sign-in (pi)
+
+// The sign-in panel in the agent pane. pending: the terminal size to start pi with once
+// signed in; null when opened from the menu (sign in only).
+function showLogin(w, status, pending = null) {
+  w.pendingAgent = pending;
+  send(w, 'login-show', { providers: status?.providers || {}, starting: !!pending });
+}
+
+async function openLoginFromMenu(w) {
+  if (!w) return;
+  const st = await piLogin.piStatus();
+  if (w.win) showLogin(w, st, w.agent?.alive ? null : w.pendingAgent);
+}
+
+function beginLogin(w, { provider, method, key } = {}) {
+  const p = piLogin.PROVIDERS[provider];
+  if (!p || !p.methods.includes(method) || (method === 'api_key' && (typeof key !== 'string' || !key.trim()))) return;
+  w.login?.cancel();
+  const session = piLogin.startLogin({ provider, method, key: key?.trim() }, (e) => {
+    if (w.login !== session) return;
+    if (e.type === 'auth_url' && /^https:\/\//i.test(e.url || '')) { w.loginUrl = e.url; shell.openExternal(e.url); }
+    if (e.type === 'device_code' && /^https:\/\//i.test(e.verificationUri || '')) shell.openExternal(e.verificationUri);
+    if (e.type === 'done' || e.type === 'error') { w.login = null; w.loginUrl = null; }
+    send(w, 'login-event', e);
+    if (e.type !== 'done') return;
+    send(w, 'login-hide', { signedIn: p.name });
+    if (w.pendingAgent) { const size = w.pendingAgent; w.pendingAgent = null; startAgent(w, size); }
+    else if (w.agent?.alive) toast(w, `Signed in to ${p.name}. Restart the agent to use it.`);
+    else toast(w, `Signed in to ${p.name}.`);
+  });
+  w.login = session;
 }
 
 // ---------------------------------------------------------------- menu
 
-function confirmEndSession(verb) {
-  const choice = dialog.showMessageBoxSync(win, {
-    type: 'question', buttons: [`End Session and ${verb}`, 'Cancel'], defaultId: 1, cancelId: 1,
-    message: 'An agent session is still running.',
-    detail: `${verb === 'Quit' ? 'Quitting' : 'Closing the window'} ends it. Edits it already saved stay in the file.`,
+function confirmEndSession(w, verb, count = 1) {
+  const choice = dialog.showMessageBoxSync(w.win, {
+    type: 'question', buttons: [`End ${count > 1 ? 'Sessions' : 'Session'} and ${verb}`, 'Cancel'], defaultId: 1, cancelId: 1,
+    message: count > 1 ? `${count} agent sessions are still running.` : 'An agent session is still running.',
+    detail: `${verb === 'Quit' ? 'Quitting' : 'Closing the window'} ends ${count > 1 ? 'them' : 'it'}. Edits already saved stay in the file.`,
   });
   return choice === 0;
 }
 
 function confirmQuit() {
-  if (agent?.alive && win && !confirmEndSession('Quit')) return;
+  const busy = [...windows].filter((w) => w.agent?.alive && w.win);
+  if (busy.length) {
+    const w = busy.includes(current()) ? current() : busy[0];
+    focusWindow(w);
+    if (!confirmEndSession(w, 'Quit', busy.length)) return;
+  }
   app.quit();
 }
 
 function buildMenu() {
-  const hasFile = !!currentFile;
-  const inShow = mode !== 'normal';
+  const w = current();
+  const hasFile = !!w?.currentFile;
+  const inShow = !!w && w.mode !== 'normal';
   const isMac = process.platform === 'darwin';
+  lastMenuKey = w ? `${hasFile}|${w.mode}|${w.undoStack.at(-1)?.what || ''}` : '';
+  // Menu clicks act on the window in front at the time of the click.
+  const on = (fn) => () => fn(current());
 
   const template = [
     ...(isMac ? [{
@@ -566,11 +774,12 @@ function buildMenu() {
     {
       label: 'File',
       submenu: [
-        { label: 'Open…', accelerator: 'CmdOrCtrl+O', click: showOpenDialog },
+        { label: 'New Window', accelerator: 'CmdOrCtrl+N', click: () => createWindow() },
+        { label: 'Open…', accelerator: 'CmdOrCtrl+O', click: () => { const c = current() || createWindow(); showOpenDialog(c); } },
         ...(isMac ? [{ role: 'recentDocuments', submenu: [{ role: 'clearRecentDocuments' }] }] : []),
-        { label: 'Close Presentation', accelerator: 'CmdOrCtrl+W', enabled: hasFile, click: closeFile },
+        { label: 'Close Presentation', accelerator: 'CmdOrCtrl+W', enabled: hasFile, click: on(closeFile) },
         { type: 'separator' },
-        { label: 'Reveal in Finder', enabled: hasFile, click: () => shell.showItemInFolder(currentFile) },
+        { label: 'Reveal in Finder', enabled: hasFile, click: on((c) => c?.currentFile && shell.showItemInFolder(c.currentFile)) },
         { type: 'separator' },
         isMac ? { role: 'close', accelerator: 'CmdOrCtrl+Shift+W' } : { label: 'Quit', click: confirmQuit },
       ],
@@ -578,7 +787,7 @@ function buildMenu() {
     {
       label: 'Edit',
       submenu: [
-        { label: 'Undo Add Media', accelerator: 'CmdOrCtrl+Z', enabled: undoStack.length > 0, click: undoInsert },
+        { label: `Undo ${w?.undoStack.at(-1)?.what || ''}`.trim(), accelerator: 'CmdOrCtrl+Z', enabled: !!w?.undoStack.length, click: on(undoInsert) },
         { type: 'separator' },
         { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' },
       ],
@@ -586,25 +795,34 @@ function buildMenu() {
     {
       label: 'Slideshow',
       submenu: [
-        { label: 'Play Full Screen', accelerator: 'CmdOrCtrl+Shift+Enter', enabled: hasFile && !inShow, click: () => setMode('fullscreen') },
-        { label: 'Play in Window', accelerator: 'CmdOrCtrl+Alt+Enter', enabled: hasFile && !inShow, click: () => setMode('window') },
-        { label: 'End Slideshow', enabled: inShow, click: () => setMode('normal') },
+        { label: 'Play Full Screen', accelerator: 'CmdOrCtrl+Shift+Enter', enabled: hasFile && !inShow, click: on((c) => setMode(c, 'fullscreen')) },
+        { label: 'Play in Window', accelerator: 'CmdOrCtrl+Alt+Enter', enabled: hasFile && !inShow, click: on((c) => setMode(c, 'window')) },
+        { label: 'End Slideshow', enabled: inShow, click: on((c) => setMode(c, 'normal')) },
         { type: 'separator' },
-        { label: 'Next Slide', enabled: hasFile, click: () => navigate('next') },
-        { label: 'Previous Slide', enabled: hasFile, click: () => navigate('prev') },
-        { label: 'First Slide', enabled: hasFile, click: () => navigate('first') },
-        { label: 'Last Slide', enabled: hasFile, click: () => navigate('last') },
+        { label: 'Next Slide', enabled: hasFile, click: on((c) => navigate(c, 'next')) },
+        { label: 'Previous Slide', enabled: hasFile, click: on((c) => navigate(c, 'prev')) },
+        { label: 'First Slide', enabled: hasFile, click: on((c) => navigate(c, 'first')) },
+        { label: 'Last Slide', enabled: hasFile, click: on((c) => navigate(c, 'last')) },
       ],
     },
     {
       label: 'View',
       submenu: [
-        { label: 'Slides Drawer', accelerator: 'CmdOrCtrl+Alt+S', click: () => send('toggle', 'drawer') },
-        { label: 'Agent Terminal', accelerator: 'CmdOrCtrl+J', click: () => send('toggle', 'agent') },
+        { label: 'Slides Drawer', accelerator: 'CmdOrCtrl+Alt+S', click: on((c) => send(c, 'toggle', 'drawer')) },
+        { label: 'Agent Terminal', accelerator: 'CmdOrCtrl+J', click: on((c) => send(c, 'toggle', 'agent')) },
+        {
+          label: 'Agent',
+          submenu: [
+            { label: 'Pi (built in)', type: 'radio', checked: agentKind() === 'pi', click: () => setAgentKind('pi') },
+            { label: 'Claude Code', type: 'radio', checked: agentKind() === 'claude', click: () => setAgentKind('claude') },
+            { type: 'separator' },
+            { label: 'Sign In to a Model for Pi…', click: on(openLoginFromMenu) },
+          ],
+        },
         { type: 'separator' },
-        { label: 'Reload Presentation', accelerator: 'CmdOrCtrl+R', enabled: hasFile, click: reloadFromDisk },
-        { label: 'Developer Tools (Presentation)', accelerator: 'Alt+CmdOrCtrl+I', enabled: hasFile, click: () => deckView.webContents.toggleDevTools() },
-        { label: 'Developer Tools (App)', click: () => win?.webContents.toggleDevTools() },
+        { label: 'Reload Presentation', accelerator: 'CmdOrCtrl+R', enabled: hasFile, click: on(reloadFromDisk) },
+        { label: 'Developer Tools (Presentation)', accelerator: 'Alt+CmdOrCtrl+I', enabled: hasFile, click: on((c) => c?.deckView?.webContents.toggleDevTools()) },
+        { label: 'Developer Tools (App)', click: on((c) => c?.win?.webContents.toggleDevTools()) },
       ],
     },
     { role: 'windowMenu' },
@@ -616,40 +834,64 @@ function buildMenu() {
 
 const isNavTarget = (t) => ['next', 'prev', 'first', 'last'].includes(t) || Number.isInteger(t);
 
-ipcMain.on('open-dialog', showOpenDialog);
-ipcMain.on('open-path', (_e, p) => { if (typeof p === 'string' && /\.html?$/i.test(p)) openFile(p); });
-ipcMain.on('nav', (_e, t, opts) => {
-  if (t === 'exit') return keyAction('exit');
-  if (isNavTarget(t)) navigate(t, { focus: !!opts?.focus });
+// Every message is handled by the window it came from (its app UI or its deck view).
+const handle = (channel, fn) => ipcMain.on(channel, (e, ...args) => {
+  const w = fromSender(e);
+  if (w?.win) fn(w, ...args);
 });
-ipcMain.on('deck-key', (_e, action) => keyAction(action));
-ipcMain.on('slideshow', (_e, m) => { if (m === 'fullscreen' || m === 'window') setMode(m); });
-ipcMain.on('slideshow-menu', (_e, { x, y }) => popupSlideshowMenu(x, y));
-ipcMain.on('stage-rect', (_e, r) => {
-  if (r && [r.x, r.y, r.width, r.height].every(Number.isFinite)) { stageRect = r; layout(); }
+
+handle('open-dialog', (w) => showOpenDialog(w));
+handle('open-path', (w, p) => { if (typeof p === 'string' && /\.html?$/i.test(p)) openFile(w, p); });
+handle('nav', (w, t, opts) => {
+  if (t === 'exit') return keyAction(w, 'exit');
+  if (isNavTarget(t)) navigate(w, t, { focus: !!opts?.focus });
 });
-ipcMain.on('drawer', (_e, open) => { drawerOpen = !!open; if (drawerOpen) updateThumbs(); });
-ipcMain.on('drop-paths', (_e, { paths, slide }) => {
-  if (Array.isArray(paths)) handleDrop(paths.filter((p) => typeof p === 'string' && p), Number.isInteger(slide) ? slide : undefined);
+handle('deck-key', (w, action) => keyAction(w, action));
+handle('slideshow', (w, m) => { if (m === 'fullscreen' || m === 'window') setMode(w, m); });
+handle('slideshow-menu', (w, { x, y } = {}) => popupSlideshowMenu(w, x, y));
+handle('stage-rect', (w, r) => {
+  if (r && [r.x, r.y, r.width, r.height].every(Number.isFinite)) { w.stageRect = r; layout(w); }
 });
-ipcMain.on('deck-drop', (_e, paths) => {
-  if (Array.isArray(paths)) handleDrop(paths.filter((p) => typeof p === 'string' && p));
+handle('drawer', (w, open) => { w.drawerOpen = !!open; if (w.drawerOpen) updateThumbs(w); });
+handle('drop-paths', (w, { paths, slide } = {}) => {
+  if (Array.isArray(paths)) handleDrop(w, paths.filter((p) => typeof p === 'string' && p), Number.isInteger(slide) ? slide : undefined);
 });
-ipcMain.on('agent-start', (_e, size) => startAgent(size || {}));
-ipcMain.on('agent-stop', () => agent?.stop());
-ipcMain.on('agent-restart', (_e, size) => {
-  if (agent?.alive) { restartAgent = size || {}; agent.stop(); } else startAgent(size || {});
+handle('deck-drop', (w, paths) => {
+  if (Array.isArray(paths)) handleDrop(w, paths.filter((p) => typeof p === 'string' && p));
 });
-ipcMain.on('pty-input', (_e, data) => { if (typeof data === 'string') agent?.write(data); });
-ipcMain.on('pty-resize', (_e, { cols, rows }) => agent?.resize(cols, rows));
-ipcMain.on('focus-deck', () => deckView?.webContents.focus());
+handle('agent-start', (w, size) => startAgent(w, size || {}));
+handle('agent-stop', (w) => w.agent?.stop());
+handle('agent-restart', (w, size) => {
+  if (w.agent?.alive) { w.restartAgent = size || {}; w.agent.stop(); } else startAgent(w, size || {});
+});
+handle('login-start', (w, req) => beginLogin(w, req || {}));
+handle('login-answer', (w, { id, value } = {}) => { if (typeof id === 'string' && typeof value === 'string') w.login?.answer(id, value); });
+handle('login-cancel', (w) => { w.login?.cancel(); w.login = null; w.loginUrl = null; });
+handle('login-open-url', (w) => { if (w.login && w.loginUrl) shell.openExternal(w.loginUrl); });
+handle('login-use-claude', (w) => {
+  w.login?.cancel(); w.login = null;
+  setAgentKind('claude');
+  send(w, 'login-hide', {});
+  const size = w.pendingAgent; w.pendingAgent = null;
+  if (size) startAgent(w, size);
+});
+handle('open-link', (_w, url) => {
+  // Only the pages the sign-in panel links to.
+  if (url === 'https://console.anthropic.com/settings/keys') shell.openExternal(url);
+});
+handle('move-slide', (w, { from, to } = {}) => moveSlideInDeck(w, from, to));
+handle('pty-input', (w, data) => { if (typeof data === 'string') w.agent?.write(data); });
+handle('pty-resize', (w, { cols, rows } = {}) => w.agent?.resize(cols, rows));
+handle('focus-deck', (w) => w.deckView?.webContents.focus());
 
 // ---------------------------------------------------------------- app lifecycle
 
 // Files opened from Finder / "Open With" / dock drop (macOS).
 app.on('open-file', (event, file) => {
   event.preventDefault();
-  if (app.isReady() && win) openFile(file); else pendingFile = file;
+  if (app.isReady() && windows.size) openAnywhere(file);
+  else if (app.isReady()) createWindow(path.resolve(file));
+  else pendingFile = file;
 });
 
 // File given on the command line: `bin/pptd deck.pptd.html` or
@@ -670,13 +912,14 @@ if (argFile) pendingFile = argFile;
 // an installed PPTD.app. (The brand file is shared: see lib/brand.js.)
 if (!app.isPackaged) app.setPath('userData', path.join(app.getPath('appData'), 'PPTD Dev'));
 
-// One app at a time: running the command again opens the file in the existing window.
+// One app at a time: running the command again opens the file in the existing app.
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) app.quit();
 app.on('second-instance', (_e, argv, cwd) => {
-  if (win) { if (win.isMinimized()) win.restore(); win.show(); win.focus(); }
   const f = fileFromArgs(argv, cwd);
-  if (f) openFile(f);
+  if (!windows.size) return createWindow(f);
+  if (f) return openAnywhere(f);
+  focusWindow(current());
 });
 
 app.whenReady().then(() => {
@@ -686,15 +929,15 @@ app.whenReady().then(() => {
     try { app.dock.setIcon(path.join(__dirname, 'build', 'icon.png')); } catch {}
   }
   buildMenu();
-  createWindow();
-  app.on('activate', () => { if (!win) createWindow(); });
+  createWindow(pendingFile ? path.resolve(pendingFile) : null);
+  pendingFile = null;
+  app.on('activate', () => { if (!windows.size) createWindow(); });
 });
 
 app.on('before-quit', () => { quitting = true; });
 
 app.on('will-quit', () => {
-  agent?.stop();
-  for (const f of [agent?.stateFile, agent?.eventsFile]) { if (f) try { fs.rmSync(f, { force: true }); } catch {} }
+  for (const w of windows) if (w.agent) { w.agent.stop(); removeAgentFiles(w.agent); }
 });
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });

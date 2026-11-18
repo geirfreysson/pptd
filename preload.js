@@ -16,12 +16,21 @@ contextBridge.exposeInMainWorld('viewer', {
   pathForFile: (file) => { try { return webUtils.getPathForFile(file) || ''; } catch { return ''; } },
   // slide is a 0-based index, or undefined for the current slide.
   dropPaths: (paths, slide) => ipcRenderer.send('drop-paths', { paths, slide }),
+  // Reorder: 0-based positions.
+  moveSlide: (from, to) => ipcRenderer.send('move-slide', { from, to }),
 
   agentStart: (size) => ipcRenderer.send('agent-start', size),
   agentStop: () => ipcRenderer.send('agent-stop'),
   agentRestart: (size) => ipcRenderer.send('agent-restart', size),
   ptyInput: (data) => ipcRenderer.send('pty-input', data),
   ptyResize: (cols, rows) => ipcRenderer.send('pty-resize', { cols, rows }),
+  // Model sign-in for pi (the panel in the agent pane).
+  loginStart: (req) => ipcRenderer.send('login-start', req),
+  loginAnswer: (id, value) => ipcRenderer.send('login-answer', { id, value }),
+  loginCancel: () => ipcRenderer.send('login-cancel'),
+  loginUseClaude: () => ipcRenderer.send('login-use-claude'),
+  loginOpenUrl: () => ipcRenderer.send('login-open-url'),
+  openLink: (url) => ipcRenderer.send('open-link', url),
 
   onState: on('state'),
   onThumb: on('thumb'),
@@ -30,4 +39,7 @@ contextBridge.exposeInMainWorld('viewer', {
   onPtyData: on('pty-data'),
   onPtyExit: on('pty-exit'),
   onPtyStart: on('pty-start'),
+  onLoginShow: on('login-show'),
+  onLoginEvent: on('login-event'),
+  onLoginHide: on('login-hide'),
 });

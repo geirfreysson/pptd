@@ -2,3 +2,5 @@ node_modules/
 dist/
 .DS_Store
 *.tmp
+vendor/pi/node_modules/
+vendor/tools/

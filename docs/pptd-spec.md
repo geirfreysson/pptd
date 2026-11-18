@@ -181,6 +181,21 @@ writes this markup when media is dropped on a slide; agents adding media SHOULD 
 | Video: MP4 (H.264/AAC) or WebM, `controls`, no `autoplay` | SHOULD |
 | Total file size: a short clip only; warn above 25 MB of video | SHOULD |
 
+### Reordering in the app
+
+The user can drag a slide to another position in the app's slide drawer. The app rewrites
+the file so that the slide's **content** moves and everything tied to a **position** stays:
+
+- Each `<section>` keeps its position's `id` (`sN`) and the number in its `aria-label`
+  (`Slide N: …`); the title after the number moves with the content.
+- Each position keeps its `.controls` and `.progress` elements (‹ › targets, counter, width).
+- Radios and the `#rN:checked ~ #sN` switching rules are unchanged.
+- Per-slide CSS in `<style>` blocks (`#s3 .chart`) and `for="rN"` jump links inside slide
+  content are renumbered to follow the slide they refer to.
+
+Decks stay conforming without other changes. Keep per-slide chrome inside `.controls` or
+`.progress` so it stays with its position, and anything else inside the slide content.
+
 ### Brand
 
 A deck records the brand it was made with, so it keeps its look wherever it is opened and an

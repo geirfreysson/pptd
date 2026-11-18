@@ -1,0 +1,9 @@
+{
+  "name": "pptd-vendored-pi",
+  "private": true,
+  "description": "The pi coding agent, bundled with PPTD as its default agent. Installed by tools/vendor-pi.sh; shipped as Contents/Resources/pi.",
+  "license": "MIT",
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "1.5.2"
+  }
+}

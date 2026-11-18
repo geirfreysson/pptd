@@ -16,11 +16,12 @@
     "build": "electron-builder --mac --dir",
     "dist": "electron-builder --mac",
     "check": "node tools/pptd-check.mjs",
-    "postinstall": "chmod +x node_modules/node-pty/prebuilds/*/spawn-helper",
+    "postinstall": "node tools/postinstall.mjs",
     "sync-skill": "sh tools/sync-skill.sh",
-    "prebuild": "sh tools/sync-skill.sh",
-    "predist": "sh tools/sync-skill.sh",
-    "icon": "python3 tools/make-icon.py"
+    "prebuild": "sh tools/sync-skill.sh && node tools/vendor-pi.mjs",
+    "predist": "sh tools/sync-skill.sh && node tools/vendor-pi.mjs",
+    "icon": "python3 tools/make-icon.py",
+    "vendor-pi": "node tools/vendor-pi.mjs"
   },
   "devDependencies": {
     "electron": "45.3.3",
@@ -53,7 +54,31 @@
       ],
       "identity": "-",
       "hardenedRuntime": false,
-      "icon": "build/icon.icns"
+      "icon": "build/icon.icns",
+      "extraResources": [
+        {
+          "from": "vendor/pi/node_modules",
+          "to": "pi/node_modules",
+          "filter": [
+            "**/*",
+            "!**/*.map",
+            "!**/*.d.ts",
+            "!**/*.d.mts",
+            "!**/*.d.cts",
+            "!@types/**",
+            "!@earendil-works/pi-tui/native/linux/**",
+            "!@earendil-works/pi-tui/native/win32/**"
+          ]
+        },
+        {
+          "from": "vendor/tools/mac-${arch}",
+          "to": "pi/bin",
+          "filter": [
+            "**/*",
+            "!.versions.json"
+          ]
+        }
+      ]
     },
     "fileAssociations": [
       {
@@ -67,7 +92,59 @@
     "asarUnpack": [
       "agent/**",
       "node_modules/node-pty/**"
-    ]
+    ],
+    "linux": {
+      "extraResources": [
+        {
+          "from": "vendor/pi/node_modules",
+          "to": "pi/node_modules",
+          "filter": [
+            "**/*",
+            "!**/*.map",
+            "!**/*.d.ts",
+            "!**/*.d.mts",
+            "!**/*.d.cts",
+            "!@types/**",
+            "!@earendil-works/pi-tui/native/darwin/**",
+            "!@earendil-works/pi-tui/native/win32/**"
+          ]
+        },
+        {
+          "from": "vendor/tools/linux-${arch}",
+          "to": "pi/bin",
+          "filter": [
+            "**/*",
+            "!.versions.json"
+          ]
+        }
+      ]
+    },
+    "win": {
+      "extraResources": [
+        {
+          "from": "vendor/pi/node_modules",
+          "to": "pi/node_modules",
+          "filter": [
+            "**/*",
+            "!**/*.map",
+            "!**/*.d.ts",
+            "!**/*.d.mts",
+            "!**/*.d.cts",
+            "!@types/**",
+            "!@earendil-works/pi-tui/native/darwin/**",
+            "!@earendil-works/pi-tui/native/linux/**"
+          ]
+        },
+        {
+          "from": "vendor/tools/win-${arch}",
+          "to": "pi/bin",
+          "filter": [
+            "**/*",
+            "!.versions.json"
+          ]
+        }
+      ]
+    }
   },
   "dependencies": {
     "@xterm/addon-fit": "0.11.0",
