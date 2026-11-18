@@ -102,7 +102,9 @@ When a change alters behaviour, update the docs in the same change:
 - `npm run check -- deck.pptd.html` validates a deck against the spec.
 - Install locally: `npm run build` → `dist/mac-arm64/PPTD.app`. Then quit the installed app
   (`osascript -e 'quit app "PPTD"'`), but first check that it has no running agent session
-  (a `claude` or `pi` child of the PPTD process). Then
+  (a `claude` or `pi` child of the PPTD process). For the ad-hoc signed local build that
+  AppleScript can fail with "Application isn't running" (-600) while it is; then send it
+  `kill -TERM <pid>` instead, which Electron handles as a normal quit. Then
   `rm -rf /Applications/PPTD.app && ditto dist/mac-arm64/PPTD.app /Applications/PPTD.app`
   and relaunch. Local builds are ad-hoc signed; signed and notarized releases come from
   `.github/workflows/release-macos.yml` when a `v*` tag matching `package.json` is pushed.
