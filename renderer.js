@@ -206,6 +206,8 @@ $('thumbs').addEventListener('dragleave', (e) => { if (!$('thumbs').contains(e.r
 // ---------------------------------------------------------------- terminal
 
 let term = null, fit = null, live = false, started = false;
+// Keys typed while an agent session is starting are kept and sent once it is live.
+let starting = false, earlyInput = '';
 
 function ensureTerm() {
   if (term) return;
@@ -235,7 +237,10 @@ function ensureTerm() {
     if (e.type === 'keydown' && live) v.ptyInput(agentName === 'Pi' ? '\x1b[13;2u' : '\x1b\r');
     return false;
   });
-  term.onData((d) => { if (live) v.ptyInput(d); });
+  term.onData((d) => {
+    if (live) v.ptyInput(d);
+    else if (starting) earlyInput += d;
+  });
   term.onResize(({ cols, rows }) => v.ptyResize(cols, rows));
   new ResizeObserver(() => { if (body.classList.contains('term-open')) safeFit(); }).observe($('xterm'));
 }
@@ -252,15 +257,24 @@ function toggleAgent(force) {
     if (!open) { v.focusDeck(); return; }
     ensureTerm();
     safeFit();
-    if (!started) { started = true; v.agentStart(size()); }
+    if (!started) { started = true; starting = true; earlyInput = ''; v.agentStart(size()); }
+    // The deck is a separate view that usually holds keyboard focus; take it back so you can
+    // type to the agent straight after ⌘J.
+    v.focusUi();
     term.focus();
   });
 }
 
-v.onPtyStart((e) => { live = true; agentName = e?.agent || 'Agent'; updateTermTitle(); });
+v.onPtyStart((e) => {
+  starting = false;
+  live = true; agentName = e?.agent || 'Agent'; updateTermTitle();
+  // Keys typed while the agent was starting (straight after ⌘J) go to it now.
+  if (earlyInput) { v.ptyInput(earlyInput); earlyInput = ''; }
+});
 v.onPtyData((d) => term?.write(d));
 v.onPtyExit((e) => {
   live = false;
+  starting = false; earlyInput = '';
   if (!e?.notFound) term?.write(`\r\n\x1b[2m[session ended${e?.exitCode ? `, exit code ${e.exitCode}` : ''}; press Restart for a new one]\x1b[0m\r\n`);
   updateTermTitle();
 });
@@ -271,6 +285,7 @@ $('restart').addEventListener('click', () => {
   ensureTerm();
   term.reset();
   started = true;
+  starting = true; earlyInput = '';
   v.agentRestart(size());
   term.focus();
 });
@@ -303,6 +318,8 @@ const loginBox = () => $('loginBox');
 function setLoginOpen(open) {
   $('login').hidden = !open;
   if (open) {
+    starting = false; earlyInput = ''; // the sign-in panel takes the keys now
+    v.focusUi();
     body.classList.add('term-open');
     $('agentBtn').classList.add('on');
     requestAnimationFrame(reportStage);
@@ -448,7 +465,7 @@ v.onLoginEvent((e) => {
 });
 v.onLoginHide(() => {
   setLoginOpen(false);
-  if (body.classList.contains('term-open')) { ensureTerm(); safeFit(); term.focus(); }
+  if (body.classList.contains('term-open')) { ensureTerm(); safeFit(); v.focusUi(); term.focus(); }
 });
 
 // Resize the terminal by dragging the divider.

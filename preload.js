@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('viewer', {
   stageRect: (r) => ipcRenderer.send('stage-rect', r),
   drawer: (open) => ipcRenderer.send('drawer', open),
   focusDeck: () => ipcRenderer.send('focus-deck'),
+  focusUi: () => ipcRenderer.send('focus-ui'),
   // Dropped files. A FileList doesn't survive the context bridge, so the page passes
   // File objects one at a time to pathForFile and sends plain paths.
   pathForFile: (file) => { try { return webUtils.getPathForFile(file) || ''; } catch { return ''; } },

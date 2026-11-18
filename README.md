@@ -83,7 +83,8 @@ npm run check -- path/to/deck.pptd.html
 - **New presentations**: press ⌘J and ask for one ("make a 6-slide deck about our Q3
   results"). With no deck open, the agent works in `~/Documents/PPTD`; the app opens the new
   deck as soon as the agent saves it.
-- **Agent** (bottom, ⌘J): a coding agent in a terminal, started in the deck's folder. Each message
+- **Agent** (bottom, ⌘J): a coding agent in a terminal, started in the deck's folder. ⌘J puts
+  the cursor in it, so you can type straight away (even while it starts). Each message
   you send carries the slide on screen, so "make the headline shorter" applies to that slide
   unless you name another one. The agent edits the file; the app reloads it straight away and
   stays on the same slide. **Hide** keeps the session; **Stop**/**Restart** end it or start a new one.

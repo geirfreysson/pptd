@@ -82,6 +82,11 @@ When a change alters behaviour, update the docs in the same change:
 
 - `index.html` CSS: `.main` is the layout grid under the toolbar. Don't reuse generic class
   names like `main` on components (a Play button that did got squashed to zero width).
+- **Keyboard focus:** the deck is a separate WebContentsView and usually holds keyboard focus,
+  so `term.focus()` alone does nothing. The renderer calls `viewer.focusUi()` (main:
+  `w.win.webContents.focus()`) before focusing the terminal or the sign-in panel. Decks the
+  agent opens use `openFile(w, f, { focus: false })` so they don't take the keyboard from the
+  agent; keys typed while a session starts are queued in the renderer and sent on `pty-start`.
 - The skill's `SKILL.md` frontmatter must be strict YAML (quote a description that contains
   `: `). Claude Code tolerates bad YAML; pi drops the skill without saying so.
 - The agent terminal is xterm.js, which sends a bare `\r` for Shift+Enter and supports neither

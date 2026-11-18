@@ -263,7 +263,9 @@ function openAnywhere(file, preferred = current()) {
   createWindow(file);
 }
 
-async function openFile(w, file) {
+// focus: give the deck keyboard focus once loaded. Decks the agent opens pass false, so
+// typing to the agent isn't taken over by the slide (where arrow keys change slides).
+async function openFile(w, file, { focus = true } = {}) {
   if (!w.win) { w.pendingFile = file; return; }
   file = path.resolve(file);
   if (!fs.existsSync(file)) {
@@ -282,7 +284,7 @@ async function openFile(w, file) {
   w.deckView.setVisible(true);
   watch(w, file);
   await w.deckView.webContents.loadFile(file);
-  w.deckView?.webContents.focus();
+  if (focus) w.deckView?.webContents.focus();
 }
 
 async function showOpenDialog(w) {
@@ -633,7 +635,7 @@ function watchAgentEvents(w, file) {
       let p;
       try { p = JSON.parse(`{${line}}`).file_path; } catch { continue; }
       if (typeof p !== 'string' || !/\.pptd\.html$/i.test(p) || !path.isAbsolute(p)) continue;
-      if (p !== w.currentFile && fs.existsSync(p)) openFile(w, p);
+      if (p !== w.currentFile && fs.existsSync(p)) openFile(w, p, { focus: false });
     }
   });
 }
@@ -652,7 +654,7 @@ function watchAgentFolder(w, dir) {
         w.cwdTimers.delete(file);
         // Another window showing it already reloads it; don't steal it.
         if (file === w.currentFile || windowShowing(file)) return;
-        try { if (fs.statSync(file).mtimeMs >= since) openFile(w, file); } catch {}
+        try { if (fs.statSync(file).mtimeMs >= since) openFile(w, file, { focus: false }); } catch {}
       }, 400));
     });
   } catch { w.cwdWatcher = null; }
@@ -890,6 +892,8 @@ handle('move-slide', (w, { from, to } = {}) => moveSlideInDeck(w, from, to));
 handle('pty-input', (w, data) => { if (typeof data === 'string') w.agent?.write(data); });
 handle('pty-resize', (w, { cols, rows } = {}) => w.agent?.resize(cols, rows));
 handle('focus-deck', (w) => w.deckView?.webContents.focus());
+// The app chrome (terminal, sign-in panel) takes keyboard focus back from the deck view.
+handle('focus-ui', (w) => w.win.webContents.focus());
 
 // ---------------------------------------------------------------- app lifecycle
 
