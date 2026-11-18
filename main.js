@@ -75,6 +75,7 @@ function newWindowState() {
     stageRect: null,             // where index.html wants the deck (normal mode)
     watcher: null,
     reloadTimer: null,
+    refreshing: null,            // the in-place update under way (they run one at a time)
     settleTimer: null,
     drawerOpen: false,
     thumbsStale: true,
@@ -288,6 +289,7 @@ async function openFile(w, file, { focus = true } = {}) {
   w.win.setRepresentedFilename?.(file);
   w.deckView.setVisible(true);
   watch(w, file);
+  if (!focus) keepUiFocus(w);
   await w.deckView.webContents.loadFile(file);
   if (focus) w.deckView?.webContents.focus();
 }
@@ -327,17 +329,81 @@ function watch(w, file) {
     w.watcher = fs.watch(dir, (_event, name) => {
       if (name && name !== base) return;
       clearTimeout(w.reloadTimer);
-      w.reloadTimer = setTimeout(() => reloadFromDisk(w), 200);
+      w.reloadTimer = setTimeout(() => {
+        w.refreshing = (w.refreshing || Promise.resolve()).then(() => refreshFromDisk(w)).catch(() => {});
+      }, 200);
     });
   } catch { w.watcher = null; }
 }
 function unwatch(w) { clearTimeout(w.reloadTimer); w.watcher?.close(); w.watcher = null; }
 
+// A full reload (⌘R, or when an in-place update can't be done).
 function reloadFromDisk(w) {
   if (!w?.currentFile || !w.deckView || !fs.existsSync(w.currentFile)) return;
   if (w.restoreIndex == null) w.restoreIndex = w.state.index;
+  keepUiFocus(w);
   w.deckView.webContents.reloadIgnoringCache();
 }
+
+// Loading a page into the deck view can take keyboard focus from the app chrome (the agent
+// terminal). If the chrome had it, give it back once the deck has loaded.
+function keepUiFocus(w) {
+  const ui = w.win?.webContents;
+  if (!ui?.isFocused()) return;
+  w.deckView.webContents.once('did-stop-loading', () => { if (!ui.isDestroyed()) ui.focus(); });
+}
+
+// The deck changed on disk: patch the open page in place so only what changed is touched.
+// No reload, so no flash of slide 1, the slide you're on stays put, and keyboard focus stays
+// where it was. Falls back to a full reload for anything other than a radio deck.
+async function refreshFromDisk(w) {
+  if (!w?.currentFile || !w.deckView) return;
+  let html;
+  try { html = fs.readFileSync(w.currentFile, 'utf8'); } catch { return; }
+  const ok = w.isRadioDeck && !w.deckView.webContents.isLoading()
+    && await w.deckView.webContents.executeJavaScript(PATCH_JS(html)).catch(() => false);
+  if (!ok) return reloadFromDisk(w);
+  const i = w.restoreIndex ?? w.state.index;
+  w.restoreIndex = null;
+  await navigate(w, i, { focus: false });
+  w.thumbsStale = true;
+  if (w.drawerOpen) updateThumbs(w);
+  sendPrompts(w);
+}
+
+// Runs in the deck page. Morphs the live document into the new HTML: unchanged nodes are
+// kept (images don't reload, the visible slide doesn't re-run its entry animation), changed
+// ones get their attributes and children updated. Returns false if the new file isn't a
+// script-free radio deck, so the caller reloads instead.
+const PATCH_JS = (html) => `(() => {
+  const next = new DOMParser().parseFromString(${JSON.stringify(html)}, 'text/html');
+  if (next.querySelector('script')) return false;
+  if (!next.querySelector('meta[name=pptd], input.slide-radio, input[type=radio][name=slide]')) return false;
+  const syncAttrs = (a, b) => {
+    for (const { name } of [...a.attributes]) if (!b.hasAttribute(name)) a.removeAttribute(name);
+    for (const { name, value } of [...b.attributes]) if (a.getAttribute(name) !== value) a.setAttribute(name, value);
+  };
+  const same = (a, b) => a.nodeType === b.nodeType && a.nodeName === b.nodeName
+    && (a.nodeType !== 1 || (a.id === b.id && a.nodeName !== 'TEMPLATE'));
+  const morph = (a, b) => {
+    const ak = [...a.childNodes], bk = [...b.childNodes];
+    for (let i = 0; i < bk.length; i++) {
+      const x = ak[i], y = bk[i];
+      if (!x) { a.appendChild(document.importNode(y, true)); continue; }
+      if (!same(x, y)) { a.replaceChild(document.importNode(y, true), x); continue; }
+      if (x.nodeType === 1) {
+        if (x.outerHTML === y.outerHTML) continue;
+        syncAttrs(x, y);
+        morph(x, y);
+      } else if (x.nodeValue !== y.nodeValue) x.nodeValue = y.nodeValue;
+    }
+    for (let i = bk.length; i < ak.length; i++) ak[i].remove();
+  };
+  syncAttrs(document.documentElement, next.documentElement);
+  syncAttrs(document.head, next.head); morph(document.head, next.head);
+  syncAttrs(document.body, next.body); morph(document.body, next.body);
+  return true;
+})()`;
 
 function writeAtomic(file, text) {
   const tmp = path.join(path.dirname(file), `.${path.basename(file)}.${process.pid}.tmp`);
@@ -526,6 +592,7 @@ function sendState(w) {
     total: w.state.total,
     label: w.state.label,
     mode: w.mode,
+    slideshowMode: slideshowMode(),
   });
 }
 
@@ -563,7 +630,7 @@ async function setMode(w, next) {
 
 function popupSlideshowMenu(w, x, y) {
   Menu.buildFromTemplate([
-    { label: 'Full Screen', accelerator: 'CmdOrCtrl+Enter', click: () => setMode(w, 'fullscreen') },
+    { label: 'Full Screen', accelerator: 'CmdOrCtrl+Shift+Enter', click: () => setMode(w, 'fullscreen') },
     { label: 'Fill Window', accelerator: 'CmdOrCtrl+Alt+Enter', click: () => setMode(w, 'window') },
   ]).popup({ window: w.win, x: Math.round(x), y: Math.round(y) });
 }
@@ -738,6 +805,15 @@ const snapshots = () => historyStore ||= history.createStore(path.join(app.getPa
   () => (Number(readSettings().historyMaxMB) || 1024) * 1048576);
 const savePrompts = () => readSettings().savePrompts === true;
 const isPptdDeck = (html) => /<meta\s[^>]*name=["']pptd["']/i.test(html);
+
+// How ⌘↩ and the toolbar's ▶ button play: 'fullscreen' (the default) or 'window'.
+// Chosen in View › Slideshow Plays.
+const slideshowMode = () => (readSettings().slideshowMode === 'window' ? 'window' : 'fullscreen');
+function setSlideshowMode(mode) {
+  writeSettings({ slideshowMode: mode });
+  buildMenu();
+  for (const w of windows) sendState(w);
+}
 
 function toggleSavePrompts() {
   const on = !savePrompts();
@@ -1003,9 +1079,8 @@ function buildMenu() {
     {
       label: 'Slideshow',
       submenu: [
-        { label: 'Play Full Screen', accelerator: 'CmdOrCtrl+Enter', enabled: hasFile && !inShow, click: on((c) => setMode(c, 'fullscreen')) },
-        // The old shortcut, kept working but not shown.
-        { label: 'Play Full Screen', accelerator: 'CmdOrCtrl+Shift+Enter', visible: false, acceleratorWorksWhenHidden: true, enabled: hasFile && !inShow, click: on((c) => setMode(c, 'fullscreen')) },
+        { label: 'Play Slideshow', accelerator: 'CmdOrCtrl+Enter', enabled: hasFile && !inShow, click: on((c) => setMode(c, slideshowMode())) },
+        { label: 'Play Full Screen', accelerator: 'CmdOrCtrl+Shift+Enter', enabled: hasFile && !inShow, click: on((c) => setMode(c, 'fullscreen')) },
         { label: 'Play in Window', accelerator: 'CmdOrCtrl+Alt+Enter', enabled: hasFile && !inShow, click: on((c) => setMode(c, 'window')) },
         { label: 'End Slideshow', enabled: inShow, click: on((c) => setMode(c, 'normal')) },
         { type: 'separator' },
@@ -1022,6 +1097,13 @@ function buildMenu() {
         { label: 'Agent Terminal', accelerator: 'CmdOrCtrl+J', click: on((c) => send(c, 'toggle', 'agent')) },
         { label: 'Prompt History', click: on((c) => send(c, 'toggle', 'prompts')) },
         { label: 'Save Prompts in Decks', type: 'checkbox', checked: savePrompts(), click: toggleSavePrompts },
+        {
+          label: 'Slideshow Plays',
+          submenu: [
+            { label: 'Full Screen', type: 'radio', checked: slideshowMode() === 'fullscreen', click: () => setSlideshowMode('fullscreen') },
+            { label: 'In Window', type: 'radio', checked: slideshowMode() === 'window', click: () => setSlideshowMode('window') },
+          ],
+        },
         {
           label: 'Agent',
           submenu: [
@@ -1059,7 +1141,10 @@ handle('nav', (w, t, opts) => {
   if (isNavTarget(t)) navigate(w, t, { focus: !!opts?.focus });
 });
 handle('deck-key', (w, action) => keyAction(w, action));
-handle('slideshow', (w, m) => { if (m === 'fullscreen' || m === 'window') setMode(w, m); });
+handle('slideshow', (w, m) => {
+  if (m === 'default') m = slideshowMode();
+  if (m === 'fullscreen' || m === 'window') setMode(w, m);
+});
 handle('slideshow-menu', (w, { x, y } = {}) => popupSlideshowMenu(w, x, y));
 handle('stage-rect', (w, r) => {
   if (r && [r.x, r.y, r.width, r.height].every(Number.isFinite)) { w.stageRect = r; layout(w); }

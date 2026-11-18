@@ -100,6 +100,10 @@ When a change alters behaviour, update the docs in the same change:
 
 ## Gotchas
 
+- **Don't reload the deck view on file changes.** A reload repaints slide 1 before jumping
+  back (a visible flash) and takes keyboard focus from the agent terminal. Disk changes go
+  through `refreshFromDisk` (in-place DOM morph); anything that must reload or `loadFile`
+  without focusing the deck calls `keepUiFocus(w)` first.
 - `index.html` CSS: `.main` is the layout grid under the toolbar. Don't reuse generic class
   names like `main` on components (a Play button that did got squashed to zero width).
 - **Keyboard focus:** the deck is a separate WebContentsView and usually holds keyboard focus,

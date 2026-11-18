@@ -26,7 +26,7 @@ window.addEventListener('resize', reportStage);
 $('open').addEventListener('click', () => v.open());
 $('prev').addEventListener('click', () => v.nav('prev'));
 $('next').addEventListener('click', () => v.nav('next'));
-$('play').addEventListener('click', () => v.slideshow('fullscreen'));
+$('play').addEventListener('click', () => v.slideshow('default'));
 $('playMenu').addEventListener('click', (e) => {
   const r = e.currentTarget.getBoundingClientRect();
   v.slideshowMenu(r.left, r.bottom + 4);
@@ -79,6 +79,7 @@ v.onState((s) => {
   $('file').textContent = s.file || '';
   $('file').title = s.path || '';
   for (const id of ['prev', 'next', 'play', 'playMenu']) $(id).disabled = !has;
+  $('play').title = `Slideshow, ${s.slideshowMode === 'window' ? 'in window' : 'full screen'} (⌘↩)`;
   if (has && s.total) {
     $('counter').textContent = `${s.index + 1} / ${s.total}`;
     $('prev').disabled = s.index <= 0;

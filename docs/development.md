@@ -123,7 +123,9 @@ the oldest removed first; `historyMaxMB` in `settings.json` changes the cap.
 ## How it works
 
 - `main.js`: windows, layout, slideshow modes, file watching, media drops, undo, menu. Each
-  window (⌘N) has its own deck, undo history, thumbnails and agent session.
+  window (⌘N) has its own deck, undo history, thumbnails and agent session. When the deck
+  changes on disk, `refreshFromDisk` patches the open page in place (`PATCH_JS` morphs the
+  DOM, keeping unchanged nodes) instead of reloading it; ⌘R and non-radio pages reload.
 - `deck-preload.js`: runs inside the deck. Catches navigation keys (so the deck's own radio
   group can't wrap from last to first) and dropped files.
 - `index.html` / `renderer.js` / `preload.js`: toolbar, slides drawer, terminal (xterm.js).

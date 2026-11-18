@@ -27,7 +27,8 @@ Press **⌘J** and ask: *"Make a 6-slide deck about our Q3 results."* The agent 
 deck, and PPTD opens it as soon as it's saved. New presentations go in `Documents/PPTD`.
 
 Then just talk about what you see. Every message carries the slide on screen, so "make this
-shorter" means *this* slide unless you name another.
+shorter" means *this* slide unless you name another. Changes appear in place as the agent
+saves them: you stay on the slide you're looking at, and you can keep typing while it works.
 
 **Sign in once.** PPTD comes with its own agent, so there's nothing else to install. The first
 time, sign in with your **ChatGPT** (Plus/Pro) or **Claude** (Pro/Max) account, or paste an
@@ -69,8 +70,9 @@ this is off until you turn it on. File › Remove Prompt History clears them fro
 
 ## Present
 
-Press **⌘↩** for a full-screen slideshow, or **⌘⌥↩** to fill the window. Arrow keys, Space and
-Enter move through the slides, and Esc ends the show.
+Press **⌘↩** to start the slideshow. It plays full screen unless you choose
+**View › Slideshow Plays › In Window**. **⇧⌘↩** always plays full screen and **⌘⌥↩** always fills
+the window. Arrow keys, Space and Enter move through the slides, and Esc ends the show.
 
 ## Keyboard
 
@@ -78,7 +80,8 @@ Enter move through the slides, and Esc ends the show.
 |---|---|
 | ← → ↑ ↓, PageUp / PageDown | previous / next slide |
 | Home / End | first / last slide |
-| ⌘↩ | full-screen slideshow |
+| ⌘↩ | slideshow, in the mode chosen in View › Slideshow Plays |
+| ⇧⌘↩ | full-screen slideshow |
 | ⌘⌥↩ | slideshow in the window |
 | In a slideshow: Enter / Space | next slide (Shift+Enter, Backspace: previous) |
 | In a slideshow: Esc | end the slideshow |
