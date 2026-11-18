@@ -1,234 +1,106 @@
 # PPTD — PowerPoint is dead
 
-A macOS app for presentations that are single HTML files (`*.pptd.html`). It plays them with
-native controls and a slideshow mode, and edits them with an agent in a terminal next to the
-slides. The deck's in-page ‹ › buttons are hidden; navigation lives in the app's toolbar.
+**Presentations you make by asking.** Tell PPTD what you want to say and an AI agent builds the
+slides while you watch. Then keep going: "make the headline shorter", "turn this into a
+chart", "add a slide about pricing". Every change appears straight away.
 
-```sh
-npm install
-npm start                      # then ⌘O, or drop a .html file on the window
-npm start -- path/to/deck.pptd.html  # open a file directly
-```
+Each presentation is a single HTML file. It opens in any browser, previews in Microsoft Teams
+and needs nothing installed to view, so you can send it the way you'd send a PDF.
 
-### From the command line
+## Download
 
-```sh
-npm link                         # once: puts `pptd` on your PATH
-pptd path/to/deck.pptd.html
-```
-
-`pptd` (in `bin/`) starts the dev version in this repo, or the installed app if
-`node_modules` is missing. If PPTD is already running, the file opens in its front window, or the window already
-showing it.
-Relative paths are resolved from the folder you run it in.
-
-## Build the native app
-
-```sh
-npm run build   # → dist/mac-arm64/PPTD.app   (fast, no installer)
-npm run dist    # → dist/PPTD-<version>-arm64.dmg
-```
-
-The app icon is `build/icon.icns`, made from `build/source-icon.png` by `npm run icon`
-(white rounded square with macOS padding; needs Python with Pillow). `npm start` keeps its
-settings in `PPTD Dev`, so it can run next to an installed PPTD.app.
-
-Local builds are ad-hoc signed, so they run on the Mac that built them.
-
-### Releases
-
-`.github/workflows/release.yml` builds on GitHub Actions, one native runner per platform:
-
-| Platform | Files |
-|---|---|
-| macOS, Apple Silicon | `PPTD-<version>-mac-arm64.dmg` |
-| Linux x64 | `PPTD-<version>-linux-x86_64.AppImage`, `PPTD-<version>-linux-amd64.deb` |
-| Windows x64 | `PPTD-<version>-windows-x64-setup.exe` (unsigned, per-user NSIS installer) |
-
-Each comes with a `.sha256`, plus a copy without the version in its name for a stable
-"latest" link. Pushing a tag `v<version>` that matches `package.json` publishes one GitHub
-release once all three builds pass, with `release-draft.md` (first line exactly
-`# PPTD v<version>`) as its notes and `.github/release-install.md` appended.
-`npm run release:validate -- v<version>` checks the version, tag and draft before you tag.
-Running the workflow by hand builds all three without releasing (the files are kept as
-workflow artifacts). Each build runs `tools/verify-release-bundle.mjs` on the packaged app:
-pi, this OS's ripgrep and fd (which must run), the skill, and node-pty's native module.
-
-The macOS build is signed with a Developer ID and notarized only when these repository
-secrets exist; without them it is ad-hoc signed and users have to allow it in
-System Settings › Privacy & Security the first time.
-
-| Secret | Value |
-|---|---|
-| `CSC_LINK` | base64 of the Developer ID Application `.p12` certificate |
-| `CSC_KEY_PASSWORD` | the `.p12` export password |
-| `APPLE_API_KEY_BASE64` | base64 of the App Store Connect API key (`AuthKey_….p8`) |
-| `APPLE_API_KEY_ID` | that key's ID |
-| `APPLE_API_ISSUER` | the App Store Connect issuer ID |
-
-```sh
-gh secret set CSC_LINK < <(base64 -i DeveloperID.p12)
-gh secret set CSC_KEY_PASSWORD
-gh secret set APPLE_API_KEY_BASE64 < <(base64 -i AuthKey_XXXXXXXXXX.p8)
-gh secret set APPLE_API_KEY_ID
-gh secret set APPLE_API_ISSUER
-```
-
-On macOS the app registers as an *alternate* handler for `.html`, so it appears in Finder's
-**Open With** menu without taking over as the default browser. (macOS can't associate a
-double extension like `.pptd.html` on its own.)
-
-## The PPTD format
-
-Decks are saved as `<name>.pptd.html`. The spec agents must follow is in
-[`docs/pptd-spec.md`](docs/pptd-spec.md). Check a file with:
-
-```sh
-npm run check -- path/to/deck.pptd.html
-```
-
-## Editing with the app
-
-- **Slides drawer** (left, ⌥⌘S): a picture of every slide. It scrolls on its own; click a slide
-  to show it. Pictures refresh whenever the file changes. **Drag a slide** to move it; a line
-  shows where it lands. ⌘Z undoes the move. The slide's content moves while each position keeps
-  its arrows, counter and progress bar, so the deck stays valid. The agent is told about the
-  move (and about dropped media), so it re-reads the deck instead of trusting slide numbers it
-  saw earlier.
-- **New presentations**: press ⌘J and ask for one ("make a 6-slide deck about our Q3
-  results"). With no deck open, the agent works in `~/Documents/PPTD`; the app opens the new
-  deck as soon as the agent saves it.
-- **Agent** (bottom, ⌘J): a coding agent in a terminal, started in the deck's folder. ⌘J puts
-  the cursor in it, so you can type straight away (even while it starts). Each message
-  you send carries the slide on screen, so "make the headline shorter" applies to that slide
-  unless you name another one. The agent edits the file; the app reloads it straight away and
-  stays on the same slide. **Hide** keeps the session; **Stop**/**Restart** end it or start a new one.
-- **Choosing the agent** (View › Agent): **Pi** is built in and is the default, so nothing needs
-  installing. If Pi has no AI model to use when you open the agent, the agent pane shows a
-  sign-in panel: **Sign in with ChatGPT** (Plus/Pro), **Sign in with Claude** (Pro/Max), or an
-  **Anthropic API key**. Pi starts as soon as you're signed in. View › Agent › Sign In to a Model
-  for Pi… opens it again later. PPTD's Pi keeps its sign-ins, settings and sessions in its own
-  folder (`PPTD/pi` in your application-data folder, e.g. `~/Library/Application Support/PPTD/pi`),
-  apart from any pi you run yourself, so your own pi extensions and instructions don't affect it.
-  An API key in your shell profile, such as `ANTHROPIC_API_KEY`, also works.
-- **What the agent knows:** every message you send carries the deck and the slide on screen (and
-  the brand), so "make this shorter" means that slide. Pi's footer shows it live
-  (`PPTD · deck · slide 3 of 7`). **Claude Code**
-  uses your installed `claude`; the first time in a folder, it asks whether you trust it. The
-  choice applies to new sessions; press **Restart** to switch a running one.
-- **Drop images or video** on the slide (or on a slide in the drawer): the app embeds them
-  as a centred, rounded image or a video with controls, on that slide. Photos are scaled to
-  2560 px and HEIC is converted to JPEG. Videos over 25 MB ask first. **⌘Z** undoes the last drop.
-  Dropping a file on the terminal pastes its path instead.
-- **Slide images:** Edit › **Copy Slide as Image** (⇧⌘C) puts the current slide on the
-  clipboard, and File › **Export Slides as Images…** saves one PNG per slide, both at
-  1920×1080 without the ‹ › controls. The agent screenshots slides the same way to check its
-  own work (`pptd-app.mjs` in the skill): PPTD renders them itself, so no browser is launched.
-- **Prompt history** (drawer › **Prompts**, View › Prompt History): turn on View › **Save
-  Prompts in Decks** (off by default) and each prompt that changes a deck is saved in the
-  deck, one row per agent run (messages sent while the agent works join that row). The
-  prompts are stored in the file, so anyone you send the deck to can read them; File ›
-  **Remove Prompt History** deletes them. PPTD also keeps a copy of the deck after each run in
-  its own data folder (`history/`, up to 1 GB, oldest removed first; `historyMaxMB` in
-  `settings.json` changes the cap), so a row on this Mac gets a **↺** button that puts the deck
-  back as it was after that prompt. Reverting keeps the whole list: later rows are dimmed and
-  a "Reverted to #N" row is added, so you can go forward again. ⌘Z undoes a revert. Decks
-  from another computer show their prompts without ↺.
-- Edits made in any editor are picked up too: the app watches the file.
-
-### The agent's context
-
-Agents started from the app load the bundled slide skill `pptd-slides` (for Claude Code, as
-the plugin `agent/plugin`; for pi, with `--skill`). It is brand-neutral and maintained in this repo:
-
-- `SKILL.md`: slide structure, layout, diagrams, writing, checks.
-- `PPTD.md`: working inside the app (current slide, new decks, branding, media).
-- `template.html`: the starting deck. Its brand is one `<style id="pptd-brand">` block.
-- `brand-template.md`: the shape of the default brand file.
-- `pptd-deck.mjs`: adds, removes and reorders slides, so the agent only writes content.
-- `pptd-spec.md`, `pptd-check.mjs`, `pptd-deck.mjs`: copied from `docs/` and `tools/` by
-  `npm run sync-skill`, which also runs before every build.
-
-Pi needs nothing installed: the app ships it (`@earendil-works/pi-coding-agent`, pinned in
-`vendor/pi`) and runs it on its own Electron runtime. Claude Code must be installed (`claude` on
-your login-shell PATH, or set `PPTD_CLAUDE`). Machines without Node still get a `node` for the
-skill's checker: the app's runtime, last on the agent's PATH. pi also gets the bundled ripgrep
-and fd first on its PATH, so nothing is downloaded at first launch.
-
-## Branding
-
-Branding is something you tell the agent; the app has no brand settings.
-
-- **First presentation:** the agent asks what branding your decks should use, with examples
-  ("Google colours", hex codes, "black and white, minimal", "no preference"). Your answer
-  becomes your **default brand**, saved as `~/Library/Application Support/PPTD/brand.md`.
-- **Every deck carries its own brand** in its HTML: `<meta name="pptd-brand" content="…">` and
-  a `<style id="pptd-brand">` block with the brand's colour tokens and rules (spec §8). New decks
-  copy the default in, so changing the default later doesn't restyle existing decks.
-- **A different brand for one deck:** ask ("use red and grey for this one"). Only that deck
-  changes.
-- **Change the default:** ask ("make this my default brand").
-
-With every message the agent is told whether the deck on screen has its own brand and where
-the default brand is (or that there isn't one yet).
-
-## Controls
+Get the latest version from the
+[Releases page](https://github.com/geirfreysson/pptd/releases/latest):
 
 | | |
 |---|---|
-| ‹ › toolbar buttons, ← → ↑ ↓, PageUp/PageDown | previous / next slide (stops at the ends, no wrap) |
+| **macOS** (Apple Silicon) | [PPTD-mac-arm64.dmg](https://github.com/geirfreysson/pptd/releases/latest/download/PPTD-mac-arm64.dmg) |
+| **Windows** (x64) | [PPTD-windows-x64-setup.exe](https://github.com/geirfreysson/pptd/releases/latest/download/PPTD-windows-x64-setup.exe) |
+| **Linux** (x64) | [AppImage](https://github.com/geirfreysson/pptd/releases/latest/download/PPTD-linux-x86_64.AppImage) · [.deb](https://github.com/geirfreysson/pptd/releases/latest/download/PPTD-linux-amd64.deb) |
+
+The first time you open it, macOS or Windows may ask you to confirm you trust the app; the
+release notes say how.
+
+## Make a presentation
+
+Press **⌘J** and ask: *"Make a 6-slide deck about our Q3 results."* The agent writes the
+deck, and PPTD opens it as soon as it's saved. New presentations go in `Documents/PPTD`.
+
+Then just talk about what you see. Every message carries the slide on screen, so "make this
+shorter" means *this* slide unless you name another.
+
+**Sign in once.** PPTD comes with its own agent, so there's nothing else to install. The first
+time, sign in with your **ChatGPT** (Plus/Pro) or **Claude** (Pro/Max) account, or paste an
+**Anthropic API key**. If you already use **Claude Code**, choose it in View › Agent instead.
+
+## Edit by hand, too
+
+- **Slides drawer** (⌥⌘S): a picture of every slide. Click one to show it, and **drag** it to
+  reorder.
+- **Drop images or video** onto a slide, or onto a slide in the drawer. Photos are resized
+  and iPhone photos converted for you.
+- **Copy a slide as an image** (⇧⌘C) to paste into an email or chat, or export every slide as
+  a PNG (File › Export Slides as Images…).
+- **Undo** (⌘Z) takes back the last move, drop or revert.
+- Edit the file in any other editor and PPTD picks up the change.
+
+The agent hears about your changes, so it never works from an out-of-date picture of the deck.
+
+## Your brand, on every deck
+
+The first time you make a presentation, the agent asks how your decks should look: "Google
+colours", your company's hex codes, "black and white, minimal", or no preference. That becomes
+your default brand.
+
+Every deck keeps its own copy of its brand, so it looks the same wherever it's opened, and
+changing your default later doesn't restyle old decks. Want something different for one
+deck? Just ask: *"use red and grey for this one."* To change the default: *"make this my
+default brand."*
+
+## Go back to any prompt
+
+Turn on **View › Save Prompts in Decks** and every prompt that changes a deck is kept with it.
+Open the drawer's **Prompts** tab to see how a deck was built, prompt by prompt, and press
+**↺** on any of them to put the deck back as it was at that point. Nothing is lost when you
+go back: later prompts stay in the list, so you can jump forward again.
+
+The prompts are saved inside the file, so anyone you send it to can read them. That's why
+this is off until you turn it on. File › Remove Prompt History clears them from a deck.
+
+## Present
+
+Press **⌘↩** for a full-screen slideshow, or **⌘⌥↩** to fill the window. Arrow keys, Space and
+Enter move through the slides, and Esc ends the show.
+
+## Keyboard
+
+| | |
+|---|---|
+| ← → ↑ ↓, PageUp / PageDown | previous / next slide |
 | Home / End | first / last slide |
-| **▶ Slideshow** (⌘↩) | full-screen slideshow |
-| **▾ → Fill Window** (⌘⌥↩) | slideshow inside the current window (toolbar hidden) |
+| ⌘↩ | full-screen slideshow |
+| ⌘⌥↩ | slideshow in the window |
 | In a slideshow: Enter / Space | next slide (Shift+Enter, Backspace: previous) |
 | In a slideshow: Esc | end the slideshow |
-| ⌥⌘S / ⌘J | slides drawer / agent terminal |
-| In the agent terminal: Shift+Enter | new line in the prompt (Enter sends it) |
-| ⌘Z | undo the last dropped image or video, or slide move |
-| ⇧⌘C | copy the current slide as an image (1920×1080) |
+| ⌥⌘S | slides drawer |
+| ⌘J | agent |
+| In the agent: Shift+Enter | new line (Enter sends) |
+| ⌘Z | undo the last move, drop or revert |
+| ⇧⌘C | copy the current slide as an image |
 | ⌘R | reload the deck |
-| ⌘N | new empty window (each window has its own deck and agent session) |
+| ⌘N | new window, with its own deck and agent |
 
-## How it works
+On Windows and Linux, use Ctrl in place of ⌘.
 
-- `main.js`: windows, layout, slideshow modes, file watching, media drops, undo, menu. Each
-  window (⌘N) has its own deck, undo history, thumbnails and agent session.
-- `deck-preload.js`: runs inside the deck. Catches navigation keys (so the deck's own radio
-  group can't wrap from last to first) and dropped files.
-- `index.html` / `renderer.js` / `preload.js`: toolbar, slides drawer, terminal (xterm.js).
-- `lib/thumbs.js`: renders slide pictures in a hidden offscreen window (one per app window).
-- `lib/shot.js`: full-size slide screenshots and the keyboard-navigation test, in a hidden
-  offscreen window (Copy Slide as Image, Export Slides as Images, and the agent's tool).
-- `lib/app-socket.js`: a local socket (`PPTD_SOCKET`, owner-only) through which the skill's
-  `pptd-app.mjs` asks the running app for screenshots and the key test.
-- `lib/media.js`: embeds images/video into a slide's `<section>`.
-- `lib/history.js`: the prompt history: reads and writes the deck's
-  `<template id="pptd-prompts">`, hashes decks without it, and keeps snapshots in
-  `userData/history/<hash>.html.gz`. The agent reports each prompt and the end of each run;
-  main records the run in the decks it changed.
-- `tools/pptd-deck.mjs`: adds, removes and reorders slides with all the numbering done
-  (`list`, `add --after N [--count K]`, `move FROM TO`, `delete N`). Agents use it from the skill; the
-  drawer's drag-to-reorder uses it too. Checks the result and refuses rather than break a deck.
-- `lib/agent.js`: starts the chosen agent in a pty (node-pty) with the skill and a system
-  prompt. Each message gets the deck, slide and brand added; files it writes are reported, and
-  the app opens decks it creates. The app also watches the agent's folder for new decks.
-  It also reports each prompt and the end of each run, for the prompt history. Claude Code
-  does this with `UserPromptSubmit`/`PostToolUse`/`Stop` hooks; pi with the extension below.
-- `agent/pi/pptd-extension.js`: the pi extension that adds the slide note to each prompt,
-  reports written files, prompts, messages sent mid-run and run ends, draws PPTD's startup header and shows the slide on screen in pi's footer.
-- `agent/pi/login.mjs` / `lib/pi-login.js`: model sign-in for pi. The helper runs pi's own login
-  code and credential store; main relays its prompts to the sign-in panel and opens the browser.
-- `vendor/pi`: the bundled pi, pinned by its own lockfile. `vendor/tools/<os>-<arch>`: pinned
-  ripgrep and fd for pi (its grep tool and `@` file completion), so pi never downloads them.
-  `tools/vendor-pi.mjs` installs both (checking each download's SHA-256) after `npm install` and
-  before builds; they ship as `Resources/pi` and `Resources/pi/bin`, with their licences.
-- `lib/brand.js`: reads a deck's brand block and finds the default brand.
-- `tools/validate-release.mjs` / `tools/verify-release-bundle.mjs`: release gates: version,
-  tag and `release-draft.md` agree; a packaged app has pi, rg, fd, the skill and node-pty.
-- `.github/workflows/release.yml`: builds macOS, Linux and Windows and publishes tagged releases.
-- Navigation checks the next or previous `input.slide-radio`, which is the switching
-  mechanism the skill uses. Other HTML files still open; arrow keys are then left to the page.
-- Decks run sandboxed with no Node access. Web links open in your default browser.
+## The file format
+
+Decks are saved as `<name>.pptd.html`: one self-contained file with every image and video
+inside it and no scripts, so it's safe to open anywhere. The format is open and documented in
+[`docs/pptd-spec.md`](docs/pptd-spec.md).
+
+## Building from source
+
+See [`docs/development.md`](docs/development.md).
 
 ## Licence
 

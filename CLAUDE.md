@@ -1,13 +1,17 @@
 # PPTD — notes for Claude
 
 Electron app (macOS, Apple Silicon) that plays and edits single-file HTML decks
-(`*.pptd.html`). User-facing docs: `README.md`. Deck format: `docs/pptd-spec.md`.
+(`*.pptd.html`). Product page: `README.md`. Developer docs: `docs/development.md`. Deck
+format: `docs/pptd-spec.md`.
 
 ## Keep the docs current
 
 When a change alters behaviour, update the docs in the same change:
 
-- `README.md`: features, the keyboard table, and "How it works" (one line per file).
+- `README.md`: the product page. Features in plain words for people who use the app, and
+  the keyboard table. No build steps, file names, env vars, secrets or internals.
+- `docs/development.md`: everything for working on the app: running and building, releases
+  and their secrets, the agent's wiring, and "How it works" (one line per file).
 - `docs/pptd-spec.md`: anything the app requires of or does to a deck (detection, the radio
   protocol, classes it hides, CSS it injects, media markup). Bump nothing for additions that
   old decks still satisfy.
@@ -137,7 +141,7 @@ When a change alters behaviour, update the docs in the same change:
 `.github/workflows/release.yml` builds macOS arm64 (DMG), Linux x64 (AppImage, deb) and
 Windows x64 (NSIS, unsigned) on native runners and, for a `v*` tag, publishes one GitHub
 release after all three pass. macOS is signed and notarized only when the Apple secrets
-(README) exist; otherwise ad-hoc. The `.html` file association is in `build.mac` on purpose:
+(`docs/development.md`) exist; otherwise ad-hoc. The `.html` file association is in `build.mac` on purpose:
 on Windows and Linux it would make PPTD the handler for every `.html` file.
 
 When the user says "create a new release" (or similar), run the whole procedure, but don't
