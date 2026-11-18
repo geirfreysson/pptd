@@ -33,15 +33,30 @@ The app icon is `build/icon.icns`, made from `build/source-icon.png` by `npm run
 (white rounded square with macOS padding; needs Python with Pillow). `npm start` keeps its
 settings in `PPTD Dev`, so it can run next to an installed PPTD.app.
 
-Local builds are ad-hoc signed, so they run on the Mac that built them. Releases are signed
-and notarized by GitHub Actions (below).
+Local builds are ad-hoc signed, so they run on the Mac that built them.
 
-### Signed releases
+### Releases
 
-`.github/workflows/release-macos.yml` builds an Apple Silicon DMG signed with a Developer ID,
-with hardened runtime (`build/entitlements.mac.plist`), notarized and stapled. Push a tag that
-matches `package.json` (`git tag v0.3.0 && git push --tags`) to publish a GitHub release, or run
-the workflow by hand to get the DMG as a build artifact. It needs these repository secrets:
+`.github/workflows/release.yml` builds on GitHub Actions, one native runner per platform:
+
+| Platform | Files |
+|---|---|
+| macOS, Apple Silicon | `PPTD-<version>-mac-arm64.dmg` |
+| Linux x64 | `PPTD-<version>-linux-x86_64.AppImage`, `PPTD-<version>-linux-amd64.deb` |
+| Windows x64 | `PPTD-<version>-windows-x64-setup.exe` (unsigned, per-user NSIS installer) |
+
+Each comes with a `.sha256`, plus a copy without the version in its name for a stable
+"latest" link. Pushing a tag `v<version>` that matches `package.json` publishes one GitHub
+release once all three builds pass, with `release-draft.md` (first line exactly
+`# PPTD v<version>`) as its notes and `.github/release-install.md` appended.
+`npm run release:validate -- v<version>` checks the version, tag and draft before you tag.
+Running the workflow by hand builds all three without releasing (the files are kept as
+workflow artifacts). Each build runs `tools/verify-release-bundle.mjs` on the packaged app:
+pi, this OS's ripgrep and fd (which must run), the skill, and node-pty's native module.
+
+The macOS build is signed with a Developer ID and notarized only when these repository
+secrets exist; without them it is ad-hoc signed and users have to allow it in
+System Settings › Privacy & Security the first time.
 
 | Secret | Value |
 |---|---|
@@ -59,7 +74,7 @@ gh secret set APPLE_API_KEY_ID
 gh secret set APPLE_API_ISSUER
 ```
 
-The app registers as an *alternate* handler for `.html`, so it appears in Finder's
+On macOS the app registers as an *alternate* handler for `.html`, so it appears in Finder's
 **Open With** menu without taking over as the default browser. (macOS can't associate a
 double extension like `.pptd.html` on its own.)
 
@@ -208,6 +223,9 @@ the default brand is (or that there isn't one yet).
   `tools/vendor-pi.mjs` installs both (checking each download's SHA-256) after `npm install` and
   before builds; they ship as `Resources/pi` and `Resources/pi/bin`, with their licences.
 - `lib/brand.js`: reads a deck's brand block and finds the default brand.
+- `tools/validate-release.mjs` / `tools/verify-release-bundle.mjs`: release gates: version,
+  tag and `release-draft.md` agree; a packaged app has pi, rg, fd, the skill and node-pty.
+- `.github/workflows/release.yml`: builds macOS, Linux and Windows and publishes tagged releases.
 - Navigation checks the next or previous `input.slide-radio`, which is the switching
   mechanism the skill uses. Other HTML files still open; arrow keys are then left to the page.
 - Decks run sandboxed with no Node access. Web links open in your default browser.

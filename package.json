@@ -6,6 +6,7 @@
   "license": "GPL-3.0-or-later",
   "author": "Geir Freysson",
   "repository": "github:geirfreysson/pptd",
+  "homepage": "https://github.com/geirfreysson/pptd",
   "main": "main.js",
   "bin": {
     "pptd": "bin/pptd"
@@ -21,7 +22,8 @@
     "prebuild": "sh tools/sync-skill.sh && node tools/vendor-pi.mjs",
     "predist": "sh tools/sync-skill.sh && node tools/vendor-pi.mjs",
     "icon": "python3 tools/make-icon.py",
-    "vendor-pi": "node tools/vendor-pi.mjs"
+    "vendor-pi": "node tools/vendor-pi.mjs",
+    "release:validate": "node tools/validate-release.mjs"
   },
   "devDependencies": {
     "electron": "45.3.3",
@@ -80,23 +82,30 @@
             "!.versions.json"
           ]
         }
+      ],
+      "fileAssociations": [
+        {
+          "ext": "html",
+          "name": "PPTD presentation",
+          "description": "PPTD presentation (*.pptd.html)",
+          "role": "Viewer",
+          "rank": "Alternate"
+        }
       ]
     },
-    "fileAssociations": [
-      {
-        "ext": "html",
-        "name": "PPTD presentation",
-        "description": "PPTD presentation (*.pptd.html)",
-        "role": "Viewer",
-        "rank": "Alternate"
-      }
-    ],
     "asarUnpack": [
       "agent/**",
       "node_modules/node-pty/**",
       "tools/pptd-*.mjs"
     ],
     "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Office",
+      "maintainer": "Geir Freysson",
+      "synopsis": "Play and edit single-file HTML presentations",
       "extraResources": [
         {
           "from": "vendor/pi/node_modules",
@@ -123,6 +132,9 @@
       ]
     },
     "win": {
+      "target": [
+        "nsis"
+      ],
       "extraResources": [
         {
           "from": "vendor/pi/node_modules",
@@ -147,6 +159,10 @@
           ]
         }
       ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false
     }
   },
   "dependencies": {

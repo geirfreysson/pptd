@@ -80,8 +80,8 @@ When a change alters behaviour, update the docs in the same change:
 - **Cross-platform:** the pi resources are declared per platform (`mac`/`linux`/`win`
   `extraResources` in `package.json`), each keeping only that OS's pi-tui native addon. Keep
   build tooling in Node (`tools/*.mjs`), not `sh`, and use `path.delimiter` and the PATH
-  helpers in `lib/agent.js` (Windows spells it `Path`). Only macOS builds are set up and
-  released so far.
+  helpers in `lib/agent.js` (Windows spells it `Path`). Releases build all three
+  (see Releases); the Linux and Windows apps are less exercised than macOS.
 - **The spec, checker and deck tool are duplicated.** The source copies are
   `docs/pptd-spec.md`, `tools/pptd-check.mjs` and `tools/pptd-deck.mjs`. `npm run sync-skill`
   (it also runs before every build) copies them into `agent/plugin/skills/pptd-slides/`. Edit
@@ -130,5 +130,33 @@ When a change alters behaviour, update the docs in the same change:
   AppleScript can fail with "Application isn't running" (-600) while it is; then send it
   `kill -TERM <pid>` instead, which Electron handles as a normal quit. Then
   `rm -rf /Applications/PPTD.app && ditto dist/mac-arm64/PPTD.app /Applications/PPTD.app`
-  and relaunch. Local builds are ad-hoc signed; signed and notarized releases come from
-  `.github/workflows/release-macos.yml` when a `v*` tag matching `package.json` is pushed.
+  and relaunch. Local builds are ad-hoc signed.
+
+## Releases
+
+`.github/workflows/release.yml` builds macOS arm64 (DMG), Linux x64 (AppImage, deb) and
+Windows x64 (NSIS, unsigned) on native runners and, for a `v*` tag, publishes one GitHub
+release after all three pass. macOS is signed and notarized only when the Apple secrets
+(README) exist; otherwise ad-hoc. The `.html` file association is in `build.mac` on purpose:
+on Windows and Linux it would make PPTD the handler for every `.html` file.
+
+When the user says "create a new release" (or similar), run the whole procedure, but don't
+tag until they have confirmed the exact version:
+
+1. Check the worktree. If unrelated uncommitted changes make the release risky, stop and ask.
+2. Read the version in `package.json` and recommend the next minor (`0.3.0` → `v0.4.0`)
+   unless they gave one. Wait for confirmation.
+3. Set it with `npm version <x.y.z> --no-git-tag-version` (updates `package.json` and
+   `package-lock.json` together).
+4. Write `release-draft.md`: first line exactly `# PPTD v<x.y.z>`, then notes derived from
+   the diff since the previous tag (`git describe --tags --abbrev=0`; the whole history for
+   the first release). Describe what users get from the app; leave out docs-only, CI-only
+   and repo-housekeeping changes.
+5. Run `npm run release:validate -- v<x.y.z>`, the smoke checks in the workflow's "Checks"
+   step, and `npm run build` with `node tools/verify-release-bundle.mjs
+   dist/mac-arm64/PPTD.app/Contents/Resources`.
+6. Commit the version and notes (`Release v<x.y.z>`), create an annotated tag `v<x.y.z>` on
+   that commit with the notes as its message, push the branch to `main` on origin, then push
+   the tag.
+7. Report the commit and tag, then watch the run (`gh run watch`) and report its result
+   rather than assuming it worked.
