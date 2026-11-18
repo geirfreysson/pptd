@@ -80,7 +80,8 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$keychain_path"
           security list-keychains -d user -s "$keychain_path" login.keychain-db
           rm -f "$certificate_path"
-          identity="$(security find-identity -v -p codesigning "$keychain_path" | sed -nE 's/.*"(Developer ID Application:[^"]+)".*/\1/p' | head -1)"
+          # electron-builder wants the certificate name without its type prefix.
+          identity="$(security find-identity -v -p codesigning "$keychain_path" | sed -nE 's/.*"Developer ID Application: ([^"]+)".*/\1/p' | head -1)"
           [ -n "$identity" ] || { echo "No Developer ID Application identity in CSC_LINK" >&2; exit 1; }
           echo "SIGNING_IDENTITY=$identity" >> "$GITHUB_ENV"
 
