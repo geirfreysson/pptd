@@ -1,0 +1,457 @@
+.page {
+  color: var(--site-ink);
+  background: var(--site-bg);
+}
+
+.eyebrow {
+  margin: 0 0 18px;
+  color: var(--site-accent);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* ---------- Hero ---------- */
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 88px 32px 72px;
+  text-align: center;
+}
+
+.heroTitle {
+  max-width: 880px;
+  margin: 0 0 22px;
+  color: var(--site-ink);
+  font-size: clamp(40px, 6vw, 68px) !important;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.heroTitle span {
+  color: var(--site-accent);
+}
+
+.heroBody {
+  max-width: 600px;
+  margin: 0 0 34px;
+  color: var(--site-muted);
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.downloadAction {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 64px;
+}
+
+.downloadIcon {
+  flex: none;
+}
+
+/* Not <p>: Infima's specificity-boosted paragraph rule would override the margins. */
+.downloadSpec,
+.downloadAlternatives {
+  color: var(--site-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.downloadSpec {
+  margin-top: 16px;
+}
+
+.downloadAlternatives {
+  margin-top: 6px;
+}
+
+.downloadAlternatives a {
+  color: var(--site-ink) !important;
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--site-line);
+  text-underline-offset: 3px;
+}
+
+.downloadAlternatives a:hover {
+  color: var(--site-accent) !important;
+  text-decoration-color: var(--site-accent);
+}
+
+.primaryButton,
+.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 28px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+.primaryButton,
+.primaryButton:hover {
+  color: #ffffff !important;
+  text-decoration: none;
+}
+
+.primaryButton {
+  background: var(--site-accent);
+}
+
+.primaryButton:hover {
+  background: var(--site-accent-hover);
+}
+
+.downloadAction > .primaryButton {
+  padding: 16px 32px;
+  font-size: 17px;
+  box-shadow: 0 12px 28px -14px rgba(14, 140, 137, 0.9);
+}
+
+.downloadAction > .primaryButton:hover {
+  transform: translateY(-1px);
+}
+
+.secondaryButton,
+.secondaryButton:hover {
+  color: var(--site-ink) !important;
+  text-decoration: none;
+}
+
+.secondaryButton {
+  background: var(--site-surface);
+  border: 1px solid var(--site-line);
+}
+
+.secondaryButton:hover {
+  border-color: var(--site-accent);
+}
+
+/* ---------- Live demo deck ---------- */
+.demoFrame {
+  width: 100%;
+  max-width: 980px;
+  overflow: hidden;
+  background: var(--site-surface);
+  border: 1px solid var(--site-line);
+  border-radius: 14px;
+  box-shadow: 0 30px 70px -24px rgba(18, 24, 31, 0.35);
+}
+
+.demoBar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 40px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--site-line);
+}
+
+.dots {
+  display: flex;
+  gap: 7px;
+}
+
+.dots i {
+  width: 11px;
+  height: 11px;
+  background: var(--site-line);
+  border-radius: 50%;
+}
+
+.demoName {
+  flex: 1;
+  overflow: hidden;
+  color: var(--site-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  text-align: left;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.demoOpen {
+  color: var(--site-muted) !important;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.demoDeck {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #e9edf2;
+  border: 0;
+}
+
+.demoCaption {
+  margin: 18px 0 0;
+  color: var(--site-muted);
+  font-size: 13px;
+}
+
+/* ---------- Sections ---------- */
+.section {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 32px 88px;
+}
+
+.sectionHeading {
+  margin-bottom: 44px;
+  text-align: center;
+}
+
+.sectionHeading .eyebrow {
+  margin-bottom: 12px;
+}
+
+.sectionHeading h2,
+.formatText h2 {
+  margin: 0;
+  color: var(--site-ink);
+  font-size: clamp(28px, 4vw, 38px) !important;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.promptGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.promptCard {
+  position: relative;
+  padding: 30px 26px 26px;
+  background: var(--site-surface);
+  border: 1px solid var(--site-line);
+  border-radius: 14px;
+}
+
+.step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-bottom: 14px;
+  color: #ffffff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  background: var(--site-accent);
+  border-radius: 50%;
+}
+
+.promptCard h3 {
+  margin: 0 0 14px;
+  color: var(--site-ink);
+  font-size: 20px;
+}
+
+.promptQuote {
+  display: flex;
+  gap: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  background: var(--site-quote);
+  border-radius: 10px;
+}
+
+.promptQuote > span {
+  color: var(--site-accent);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+}
+
+.promptQuote q {
+  color: var(--site-ink);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px;
+  font-style: italic;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.promptQuote q::before,
+.promptQuote q::after {
+  content: '';
+}
+
+.promptCard > p {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.featureCard {
+  padding: 26px 22px;
+  background: var(--site-surface);
+  border: 1px solid var(--site-line);
+  border-radius: 12px;
+}
+
+.featureIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 18px;
+  color: var(--site-accent);
+  font-size: 18px;
+  font-weight: 700;
+  background: var(--site-soft);
+  border-radius: 10px;
+}
+
+.featureCard h3 {
+  margin: 0 0 8px;
+  color: var(--site-ink);
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.featureCard p {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+/* ---------- File format ---------- */
+.formatSection {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 56px;
+  align-items: center;
+}
+
+.formatText h2 {
+  margin-bottom: 18px;
+}
+
+.formatText > p:not(.eyebrow) {
+  color: var(--site-muted);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.formatText ul {
+  margin: 0 0 28px;
+  padding-left: 18px;
+  color: var(--site-muted);
+  line-height: 1.8;
+}
+
+.formatCode {
+  margin: 0;
+  padding: 26px 28px;
+  overflow-x: auto;
+  color: #d6e2ea !important;
+  font-size: 13px;
+  line-height: 1.7;
+  background: #12181f !important;
+  border: 1px solid #253039;
+  border-radius: 14px;
+}
+
+.agentRow {
+  max-width: 720px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.agentRow p {
+  color: var(--site-muted);
+  font-size: 17px;
+  line-height: 1.7;
+}
+
+.agentRow strong {
+  color: var(--site-ink);
+}
+
+.cta {
+  padding: 80px 32px;
+  text-align: center;
+  background: var(--site-cta);
+}
+
+.cta h2 {
+  margin: 0 0 14px;
+  color: #ffffff !important;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.cta p {
+  margin: 0 0 30px;
+  color: #aab2bf;
+  font-size: 16px;
+}
+
+@media (max-width: 996px) {
+  .featureGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .promptGrid,
+  .formatSection {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .formatSection {
+    gap: 32px;
+  }
+}
+
+@media (max-width: 700px) {
+  .hero {
+    padding: 56px 16px 56px;
+  }
+
+  .section {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .downloadAction {
+    width: 100%;
+    margin-bottom: 44px;
+  }
+
+  .downloadAction > .primaryButton {
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .featureGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .demoOpen {
+    display: none;
+  }
+}

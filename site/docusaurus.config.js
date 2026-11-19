@@ -11,7 +11,12 @@ const config = {
   favicon: 'img/pptd-icon.png',
 
   future: {
-    v4: true,
+    // Not v4: true. Its CSS cascade layers polyfill boosts Infima's :root above the theme
+    // in src/css/custom.css, so the teal and fonts never apply.
+    v4: {
+      removeLegacyPostBuildHeadAttribute: true,
+      useCssCascadeLayers: false,
+    },
   },
 
   // GitHub Pages project site. For a custom domain, set url to it, baseUrl to '/',

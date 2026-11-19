@@ -7,6 +7,8 @@ chart", "add a slide about pricing". Every change appears straight away.
 Each presentation is a single HTML file. It opens in any browser, previews in Microsoft Teams
 and needs nothing installed to view, so you can send it the way you'd send a PDF.
 
+**Website and docs:** <https://geirfreysson.github.io/pptd/>
+
 ## Download
 
 Get the latest version from the

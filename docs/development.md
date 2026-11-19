@@ -90,6 +90,32 @@ same Apple developer account. GitHub repository secrets are write-only, so copy 
 the original local `.p12` and `.p8` files (or export the Developer ID identity from Keychain
 Access); they cannot be read back from another repository.
 
+## Website
+
+The home page and user docs are a Docusaurus site in `site/`, published to GitHub Pages at
+<https://geirfreysson.github.io/pptd/>.
+
+```sh
+cd site
+npm install
+npm start          # live preview at http://localhost:3000/pptd/
+npm run build      # static site in site/build
+```
+
+- `site/src/pages/index.js` is the home page; `site/docs/*.md` are the doc pages (order in
+  `site/sidebars.js`).
+- `site/static/demo/pptd-demo.pptd.html` is the live deck embedded in the home page. It is a
+  real deck made from the skill template, without `autofocus` so it doesn't take focus from
+  the page; check it with `npm run check -- site/static/demo/pptd-demo.pptd.html`.
+- `.github/workflows/site-pages.yml` builds and deploys on every push to `main` that touches
+  `site/`, and can be run by hand. Once, in the repository settings, set Pages › Source to
+  "GitHub Actions".
+- `npm run serve` redirects `*.html` URLs and drops the `/pptd/` base on the way, so the demo
+  deck 404s there. GitHub Pages doesn't do that; to test a build locally, serve a folder
+  with `pptd` linked to `site/build` from any plain static server.
+- For a custom domain: set `url` and `baseUrl: '/'` in `site/docusaurus.config.js` and add
+  `site/static/CNAME`.
+
 ## The agent's context
 
 Agents started from the app load the bundled slide skill `pptd-slides` (for Claude Code, as

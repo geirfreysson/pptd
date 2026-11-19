@@ -8,6 +8,8 @@ format: `docs/pptd-spec.md`.
 
 When a change alters behaviour, update the docs in the same change:
 
+- `site/` (the website, GitHub Pages): `site/docs/*.md` repeat the README's features at more
+  length, and `site/src/pages/index.js` is the home page. Keep them in step with `README.md`.
 - `README.md`: the product page. Features in plain words for people who use the app, and
   the keyboard table. No build steps, file names, env vars, secrets or internals.
 - `docs/development.md`: everything for working on the app: running and building, releases
@@ -104,6 +106,10 @@ When a change alters behaviour, update the docs in the same change:
   to modify its own bundle, and macOS blames PPTD ("prevented from modifying apps").
 
 ## Gotchas
+
+- **The website's CSS:** `site/docusaurus.config.js` sets `future.v4` with
+  `useCssCascadeLayers: false` on purpose. With layers on, the polyfill boosts Infima's
+  `:root` above `src/css/custom.css`, and the theme colours and fonts silently don't apply.
 
 - **Don't reload the deck view on file changes.** A reload repaints slide 1 before jumping
   back (a visible flash) and takes keyboard focus from the agent terminal. Disk changes go
