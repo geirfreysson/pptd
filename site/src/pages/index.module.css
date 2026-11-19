@@ -398,6 +398,16 @@
   line-height: 1.7;
 }
 
+.agentRow a {
+  color: var(--site-accent);
+  font-weight: 600;
+}
+
+.agentMore {
+  margin-top: 4px;
+  font-size: 15px !important;
+}
+
 .agentRow strong {
   color: var(--site-ink);
 }

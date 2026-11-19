@@ -5,7 +5,7 @@
 //     Linux:   dist/linux-unpacked/resources
 //     Windows: dist/win-unpacked/resources
 //
-// - the bundled pi (its CLI) and this OS's ripgrep and fd, with their licences;
+// - the bundled pi (its CLI and its MIT licence) and this OS's ripgrep and fd, with their licences;
 // - the agent skill and pi extension, unpacked from the asar;
 // - node-pty's native module for this OS, unpacked, and the spec tools main imports;
 // - ripgrep and fd actually run.
@@ -25,6 +25,7 @@ need('pi/node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js');
 need(`pi/bin/rg${exe}`);
 need(`pi/bin/fd${exe}`);
 need('pi/bin/licenses');
+need('pi/LICENSE');
 need('app.asar.unpacked/agent/pi/pptd-extension.js');
 need('app.asar.unpacked/agent/plugin/skills/pptd-slides/SKILL.md');
 need('app.asar.unpacked/agent/plugin/skills/pptd-slides/template.html');

@@ -85,6 +85,7 @@ const config = {
               {label: 'Getting started', to: '/docs/getting-started'},
               {label: 'Making decks', to: '/docs/making-decks'},
               {label: 'Presenting', to: '/docs/presenting'},
+              {label: 'The agent (Pi)', to: '/docs/pi'},
             ],
           },
           {

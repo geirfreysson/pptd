@@ -59,6 +59,6 @@ this is off until you turn it on. **File › Remove Prompt History** clears them
 
 ## Choosing the agent
 
-PPTD's own agent is the default. If you use **Claude Code**, choose it in **View › Agent**.
+PPTD's built-in agent, [Pi](./pi.md), is the default. If you use **Claude Code**, choose it in **View › Agent**.
 Both work the same way in PPTD. Press **⌘N** for a new window: each window has its own deck
 and its own agent.

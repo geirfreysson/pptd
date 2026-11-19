@@ -33,7 +33,8 @@ Then just talk about what you see. Every message carries the slide on screen, so
 shorter" means *this* slide unless you name another. Changes appear in place as the agent
 saves them: you stay on the slide you're looking at, and you can keep typing while it works.
 
-**Sign in once.** PPTD comes with its own agent, so there's nothing else to install. The first
+**Sign in once.** PPTD comes with its own agent, [Pi](https://github.com/earendil-works/pi)
+(MIT licence, by Mario Zechner), so there's nothing else to install. The first
 time, sign in with your **ChatGPT** (Plus/Pro) or **Claude** (Pro/Max) account, or paste an
 **Anthropic API key**. If you already use **Claude Code**, choose it in View › Agent instead.
 
@@ -118,3 +119,7 @@ See [`docs/development.md`](docs/development.md).
 
 GPL-3.0-or-later (see `LICENSE`). You may use, change and share PPTD; if you distribute a
 modified version, you must share its source under the same licence.
+
+PPTD includes [Pi](https://github.com/earendil-works/pi), © 2025 Mario Zechner, under the MIT
+licence; its notice ships in the app as `pi/LICENSE`. The bundled ripgrep and fd keep their
+own licences in `pi/bin/licenses`.

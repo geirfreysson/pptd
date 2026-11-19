@@ -186,7 +186,7 @@ applied with `nativeTheme.themeSource`, so `index.html` switches its colour toke
   header and shows the slide on screen in pi's footer.
 - `agent/pi/login.mjs` / `lib/pi-login.js`: model sign-in for pi. The helper runs pi's own login
   code and credential store; main relays its prompts to the sign-in panel and opens the browser.
-- `vendor/pi`: the bundled pi, pinned by its own lockfile. `vendor/tools/<os>-<arch>`: pinned
+- `vendor/pi`: the bundled pi, pinned by its own lockfile, with its MIT notice in `vendor/pi/LICENSE` (pi's npm packages have none), shipped as `pi/LICENSE`. `vendor/tools/<os>-<arch>`: pinned
   ripgrep and fd for pi (its grep tool and `@` file completion), so pi never downloads them.
   `tools/vendor-pi.mjs` installs both (checking each download's SHA-256) after `npm install` and
   before builds; they ship as `Resources/pi` and `Resources/pi/bin`, with their licences.

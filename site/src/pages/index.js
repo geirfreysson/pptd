@@ -215,10 +215,14 @@ function Agents() {
       </div>
       <div className={styles.agentRow}>
         <p>
-          PPTD comes with its own agent. Sign in once with your <strong>ChatGPT</strong> (Plus or
+          PPTD comes with <Link to="https://github.com/earendil-works/pi">Pi</Link>, an
+          open-source coding agent, built in. Sign in once with your <strong>ChatGPT</strong> (Plus or
           Pro) or <strong>Claude</strong> (Pro or Max) account, or paste an{' '}
           <strong>Anthropic API key</strong>. Already use <strong>Claude Code</strong>? Choose it
           in View › Agent instead.
+        </p>
+        <p className={styles.agentMore}>
+          <Link to="/docs/pi">More about Pi in PPTD</Link>
         </p>
       </div>
     </section>

@@ -43,7 +43,10 @@ When a change alters behaviour, update the docs in the same change:
   git). It runs on the app's Electron binary with `ELECTRON_RUN_AS_NODE=1`, so it needs
   Node >= the version pi's `engines` asks for; check `process.versions.node` when bumping
   either. To update pi: change the version in `vendor/pi/package.json`, run
-  `npm install --prefix vendor/pi --ignore-scripts`, and commit the new lockfile.
+  `npm install --prefix vendor/pi --ignore-scripts`, and commit the new lockfile. Pi's npm
+  packages carry no LICENSE file, so its MIT notice is kept in `vendor/pi/LICENSE` (shipped as
+  `pi/LICENSE`, checked by `verify-release-bundle.mjs`); if pi's licence or copyright line
+  changes, update that file and `site/docs/pi.md`.
 - **pi's config folder** is `appData/PPTD/pi` (`piAgentDir()` in `lib/agent.js`, passed as
   `PI_CODING_AGENT_DIR` to pi and the login helper), not `~/.pi/agent`. `preparePiAgentDir()`
   adds `quietStartup: "header"` to its `settings.json` unless set, which hides pi's list of

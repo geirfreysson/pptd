@@ -24,7 +24,7 @@ The release notes explain how.
 
 ## Sign in once
 
-PPTD comes with its own agent, so there's nothing else to install. The first time you open
+PPTD comes with its own agent, [Pi](./pi.md), so there's nothing else to install. The first time you open
 the agent, sign in with one of:
 
 - your **ChatGPT** account (Plus or Pro),

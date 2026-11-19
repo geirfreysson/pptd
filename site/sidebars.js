@@ -8,6 +8,7 @@ const sidebars = {
     'making-decks',
     'editing-by-hand',
     'presenting',
+    'pi',
     'file-format',
   ],
 };

@@ -76,6 +76,10 @@
           ]
         },
         {
+          "from": "vendor/pi/LICENSE",
+          "to": "pi/LICENSE"
+        },
+        {
           "from": "vendor/tools/mac-${arch}",
           "to": "pi/bin",
           "filter": [
@@ -123,6 +127,10 @@
           ]
         },
         {
+          "from": "vendor/pi/LICENSE",
+          "to": "pi/LICENSE"
+        },
+        {
           "from": "vendor/tools/linux-${arch}",
           "to": "pi/bin",
           "filter": [
@@ -150,6 +158,10 @@
             "!@earendil-works/pi-tui/native/darwin/**",
             "!@earendil-works/pi-tui/native/linux/**"
           ]
+        },
+        {
+          "from": "vendor/pi/LICENSE",
+          "to": "pi/LICENSE"
         },
         {
           "from": "vendor/tools/win-${arch}",

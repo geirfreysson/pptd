@@ -26,6 +26,9 @@ Teams and needs nothing installed to view, so you can send it the way you'd send
   prompt with the deck and rewind to any of them.
 - **[Present](./presenting.md)** full screen or in the window, with the keyboard.
 
+The agent is [Pi](./pi.md), an open-source coding agent that comes built in. You can use
+Claude Code instead if you have it.
+
 ## Try one
 
 The deck on the [home page](/) is a real PPTD file. Click its arrows or use the arrow keys.
