@@ -144,7 +144,9 @@ the oldest removed first; `historyMaxMB` in `settings.json` changes the cap.
   drawer's drag-to-reorder uses it too. Checks the result and refuses rather than break a deck.
 - `lib/agent.js`: starts the chosen agent in a pty (node-pty) with the skill and a system
   prompt. Each message gets the deck, slide and brand added; files it writes are reported, and
-  the app opens decks it creates. The app also watches the agent's folder for new decks.
+  the app opens decks it creates (`*.pptd.html`, or `.html` with the PPTD meta). The app
+  also watches the agent's folder for new decks, and when a run ends with no deck on screen it
+  opens the newest deck the run wrote in that folder or two levels below.
   It also reports each prompt and the end of each run, for the prompt history. Claude Code
   does this with `UserPromptSubmit`/`PostToolUse`/`Stop` hooks; pi with the extension below.
 - `agent/pi/pptd-extension.js`: the pi extension that adds the slide note to each prompt,

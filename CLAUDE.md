@@ -63,6 +63,11 @@ When a change alters behaviour, update the docs in the same change:
   *before* the run, so an agent that drops it can't lose it. Hashes exclude the block.
   Snapshots are content-addressed in `userData/history`; a row can revert only if its
   snapshot is there. A revert never truncates the list.
+- **Opening the agent's new decks** has three paths in `main.js`: write events
+  (`watchAgentEvents`), the agent-folder watcher (`watchAgentFolder`, top level only), and
+  `openDeckFromRun` at the end of a run with no deck on screen (scans two levels down, for
+  shell-written decks in subfolders). A deck is `*.pptd.html` or an `.html` with the PPTD
+  meta (`isDeckFile`).
 - **Structural edits** (`tools/pptd-deck.mjs`: list, add, move, delete) move slide content
   and leave positional parts in place (ids, aria-label numbers, `.controls`, `.progress`,
   switching CSS); see the spec section on reordering. Agents run it from the skill folder;

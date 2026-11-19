@@ -86,6 +86,8 @@ function newWindowState() {
     eventsOffset: 0,
     cwdWatcher: null,
     cwdTimers: new Map(),
+    agentCwd: null,              // the folder the agent runs in
+    runStarted: 0,               // when the agent's current run began (0: none)
     turn: null,                  // the agent run under way, for the prompt history
   };
 }
@@ -716,7 +718,7 @@ function watchAgentEvents(w, file) {
       }
       let p;
       try { p = JSON.parse(`{${line}}`).file_path; } catch { continue; }
-      if (typeof p !== 'string' || !/\.pptd\.html$/i.test(p) || !path.isAbsolute(p)) continue;
+      if (typeof p !== 'string' || !path.isAbsolute(p) || !isDeckFile(p)) continue;
       if (w.turn) noteTurnDeck(w, p, false);
       if (p !== w.currentFile && fs.existsSync(p)) openFile(w, p, { focus: false });
     }
@@ -730,17 +732,56 @@ function watchAgentFolder(w, dir) {
   const since = Date.now() - 1000;
   try {
     w.cwdWatcher = fs.watch(dir, (_e, name) => {
-      if (!name || !/\.pptd\.html$/i.test(name) || name.startsWith('.')) return;
+      if (!name || !/\.html?$/i.test(name) || name.startsWith('.')) return;
       const file = path.join(dir, name);
       clearTimeout(w.cwdTimers.get(file));
       w.cwdTimers.set(file, setTimeout(() => {
         w.cwdTimers.delete(file);
         // Another window showing it already reloads it; don't steal it.
-        if (file === w.currentFile || windowShowing(file)) return;
+        if (file === w.currentFile || windowShowing(file) || !isDeckFile(file)) return;
         try { if (fs.statSync(file).mtimeMs >= since) openFile(w, file, { focus: false }); } catch {}
       }, 400));
     });
   } catch { w.cwdWatcher = null; }
+}
+
+// A deck by name (`*.pptd.html`), or an `.html` file that is one by content (the agent may
+// name a new deck `hello.html`).
+function isDeckFile(file) {
+  if (/\.pptd\.html$/i.test(file)) return true;
+  if (!/\.html?$/i.test(file)) return false;
+  try {
+    const fd = fs.openSync(file, 'r');
+    const buf = Buffer.alloc(4096);
+    const n = fs.readSync(fd, buf, 0, buf.length, 0);
+    fs.closeSync(fd);
+    return isPptdDeck(buf.subarray(0, n).toString('utf8'));
+  } catch { return false; }
+}
+
+// End of a run with no deck on screen: the agent may have made one where neither the write
+// events nor the folder watcher see it (a shell command, in a subfolder). Open the newest
+// deck written during the run in its folder or two levels below.
+function openDeckFromRun(w) {
+  const since = w.runStarted;
+  w.runStarted = 0;
+  if (!since || w.currentFile || !w.agentCwd || !w.win) return;
+  let best = null;
+  const scan = (dir, depth) => {
+    let entries;
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const e of entries) {
+      if (e.name.startsWith('.') || e.name === 'node_modules') continue;
+      const f = path.join(dir, e.name);
+      if (e.isDirectory()) { if (depth < 2) scan(f, depth + 1); continue; }
+      if (!e.isFile() || !/\.html?$/i.test(e.name)) continue;
+      let m;
+      try { m = fs.statSync(f).mtimeMs; } catch { continue; }
+      if (m >= since - 1000 && (!best || m > best.m) && isDeckFile(f)) best = { f, m };
+    }
+  };
+  scan(w.agentCwd, 0);
+  if (best && !windowShowing(best.f)) openFile(w, best.f, { focus: false });
 }
 
 // The agent's tools reach the app through this socket (lib/app-socket.js).
@@ -790,6 +831,7 @@ async function startAgent(w, { cols, rows } = {}) {
   try { fs.mkdirSync(cwd, { recursive: true }); } catch {}
   a.lastState = { deck: w.currentFile, ...w.state };
   send(w, 'pty-start', { deck: w.currentFile ? displayName(w.currentFile) : null, agent: AGENTS[kind] });
+  w.agentCwd = cwd;
   watchAgentFolder(w, cwd);
   await a.start(cwd, cols, rows, kind);
 }
@@ -829,6 +871,10 @@ function toggleSavePrompts() {
 // run is still open (Claude Code sends no end when interrupted) closes that run first.
 function agentEvent(w, ev) {
   if (ev?.type === 'prompt') {
+    if (!w.runStarted) w.runStarted = Date.now();
+    // The folder watcher can fail when the agent starts (on a fresh install macOS may not
+    // have allowed access to Documents yet); try again now.
+    if (!w.cwdWatcher && w.agentCwd) watchAgentFolder(w, w.agentCwd);
     const text = typeof ev.text === 'string' ? ev.text : ev.hook?.prompt;
     if (w.turn) endTurn(w, 'interrupted');
     if (typeof text === 'string' && text.trim() && savePrompts()) {
@@ -838,6 +884,7 @@ function agentEvent(w, ev) {
   } else if (ev?.type === 'steer') {
     if (w.turn && typeof ev.text === 'string' && ev.text.trim()) w.turn.steers.push(ev.text.trim());
   } else if (ev?.type === 'end') {
+    openDeckFromRun(w);
     endTurn(w, ev.outcome === 'aborted' || ev.outcome === 'error' ? ev.outcome : '');
   }
 }
