@@ -23,8 +23,9 @@ signed yet, so Windows may ask you to confirm you trust it; the release notes ex
 
 ## Make a presentation
 
-Press **⌘J** and ask: *"Make a 6-slide deck about our Q3 results."* The agent writes the
-deck, and PPTD opens it as soon as it's saved. New presentations go in `Documents/PPTD`.
+Click **Make a new one** on the start screen (or press **⌘J**) and ask: *"Make a 6-slide deck about our Q3 results."* The agent writes the
+deck, and PPTD opens it as soon as it's saved; until then an animation shows it's being
+built. New presentations go in `Documents/PPTD`.
 
 Then just talk about what you see. Every message carries the slide on screen, so "make this
 shorter" means *this* slide unless you name another. Changes appear in place as the agent
@@ -73,6 +74,12 @@ this is off until you turn it on. File › Remove Prompt History clears them fro
 Press **⌘↩** to start the slideshow. It plays full screen unless you choose
 **View › Slideshow Plays › In Window**. **⇧⌘↩** always plays full screen and **⌘⌥↩** always fills
 the window. Arrow keys, Space and Enter move through the slides, and Esc ends the show.
+
+## Light or dark
+
+PPTD follows your Mac's light or dark appearance. To pick one for PPTD alone, choose
+**View › Appearance › Light** or **Dark** (**System** goes back to following the Mac). The agent
+pane switches with it.
 
 ## Keyboard
 

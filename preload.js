@@ -43,6 +43,7 @@ contextBridge.exposeInMainWorld('viewer', {
   onPtyData: on('pty-data'),
   onPtyExit: on('pty-exit'),
   onPtyStart: on('pty-start'),
+  onAgentBusy: on('agent-busy'),
   onLoginShow: on('login-show'),
   onLoginEvent: on('login-event'),
   onLoginHide: on('login-hide'),

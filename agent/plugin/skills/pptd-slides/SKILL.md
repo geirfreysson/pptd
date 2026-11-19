@@ -98,6 +98,9 @@ Teams opens shared HTML in a sandboxed preview. Learned the hard way:
   `display: none`). A focused radio group natively moves with ←/→ (and ↑/↓), which many
   presentation clickers also send. `autofocus` on r1 gives focus on load; clicking a ‹ ›
   label refocuses the radio.
+- **Slides switch instantly.** No `animation` or `transition` on `.slide` (no fade or slide-in
+  on entry): a fade from part-transparent shows the deck background through, a flash on every
+  change. Motion inside a slide (a hover, a progress bar) is fine.
 - Known limits, worth telling the user: clicking slide content drops focus (click ‹ or ›
   once to get arrows back); arrows wrap from last slide to first; Teams may ignore
   `autofocus`, so the first arrow press may need one click first.

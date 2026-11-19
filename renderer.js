@@ -24,6 +24,8 @@ window.addEventListener('resize', reportStage);
 // ---------------------------------------------------------------- toolbar
 
 $('open').addEventListener('click', () => v.open());
+$('splashOpen').addEventListener('click', () => v.open());
+$('splashNew').addEventListener('click', () => toggleAgent(true));
 $('prev').addEventListener('click', () => v.nav('prev'));
 $('next').addEventListener('click', () => v.nav('next'));
 $('play').addEventListener('click', () => v.slideshow('default'));
@@ -91,6 +93,9 @@ v.onState((s) => {
   markActive();
   updateTermTitle();
 });
+
+// The agent is running a prompt; with no deck open, building.js animates the stage.
+v.onAgentBusy((on) => body.classList.toggle('agent-busy', !!on));
 
 // ---------------------------------------------------------------- drawer
 
@@ -306,6 +311,32 @@ let term = null, fit = null, live = false, started = false;
 // Keys typed while an agent session is starting are kept and sent once it is live.
 let starting = false, earlyInput = '';
 
+// Terminal colours for the app's appearance (View › Appearance). Background matches --term-bg.
+const TERM_THEMES = {
+  dark: {
+    background: '#131416', foreground: '#e6e7ea', cursor: '#14a19e', cursorAccent: '#131416',
+    selectionBackground: 'rgba(20,161,158,.35)',
+    black: '#1d1f22', red: '#ff6b6b', green: '#3fb950', yellow: '#e3b341', blue: '#58a6ff', magenta: '#d2a8ff', cyan: '#39c5cf', white: '#c9d1d9',
+    brightBlack: '#6e7681', brightRed: '#ffa198', brightGreen: '#56d364', brightYellow: '#f2cc60', brightBlue: '#79c0ff', brightMagenta: '#e2c5ff', brightCyan: '#56d4dd', brightWhite: '#f0f6fc',
+  },
+  light: {
+    background: '#fbfbfc', foreground: '#1f2328', cursor: '#0e8c89', cursorAccent: '#fbfbfc',
+    selectionBackground: 'rgba(20,161,158,.25)',
+    black: '#24292f', red: '#cf222e', green: '#116329', yellow: '#7d4e00', blue: '#0969da', magenta: '#8250df', cyan: '#1b7c83', white: '#6e7781',
+    brightBlack: '#57606a', brightRed: '#a40e26', brightGreen: '#1a7f37', brightYellow: '#633c01', brightBlue: '#218bff', brightMagenta: '#a475f9', brightCyan: '#3192aa', brightWhite: '#8c959f',
+  },
+};
+const darkQuery = matchMedia('(prefers-color-scheme: dark)');
+const termTheme = () => TERM_THEMES[darkQuery.matches ? 'dark' : 'light'];
+// pi asks for light/dark change reports (mode 2031) and re-reads the terminal's colours when
+// one comes; xterm.js doesn't send them itself, so watch for the mode and send the report.
+let schemeReports = false;
+darkQuery.addEventListener('change', () => {
+  if (!term) return;
+  term.options.theme = termTheme();
+  if (live && schemeReports) v.ptyInput(darkQuery.matches ? '\x1b[?997;1n' : '\x1b[?997;2n');
+});
+
 function ensureTerm() {
   if (term) return;
   term = new Terminal({
@@ -316,12 +347,7 @@ function ensureTerm() {
     macOptionIsMeta: true,
     scrollback: 10000,
     allowProposedApi: false,
-    theme: {
-      background: '#131416', foreground: '#e6e7ea', cursor: '#14a19e', cursorAccent: '#131416',
-      selectionBackground: 'rgba(20,161,158,.35)',
-      black: '#1d1f22', red: '#ff6b6b', green: '#3fb950', yellow: '#e3b341', blue: '#58a6ff', magenta: '#d2a8ff', cyan: '#39c5cf', white: '#c9d1d9',
-      brightBlack: '#6e7681', brightRed: '#ffa198', brightGreen: '#56d364', brightYellow: '#f2cc60', brightBlue: '#79c0ff', brightMagenta: '#e2c5ff', brightCyan: '#56d4dd', brightWhite: '#f0f6fc',
-    },
+    theme: termTheme(),
   });
   fit = new FitAddon.FitAddon();
   term.loadAddon(fit);
@@ -368,9 +394,13 @@ v.onPtyStart((e) => {
   // Keys typed while the agent was starting (straight after ⌘J) go to it now.
   if (earlyInput) { v.ptyInput(earlyInput); earlyInput = ''; }
 });
-v.onPtyData((d) => term?.write(d));
+v.onPtyData((d) => {
+  const i = Math.max(d.lastIndexOf('\x1b[?2031h'), d.lastIndexOf('\x1b[?2031l'));
+  if (i >= 0) schemeReports = d[i + 7] === 'h';
+  term?.write(d);
+});
 v.onPtyExit((e) => {
-  live = false;
+  live = false; schemeReports = false;
   starting = false; earlyInput = '';
   if (!e?.notFound) term?.write(`\r\n\x1b[2m[session ended${e?.exitCode ? `, exit code ${e.exitCode}` : ''}; press Restart for a new one]\x1b[0m\r\n`);
   updateTermTitle();

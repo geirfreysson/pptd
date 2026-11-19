@@ -120,6 +120,10 @@ own brand, and where the default brand is (or that there isn't one yet).
 The prompt history keeps its snapshots in `history/` in the same data folder, up to 1 GB with
 the oldest removed first; `historyMaxMB` in `settings.json` changes the cap.
 
+View › Appearance is stored as `appearance` (`system`, `light`, `dark`) in `settings.json` and
+applied with `nativeTheme.themeSource`, so `index.html` switches its colour tokens with
+`prefers-color-scheme`.
+
 ## How it works
 
 - `main.js`: windows, layout, slideshow modes, file watching, media drops, undo, menu. Each
@@ -129,6 +133,8 @@ the oldest removed first; `historyMaxMB` in `settings.json` changes the cap.
 - `deck-preload.js`: runs inside the deck. Catches navigation keys (so the deck's own radio
   group can't wrap from last to first) and dropped files.
 - `index.html` / `renderer.js` / `preload.js`: toolbar, slides drawer, terminal (xterm.js).
+- `building.js`: the canvas animation on the empty stage while the agent runs a prompt
+  (`agent-busy` IPC from `setBusy` in main, body class `agent-busy`).
 - `lib/thumbs.js`: renders slide pictures in a hidden offscreen window (one per app window).
 - `lib/shot.js`: full-size slide screenshots and the keyboard-navigation test, in a hidden
   offscreen window (Copy Slide as Image, Export Slides as Images, and the agent's tool).

@@ -38,6 +38,7 @@
       "deck-preload.js",
       "index.html",
       "renderer.js",
+      "building.js",
       "package.json",
       "lib/**",
       "agent/**",

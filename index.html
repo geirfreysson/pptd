@@ -10,6 +10,23 @@
       --bg: #17181b; --bar: #26282c; --panel: #1d1f22; --line: #34363c; --text: #e6e7ea; --muted: #989ba3;
       --btn: #33353b; --btn-hover: #3f424a; --accent: #14a19e; --accent-hover: #17b5b1; --accent-soft: rgba(20,161,158,.16);
       --danger: #e5484d; --drawer-w: 232px; --term-h: 300px; --toolbar-h: 46px;
+      --on-accent-soft: #bff0ee; --err-text: #ffb3b5; --pic: #2a2c31; --hover-line: #5a5d66; --term-bg: #131416;
+      --link: #7fd8d5; --card-hover: rgba(255,255,255,.03); --card-hover-line: #4a4d55; --ok: #3fb950; --idle: #5a5d66;
+      --shimmer: rgba(255,255,255,.05);
+      color-scheme: dark;
+    }
+    /* Light: View › Appearance (or macOS when it's System). Keep --bg and --bar in step with
+       editBg() and winBg() in main.js. */
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #eceef1; --bar: #f7f8fa; --panel: #f2f3f5; --line: #d4d7dd; --text: #1d1f23; --muted: #63666e;
+        --btn: #ffffff; --btn-hover: #e9ebef; --accent: #0e8c89; --accent-hover: #0b7a77; --accent-soft: rgba(20,161,158,.12);
+        --danger: #d1343a;
+        --on-accent-soft: #0b5f5d; --err-text: #b4232a; --pic: #dfe2e7; --hover-line: #a3a7b0; --term-bg: #fbfbfc;
+        --link: #0b7a77; --card-hover: rgba(0,0,0,.03); --card-hover-line: #b5b9c1; --ok: #1a7f37; --idle: #b0b4bc;
+        --shimmer: rgba(255,255,255,.6);
+        color-scheme: light;
+      }
     }
     * { box-sizing: border-box; }
     html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden;
@@ -28,7 +45,7 @@
     button:hover:not(:disabled) { background: var(--btn-hover); }
     button:disabled { opacity: .4; cursor: default; }
     button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-    button.on { background: var(--accent-soft); border-color: var(--accent); color: #bff0ee; }
+    button.on { background: var(--accent-soft); border-color: var(--accent); color: var(--on-accent-soft); }
     .icon { width: 34px; padding: 0; justify-content: center; font-size: 17px; }
     .icon svg { width: 17px; height: 17px; }
     .counter { min-width: 64px; text-align: center; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -42,10 +59,10 @@
     .split .drop { border-radius: 0 7px 7px 0; padding: 0 8px; border-left: 1px solid rgba(0,0,0,.25); }
 
     .toast { max-width: 46ch; padding: 5px 12px; border-radius: 999px; font-size: 12px; white-space: nowrap; overflow: hidden;
-      text-overflow: ellipsis; background: var(--accent-soft); color: #bff0ee; border: 1px solid rgba(20,161,158,.5);
+      text-overflow: ellipsis; background: var(--accent-soft); color: var(--on-accent-soft); border: 1px solid rgba(20,161,158,.5);
       opacity: 0; transform: translateY(-4px); transition: opacity .18s, transform .18s; pointer-events: none; }
     .toast.show { opacity: 1; transform: none; pointer-events: auto; }
-    .toast.error { background: rgba(229,72,77,.14); color: #ffb3b5; border-color: rgba(229,72,77,.5); }
+    .toast.error { background: rgba(229,72,77,.14); color: var(--err-text); border-color: rgba(229,72,77,.5); }
 
     /* ---------- body ---------- */
     .main { display: grid; grid-template-columns: 0 1fr; min-height: 0; }
@@ -84,14 +101,14 @@
     .thumbs { flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain; padding: 4px 12px 16px 6px; scrollbar-width: thin; }
     .thumb { display: grid; grid-template-columns: 22px 1fr; gap: 4px; align-items: start; padding: 5px 0; cursor: pointer; }
     .thumb .num { text-align: right; padding-top: 2px; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
-    .thumb .pic { position: relative; aspect-ratio: 16 / 9; border-radius: 6px; overflow: hidden; background: #2a2c31;
+    .thumb .pic { position: relative; aspect-ratio: 16 / 9; border-radius: 6px; overflow: hidden; background: var(--pic);
       outline: 1px solid var(--line); transition: outline-color .12s; }
     .thumb .pic img { pointer-events: none; display: block; width: 100%; height: 100%; object-fit: cover; }
     .thumb .pic:not(:has(img))::after { content: ""; position: absolute; inset: 0;
-      background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.05) 50%, transparent 70%) 0 0 / 200% 100%;
+      background: linear-gradient(100deg, transparent 30%, var(--shimmer) 50%, transparent 70%) 0 0 / 200% 100%;
       animation: shimmer 1.2s linear infinite; }
     @keyframes shimmer { to { background-position: -200% 0; } }
-    .thumb:hover .pic { outline-color: #5a5d66; }
+    .thumb:hover .pic { outline-color: var(--hover-line); }
     .thumb.active .num { color: var(--text); font-weight: 600; }
     .thumb.active .pic { outline: 2px solid var(--accent); }
     .thumb.dropping .pic { outline: 2px dashed var(--accent); }
@@ -109,23 +126,23 @@
     /* ---------- terminal ---------- */
     .divider { flex: 0 0 6px; cursor: row-resize; background: var(--bar); border-top: 1px solid var(--line); }
     .divider:hover, .divider.dragging { background: var(--accent); }
-    .term { flex: 0 0 var(--term-h); display: flex; flex-direction: column; background: #131416; min-height: 0; }
+    .term { flex: 0 0 var(--term-h); display: flex; flex-direction: column; background: var(--term-bg); min-height: 0; }
     body:not(.term-open) .divider, body:not(.term-open) .term { display: none; }
     .term-head { flex: 0 0 34px; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 12px; background: var(--panel);
       border-bottom: 1px solid var(--line); min-width: 0; }
     .term-head .title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
     .term-head .title strong { color: var(--text); font-weight: 600; }
-    .term-head .slide-pill { color: #bff0ee; background: var(--accent-soft); border-radius: 999px; padding: 2px 8px; margin-left: 6px; font-size: 12px; }
+    .term-head .slide-pill { color: var(--on-accent-soft); background: var(--accent-soft); border-radius: 999px; padding: 2px 8px; margin-left: 6px; font-size: 12px; }
     .term-head button { height: 24px; padding: 0 9px; font-size: 12px; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: #5a5d66; flex: 0 0 auto; }
-    .dot.live { background: #3fb950; box-shadow: 0 0 0 3px rgba(63,185,80,.18); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--idle); flex: 0 0 auto; }
+    .dot.live { background: var(--ok); box-shadow: 0 0 0 3px rgba(63,185,80,.18); }
     #xterm { flex: 1 1 auto; min-height: 0; padding: 6px 4px 4px 10px; }
     #xterm .xterm { height: 100%; }
     #xterm .xterm-viewport { scrollbar-width: thin; }
 
     /* ---------- model sign-in (pi), over the terminal ---------- */
     .term { position: relative; }
-    .login { position: absolute; top: 34px; left: 0; right: 0; bottom: 0; z-index: 2; overflow: auto; background: #131416;
+    .login { position: absolute; top: 34px; left: 0; right: 0; bottom: 0; z-index: 2; overflow: auto; background: var(--term-bg);
       display: flex; justify-content: center; align-items: flex-start; padding: 18px 20px; user-select: text; }
     .login[hidden] { display: none; }
     .login-box { width: min(760px, 100%); }
@@ -136,18 +153,18 @@
       white-space: normal; border-radius: 10px; background: var(--panel); }
     .login-choice strong { font-weight: 600; }
     .login-choice span { color: var(--muted); font-size: 12px; }
-    .login-choice .ok { color: #3fb950; }
+    .login-choice .ok { color: var(--ok); }
     .login-choice.primary { border-color: var(--accent); background: var(--accent-soft); }
     .login-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
     .login-row.end { justify-content: flex-end; }
     .login button.go { background: var(--accent); border-color: var(--accent); color: #fff; }
     .login button.go:hover:not(:disabled) { background: var(--accent-hover); }
-    .login button.link { background: none; border: 0; padding: 0; height: auto; color: #7fd8d5; text-decoration: underline; }
+    .login button.link { background: none; border: 0; padding: 0; height: auto; color: var(--link); text-decoration: underline; }
     .login input { font: 13px ui-monospace, Menlo, monospace; color: var(--text); background: var(--panel); border: 1px solid var(--line);
       border-radius: 7px; height: 30px; padding: 0 10px; flex: 1 1 260px; min-width: 0; }
     .login input:focus { outline: 2px solid var(--accent); outline-offset: 0; }
     .login .note { color: var(--muted); margin: 10px 0 0; line-height: 1.5; }
-    .login .err { color: #ffb3b5; }
+    .login .err { color: var(--err-text); }
     .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--line); border-top-color: var(--accent);
       border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -1px; margin-right: 6px; }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -155,13 +172,30 @@
     /* ---------- empty state ---------- */
     .empty { position: absolute; inset: 0; display: grid; place-items: center; }
     body.has-deck .empty { display: none; }
-    .drop-zone { width: min(560px, 80%); padding: 48px 32px; text-align: center; border: 2px dashed var(--line);
-      border-radius: 14px; color: var(--muted); line-height: 1.7; }
-    .drop-zone strong { color: var(--text); font-size: 16px; display: block; margin-bottom: 6px; }
+    .drop-zone { width: min(640px, 88%); text-align: center; color: var(--muted); line-height: 1.7; font-size: 14.5px; }
     .wordmark { font-size: 34px; font-weight: 800; letter-spacing: -.04em; color: var(--text); line-height: 1; }
-    .tagline { color: var(--muted); margin: 6px 0 26px; font-style: italic; }
+    .tagline { color: var(--muted); margin: 6px 0 26px; font-style: italic; font-size: 15px; }
     .drop-zone kbd { border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
-    body.dragging .drop-zone { border-color: var(--accent); background: var(--accent-soft); }
+    .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    @media (max-width: 620px) { .cards { grid-template-columns: 1fr; } }
+    .card { display: flex; flex-direction: column; align-items: center; gap: 4px; height: auto; padding: 26px 18px;
+      border-radius: 14px; color: var(--muted); line-height: 1.5; white-space: normal; text-align: center; font-size: 15px; }
+    .card .icon { font-size: 22px; color: var(--accent); line-height: 1; margin-bottom: 6px; }
+    .card strong { color: var(--text); font-size: 17px; }
+    .card-drop { background: transparent; border: 2px dashed var(--line); }
+    .card-drop:hover:not(:disabled) { background: var(--card-hover); border-color: var(--card-hover-line); }
+    .card-new { background: var(--accent-soft); border: 2px solid rgba(20,161,158,.5); }
+    .card-new:hover:not(:disabled) { background: rgba(20,161,158,.26); border-color: var(--accent); }
+    body.dragging .card-drop { border-color: var(--accent); background: var(--accent-soft); }
+    .keys { font-size: 13.5px; }
+    /* while the agent works with no deck open: building.js */
+    .building { display: none; position: absolute; inset: 0; flex-direction: column; align-items: center; justify-content: center; }
+    .building canvas { width: 100%; flex: 0 1 60%; min-height: 0; }
+    .build-text { font: 13px ui-monospace, Menlo, monospace; color: var(--muted); letter-spacing: .08em; }
+    .build-text::after { content: ''; display: inline-block; width: 3ch; text-align: left; animation: dots 1.4s steps(4) infinite; }
+    @keyframes dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+    body.agent-busy .drop-zone { display: none; }
+    body.agent-busy .building { display: flex; }
   </style>
 </head>
 <body>
@@ -207,10 +241,24 @@
           <div class="drop-zone">
             <div class="wordmark">PPTD</div>
             <div class="tagline">PowerPoint is dead.</div>
-            <strong>Drop a presentation here</strong>
-            or click <em>Open…</em> (<kbd>⌘O</kbd>), or press <kbd>⌘J</kbd> and ask the agent for a new one.<br>
-            Then drop images or video on a slide to add them.<br><br>
-            <kbd>←</kbd> <kbd>→</kbd> change slides · <kbd>⌥⌘S</kbd> slides drawer · <kbd>⌘J</kbd> agent
+            <div class="cards">
+              <button class="card card-drop" id="splashOpen" title="Open… (⌘O)">
+                <span class="icon" aria-hidden="true">⤓</span>
+                <strong>Drop a presentation</strong>
+                <span>a <code>.pptd.html</code> file, or press <kbd>⌘O</kbd></span>
+              </button>
+              <button class="card card-new" id="splashNew" title="Open the agent (⌘J)">
+                <span class="icon" aria-hidden="true">✦</span>
+                <strong>Make a new one</strong>
+                <span>Click and describe your slides (<kbd>⌘J</kbd>)</span>
+              </button>
+            </div>
+            Drop images or video on a slide to add them.<br>
+            <span class="keys"><kbd>←</kbd> <kbd>→</kbd> change slides · <kbd>⌥⌘S</kbd> slides drawer · <kbd>⌘J</kbd> agent</span>
+          </div>
+          <div class="building" aria-live="polite">
+            <canvas id="buildCanvas" aria-hidden="true"></canvas>
+            <div class="build-text">Building your deck</div>
           </div>
         </div>
       </div>
@@ -232,5 +280,6 @@
   <script src="node_modules/@xterm/xterm/lib/xterm.js"></script>
   <script src="node_modules/@xterm/addon-fit/lib/addon-fit.js"></script>
   <script src="renderer.js"></script>
+  <script src="building.js"></script>
 </body>
 </html>

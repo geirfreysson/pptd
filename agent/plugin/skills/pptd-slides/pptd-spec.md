@@ -98,7 +98,10 @@ block that a brand file can replace.
 #r1:checked ~ #s1, #r2:checked ~ #s2, #r3:checked ~ #s3 { display: flex; }
 ```
 
-The visible slide MUST depend only on which radio is `:checked`. Do not use `:target`,
+The visible slide MUST depend only on which radio is `:checked`. Slides switch instantly:
+**the app turns off `animation` and `transition` on `.slide`**, so don't give slides an entry
+animation (a fade from part-transparent shows the deck background through, a flash on every
+change). Do not use `:target`,
 `#hash` links, `:focus` or `:hover` to switch slides. The app changes slides by checking a
 radio, and it notices nothing else.
 
@@ -155,7 +158,7 @@ Space, Backspace and Esc, are caught before the page sees them.
 | Plain links (`<a href="https://…">`) are allowed. The app opens them in the default browser | MAY |
 | No speaker notes or presenter-only text: anything in the file is visible to anyone it is shared with | MUST |
 | An `@media print` block that prints one slide per page | SHOULD |
-| `@media (prefers-reduced-motion: reduce)` honoured for slide animations | SHOULD |
+| `@media (prefers-reduced-motion: reduce)` honoured for animations inside slides | SHOULD |
 
 ### Embedded media
 

@@ -16,7 +16,7 @@
 // their in-page ‹ › controls and drive the radios ourselves. Other HTML files
 // still load; navigation then falls back to sending arrow keys to the page.
 
-const { app, BrowserWindow, WebContentsView, Menu, dialog, ipcMain, shell, clipboard, ClipboardItem } = require('electron');
+const { app, BrowserWindow, WebContentsView, Menu, dialog, ipcMain, shell, clipboard, ClipboardItem, nativeTheme } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const media = require('./lib/media');
@@ -34,14 +34,22 @@ const history = require('./lib/history');
 
 const TOOLBAR_HEIGHT = 46;
 
-const HIDE_CONTROLS_CSS = `.controls { display: none !important; }`;
-// Centre the 16:9 deck in whatever space it gets. Dark grey while editing, black in a show.
+// Hide the in-page ‹ › and switch slides instantly: a slide's entry animation (often a fade
+// from part-transparent) lets the deck background show through, a flash on every change.
+const HIDE_CONTROLS_CSS = `
+  .controls { display: none !important; }
+  .slide { animation: none !important; transition: none !important; }
+`;
+// Centre the 16:9 deck in whatever space it gets. The app's stage colour while editing
+// (grey, light or dark with the appearance), black in a show.
 const frameCss = (bg) => `
   html, body { background: ${bg} !important; }
   body { place-items: center !important; }
-  .deck { box-shadow: ${bg === '#000' ? 'none' : '0 6px 28px rgba(0,0,0,.45)'} !important; }
+  .deck { box-shadow: ${bg === '#000' ? 'none' : nativeTheme.shouldUseDarkColors ? '0 6px 28px rgba(0,0,0,.45)' : '0 4px 22px rgba(0,0,0,.16)'} !important; }
 `;
-const EDIT_BG = '#17181b';
+// Keep in step with --bg (stage) and --bar (window) in index.html.
+const editBg = () => (nativeTheme.shouldUseDarkColors ? '#17181b' : '#eceef1');
+const winBg = () => (nativeTheme.shouldUseDarkColors ? '#1e1f22' : '#f7f8fa');
 const EMPTY_STATE = () => ({ index: 0, total: 0, label: null });
 
 const windows = new Set();       // every open window's state object
@@ -106,7 +114,7 @@ function createWindow(file = null) {
     ...offset,
     minWidth: 760,
     minHeight: 480,
-    backgroundColor: '#1e1f22',
+    backgroundColor: winBg(),
     title: 'PPTD',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -126,7 +134,7 @@ function createWindow(file = null) {
       nodeIntegration: false,
     },
   });
-  deckView.setBackgroundColor(EDIT_BG);
+  deckView.setBackgroundColor(editBg());
   deckView.setVisible(false);
   win.contentView.addChildView(deckView);
 
@@ -153,7 +161,7 @@ function createWindow(file = null) {
       `!!document.querySelector('meta[name=pptd], input.slide-radio, input[type=radio][name=slide]')`);
     if (w.isRadioDeck) {
       await wc.insertCSS(HIDE_CONTROLS_CSS);
-      w.frameCssKey = await wc.insertCSS(frameCss(w.mode === 'normal' ? EDIT_BG : '#000'));
+      w.frameCssKey = await wc.insertCSS(frameCss(w.mode === 'normal' ? editBg() : '#000'));
     } else {
       w.frameCssKey = null;
     }
@@ -617,10 +625,10 @@ async function setMode(w, next) {
   else if (prev === 'fullscreen' && w.win.isFullScreen()) w.win.setFullScreen(false);
 
   const wc = w.deckView.webContents;
-  w.deckView.setBackgroundColor(next === 'normal' ? EDIT_BG : '#000000');
+  w.deckView.setBackgroundColor(next === 'normal' ? editBg() : '#000000');
   if (w.isRadioDeck) {
     if (w.frameCssKey) await wc.removeInsertedCSS(w.frameCssKey).catch(() => {});
-    w.frameCssKey = await wc.insertCSS(frameCss(next === 'normal' ? EDIT_BG : '#000'));
+    w.frameCssKey = await wc.insertCSS(frameCss(next === 'normal' ? editBg() : '#000'));
   }
 
   layout(w);
@@ -799,6 +807,7 @@ function ensureAgent(w) {
     socket: appSocket?.file,
     onData: (d) => send(w, 'pty-data', d),
     onExit: (e) => {
+      setBusy(w, false);
       send(w, 'pty-exit', e);
       if (w.restartAgent && w.win) { const s = w.restartAgent; w.restartAgent = null; startAgent(w, s); }
     },
@@ -857,6 +866,27 @@ function setSlideshowMode(mode) {
   for (const w of windows) sendState(w);
 }
 
+// Light or dark: 'system' (the default, follows macOS), 'light' or 'dark'. Chosen in
+// View › Appearance. nativeTheme drives prefers-color-scheme in index.html.
+const appearance = () => (['light', 'dark'].includes(readSettings().appearance) ? readSettings().appearance : 'system');
+function setAppearance(mode) {
+  writeSettings({ appearance: mode });
+  nativeTheme.themeSource = mode;
+  buildMenu();
+}
+// The deck view's surroundings aren't CSS the app's page controls; repaint them by hand.
+async function applyAppearance(w) {
+  if (!w.win || w.win.isDestroyed()) return;
+  w.win.setBackgroundColor(winBg());
+  if (!w.deckView || w.mode !== 'normal') return;
+  w.deckView.setBackgroundColor(editBg());
+  const wc = w.deckView.webContents;
+  if (!w.isRadioDeck || !w.frameCssKey) return;
+  const old = w.frameCssKey;
+  w.frameCssKey = await wc.insertCSS(frameCss(editBg())).catch(() => null);
+  await wc.removeInsertedCSS(old).catch(() => {});
+}
+
 function toggleSavePrompts() {
   const on = !savePrompts();
   writeSettings({ savePrompts: on });
@@ -872,6 +902,7 @@ function toggleSavePrompts() {
 function agentEvent(w, ev) {
   if (ev?.type === 'prompt') {
     if (!w.runStarted) w.runStarted = Date.now();
+    setBusy(w, true);
     // The folder watcher can fail when the agent starts (on a fresh install macOS may not
     // have allowed access to Documents yet); try again now.
     if (!w.cwdWatcher && w.agentCwd) watchAgentFolder(w, w.agentCwd);
@@ -884,9 +915,17 @@ function agentEvent(w, ev) {
   } else if (ev?.type === 'steer') {
     if (w.turn && typeof ev.text === 'string' && ev.text.trim()) w.turn.steers.push(ev.text.trim());
   } else if (ev?.type === 'end') {
+    setBusy(w, false);
     openDeckFromRun(w);
     endTurn(w, ev.outcome === 'aborted' || ev.outcome === 'error' ? ev.outcome : '');
   }
+}
+
+// The agent is running a prompt: the empty stage shows the "building" animation.
+function setBusy(w, on) {
+  if (w.busy === on) return;
+  w.busy = on;
+  send(w, 'agent-busy', on);
 }
 
 // A deck this run may change. known: we see it before the run touched it, so its content
@@ -1145,6 +1184,14 @@ function buildMenu() {
         { label: 'Prompt History', click: on((c) => send(c, 'toggle', 'prompts')) },
         { label: 'Save Prompts in Decks', type: 'checkbox', checked: savePrompts(), click: toggleSavePrompts },
         {
+          label: 'Appearance',
+          submenu: [
+            { label: 'System', type: 'radio', checked: appearance() === 'system', click: () => setAppearance('system') },
+            { label: 'Light', type: 'radio', checked: appearance() === 'light', click: () => setAppearance('light') },
+            { label: 'Dark', type: 'radio', checked: appearance() === 'dark', click: () => setAppearance('dark') },
+          ],
+        },
+        {
           label: 'Slideshow Plays',
           submenu: [
             { label: 'Full Screen', type: 'radio', checked: slideshowMode() === 'fullscreen', click: () => setSlideshowMode('fullscreen') },
@@ -1276,6 +1323,8 @@ app.whenReady().then(() => {
     try { app.dock.setIcon(path.join(__dirname, 'build', 'icon.png')); } catch {}
   }
   appSocket = startAppSocket(app.getPath('userData'));
+  nativeTheme.themeSource = appearance();
+  nativeTheme.on('updated', () => { for (const w of windows) applyAppearance(w); });
   buildMenu();
   createWindow(pendingFile ? path.resolve(pendingFile) : null);
   pendingFile = null;

@@ -109,6 +109,12 @@ When a change alters behaviour, update the docs in the same change:
   back (a visible flash) and takes keyboard focus from the agent terminal. Disk changes go
   through `refreshFromDisk` (in-place DOM morph); anything that must reload or `loadFile`
   without focusing the deck calls `keepUiFocus(w)` first.
+- **Light and dark** (View › Appearance, `nativeTheme.themeSource`): `index.html` colours are
+  tokens on `:root` with a light set under `prefers-color-scheme: light`; don't hard-code
+  colours. The stage and window colours outside CSS (`editBg()`/`winBg()` in `main.js`) must
+  match `--bg`/`--bar`. The terminal has two xterm themes in `renderer.js`; on a switch it sends
+  pi the mode-2031 light/dark report (`ESC[?997;1n`/`2n`), which xterm.js doesn't, and pi
+  re-reads the colours.
 - `index.html` CSS: `.main` is the layout grid under the toolbar. Don't reuse generic class
   names like `main` on components (a Play button that did got squashed to zero width).
 - **Keyboard focus:** the deck is a separate WebContentsView and usually holds keyboard focus,
