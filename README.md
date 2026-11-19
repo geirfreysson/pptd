@@ -18,8 +18,8 @@ Get the latest version from the
 | **Windows** (x64) | [PPTD-windows-x64-setup.exe](https://github.com/geirfreysson/pptd/releases/latest/download/PPTD-windows-x64-setup.exe) |
 | **Linux** (x64) | [AppImage](https://github.com/geirfreysson/pptd/releases/latest/download/PPTD-linux-x86_64.AppImage) · [.deb](https://github.com/geirfreysson/pptd/releases/latest/download/PPTD-linux-amd64.deb) |
 
-The first time you open it, macOS or Windows may ask you to confirm you trust the app; the
-release notes say how.
+The macOS app is Developer ID signed and notarized by Apple. The Windows installer is not
+signed yet, so Windows may ask you to confirm you trust it; the release notes explain how.
 
 ## Make a presentation
 
