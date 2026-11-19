@@ -34,6 +34,16 @@
   letter-spacing: -0.03em;
 }
 
+.heroSlogan {
+  margin: 0 0 22px;
+  color: var(--site-ink);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(22px, 2.6vw, 30px);
+  font-style: italic;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
 .heroTitle span {
   color: var(--site-accent);
 }

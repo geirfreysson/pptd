@@ -76,13 +76,14 @@ function Hero() {
   const demo = useBaseUrl('/demo/pptd-demo.pptd.html');
   return (
     <header className={styles.hero}>
-      <p className={styles.eyebrow}>PPTD · PowerPoint is dead</p>
+      <p className={styles.eyebrow}>PPTD · presentations by prompting</p>
       <Heading as="h1" className={styles.heroTitle}>
-        Presentations you make <span>by asking.</span>
+        PowerPoint is <span>Dead</span>
       </Heading>
+      <div className={styles.heroSlogan}>Friends don't let friends drag and drop.</div>
       <p className={styles.heroBody}>
-        Tell PPTD what you want to say and an AI agent builds the slides while you watch.
-        Then keep going: every change appears straight away.
+        Prompt your slides instead. Tell PPTD what you want to say and an AI agent builds the
+        deck while you watch. Then keep prompting: every change appears straight away.
       </p>
       <DownloadAction />
 
@@ -129,7 +130,7 @@ function Prompts() {
     <section className={styles.section}>
       <div className={styles.sectionHeading}>
         <p className={styles.eyebrow}>How it works</p>
-        <Heading as="h2">You write sentences. It writes slides.</Heading>
+        <Heading as="h2">You prompt. It builds the slides.</Heading>
       </div>
       <div className={styles.promptGrid}>
         {PROMPTS.map((p, i) => (
@@ -227,7 +228,7 @@ function Agents() {
 function CTA() {
   return (
     <section className={styles.cta}>
-      <Heading as="h2">Make your next deck by asking.</Heading>
+      <Heading as="h2">Make your next deck with a prompt.</Heading>
       <p>Free and open source, for macOS, Windows and Linux.</p>
       <Link className={styles.primaryButton} to="/docs/getting-started">Get started</Link>
     </section>
@@ -237,7 +238,7 @@ function CTA() {
 export default function Home() {
   return (
     <Layout
-      title="Presentations you make by asking"
+      title="PowerPoint is Dead"
       description="PPTD is a desktop app where an AI agent builds your slides while you watch. Each deck is one HTML file that opens anywhere.">
       <main className={styles.page}>
         <Hero />
