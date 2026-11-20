@@ -66,9 +66,13 @@ Teams opens shared HTML in a sandboxed preview. Learned the hard way:
 3. **Anchor the deck to the top:** `body { display: grid; place-items: start center; }`.
    With `center`, the 16:9 deck sits in the middle of Teams' tall preview frame and a
    big grey band appears above it.
-4. **Size text with container units.** `.deck { container-type: inline-size }` and every
-   font size as `clamp(min, Ncqw, max)`, so text scales with the slide, not the window.
-   Check at 1280×720, 1440×900, 1920×1080 and a tall frame such as 1000×1000.
+4. **Size everything with container units.** `.deck { container-type: inline-size }` and every
+   font size, gap, padding and box size as plain `Ncqw` (1cqw = 12.8px at 1280×720), so the
+   whole slide scales as one picture. No `clamp()` with px floors or caps, and no
+   `@media (max-width…)` phone layout: on a phone the deck is a miniature of the same slide,
+   not a reflowed page. Only 1px hairline borders stay in px. Check at 1280×720, 1920×1080, a
+   tall frame such as 1000×1000 and a phone (390×844): the phone must look like the 1280×720
+   slide, shrunk.
 5. **No speaker notes in the file.** Whatever is in the HTML is visible to anyone it is
    shared with. Keep presenter text out, or in a separate local file.
 6. Self-contained only: no CDN links, external fonts or remote images.
@@ -94,6 +98,11 @@ Teams opens shared HTML in a sandboxed preview. Learned the hard way:
 
 - **Clicking:** each slide's ‹ › are `<label for="rN±1">`. Clicking a label checks that radio,
   and the `~` sibling selector shows the matching section.
+- **Click zones:** a click or tap on the slide itself also navigates: the left third goes back,
+  the rest goes forward (the whole slide on the first one). The template does this with the
+  labels' `::before` (the `.controls` rules), so keep its `.controls` CSS and the labels'
+  `aria-label="Previous slide"` / `"Next slide"` exactly. Links in a slide sit above the zones.
+  There is no swipe: that would need a script.
 - **Arrow keys:** the radios are *invisible but focusable* (not `hidden`, not
   `display: none`). A focused radio group natively moves with ←/→ (and ↑/↓), which many
   presentation clickers also send. `autofocus` on r1 gives focus on load; clicking a ‹ ›
@@ -141,7 +150,7 @@ node pptd-deck.mjs delete deck.pptd.html 4
 If a slide needs more than two sentences to explain how something works, draw it.
 
 - **Linear flow (3–6 steps):** HTML `.path` of `.node` + `.arrow`. Highlight the step the slide
-  is about with `.node.hl`. Stacks vertically on mobile.
+  is about with `.node.hl`.
 - **Anything with structure** (data going in and out, tables, branching, before/after):
   inline SVG inside `.diagram`, with a `viewBox` and `width: 100%`, styled with classes
   (`dg-box`, `dg-label`, `dg-sub`, `dg-arrow`, `dg-step`) rather than inline colours. Give it

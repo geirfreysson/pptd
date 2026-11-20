@@ -22,7 +22,7 @@
 
     /* ---------- Frame: 16:9, top-anchored (Teams preview fix) ---------- */
     * { box-sizing: border-box; }
-    html, body { margin: 0; width: 100%; height: 100%; background: #e9edf2; color: var(--ink); font-family: var(--font); }
+    html, body { margin: 0; width: 100%; height: 100%; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; background: #e9edf2; color: var(--ink); font-family: var(--font); }
     body { display: grid; place-items: start center; overflow: hidden; }   /* start, NOT center */
     .deck { width: min(100vw, 177.78vh); height: min(100vh, 56.25vw); container-type: inline-size; position: relative; background: var(--paper); overflow: hidden; box-shadow: var(--shadow); }
 
@@ -33,49 +33,61 @@
     /* ONE ENTRY PER SLIDE: extend this list whenever you add a slide. */
     #r1:checked ~ #s1, #r2:checked ~ #s2, #r3:checked ~ #s3, #r4:checked ~ #s4, #r5:checked ~ #s5, #r6:checked ~ #s6 { display: flex; flex-direction: column; }
 
-    .controls { position: absolute; z-index: 5; right: 2.4%; bottom: 2%; display: flex; align-items: center; gap: 8px; }
-    .controls .nav-btn, .controls .nav-ph { display: inline-flex; align-items: center; justify-content: center; border: 1px solid #cbd5df; background: rgba(255,255,255,.94); color: var(--ink); width: 40px; height: 36px; border-radius: 9px; font-size: 18px; cursor: pointer; user-select: none; }
+    /* .controls covers the slide but lets clicks through, except on its buttons and click zones. */
+    .controls { position: absolute; z-index: 5; inset: 0; display: flex; align-items: flex-end; justify-content: flex-end; gap: .625cqw; padding: 0 2.4% 1.125cqw 0; pointer-events: none; }
+    .controls .nav-btn, .controls .counter { pointer-events: auto; }
+    /* Click zones: a click (or tap) on the left third of the slide goes back, anywhere else
+       goes forward (the whole slide on the first one). They are the ‹ › labels' ::before, so
+       they need no extra markup; the bottom 7% is left clear for the buttons. */
+    .controls label::before { content: ""; position: absolute; top: 0; bottom: 7%; pointer-events: auto; }
+    .controls label[aria-label="Previous slide"]::before { left: 0; width: 33.33%; }
+    .controls label[aria-label="Next slide"]::before { left: 33.33%; right: 0; }
+    .controls .nav-ph ~ label[aria-label="Next slide"]::before { left: 0; }
+    .slide a { position: relative; z-index: 6; }   /* links stay clickable above the zones */
+    .controls .nav-btn, .controls .nav-ph { display: inline-flex; align-items: center; justify-content: center; border: 1px solid #cbd5df; background: rgba(255,255,255,.94); color: var(--ink); width: 3.125cqw; height: 2.812cqw; border-radius: .703cqw; font-size: 1.406cqw; cursor: pointer; user-select: none; }
     .controls .nav-btn:hover { background: var(--accent-soft); }
     .controls .nav-ph { visibility: hidden; }
-    .counter { min-width: 50px; text-align: center; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; background: rgba(255,255,255,.94); border: 1px solid #cbd5df; border-radius: 9px; padding: 8px 6px; }
-    .progress { position: absolute; z-index: 6; bottom: 0; left: 0; height: 4px; width: 100%; background: rgba(20,43,67,.09); }
+    .counter { min-width: 3.906cqw; text-align: center; color: var(--muted); font-size: 1.016cqw; font-variant-numeric: tabular-nums; background: rgba(255,255,255,.94); border: 1px solid #cbd5df; border-radius: .703cqw; padding: .625cqw .469cqw; }
+    .progress { position: absolute; z-index: 6; bottom: 0; left: 0; height: .312cqw; width: 100%; background: rgba(20,43,67,.09); }
     .progress span { display: block; height: 100%; background: var(--accent); }
 
-    /* ---------- Type scale: cqw = 1% of deck width, so text scales with the slide ---------- */
-    .slide::before { content: ""; position: absolute; top: 0; left: 0; height: 8px; width: 100%; background: linear-gradient(90deg, var(--ink), var(--accent)); }
+    /* ---------- Type scale: cqw = 1% of deck width (12.8px at 1280×720). Every size is in cqw,
+       with no px floors or caps and no phone layout, so a small screen shows a miniature of
+       the same slide. Only hairlines (1px borders) stay in px. ---------- */
+    .slide::before { content: ""; position: absolute; top: 0; left: 0; height: .625cqw; width: 100%; background: linear-gradient(90deg, var(--ink), var(--accent)); }
     h1, h2, h3, p { margin-top: 0; }
-    .eyebrow { color: var(--ink); text-transform: uppercase; letter-spacing: .16em; font-size: clamp(10px, 1cqw, 15px); font-weight: 700; margin-bottom: 1.15em; }
-    h1 { font-size: clamp(36px, 5.6cqw, 80px); line-height: 1.02; letter-spacing: -.045em; margin-bottom: .3em; max-width: 75cqw; }
-    h2 { font-size: clamp(24px, 3.3cqw, 48px); line-height: 1.04; letter-spacing: -.035em; margin-bottom: .45em; }
-    h3 { font-size: clamp(14px, 1.55cqw, 22px); line-height: 1.15; margin-bottom: .5em; }
-    p, li { font-size: clamp(12px, 1.3cqw, 19px); line-height: 1.45; }
-    .lead { color: var(--ink-2); font-size: clamp(15px, 1.75cqw, 25px); line-height: 1.34; }
-    .footer { position: absolute; left: 7.2%; right: 22%; bottom: 2.8%; display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: clamp(10px, .9cqw, 13px); letter-spacing: .03em; }
+    .eyebrow { color: var(--ink); text-transform: uppercase; letter-spacing: .16em; font-size: 1cqw; font-weight: 700; margin-bottom: 1.15em; }
+    h1 { font-size: 5.6cqw; line-height: 1.02; letter-spacing: -.045em; margin-bottom: .3em; max-width: 75cqw; }
+    h2 { font-size: 3.3cqw; line-height: 1.04; letter-spacing: -.035em; margin-bottom: .45em; }
+    h3 { font-size: 1.55cqw; line-height: 1.15; margin-bottom: .5em; }
+    p, li { font-size: 1.3cqw; line-height: 1.45; }
+    .lead { color: var(--ink-2); font-size: 1.75cqw; line-height: 1.34; }
+    .footer { position: absolute; left: 7.2%; right: 22%; bottom: 2.8%; display: flex; justify-content: space-between; gap: .938cqw; color: var(--muted); font-size: .9cqw; letter-spacing: .03em; }
 
     /* ---------- Components ---------- */
-    .grid { display: grid; gap: 18px; }
+    .grid { display: grid; gap: 1.406cqw; }
     .grid.two { grid-template-columns: repeat(2, 1fr); }
     .grid.three { grid-template-columns: repeat(3, 1fr); }
-    .panel { background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: clamp(12px, 1.7cqw, 24px); }
+    .panel { background: var(--white); border: 1px solid var(--line); border-radius: 1.25cqw; padding: 1.7cqw; }
     .panel p:last-child { margin-bottom: 0; }
-    .tag { display: inline-flex; padding: 6px 10px; border-radius: 999px; font-size: clamp(10px, .9cqw, 13px); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin-bottom: .6em; }
+    .tag { display: inline-flex; padding: .469cqw .781cqw; border-radius: 999px; font-size: .9cqw; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin-bottom: .6em; }
     .tag.ready { color: #12664f; background: var(--green-soft); }
     .tag.proven { color: #135a90; background: var(--blue-soft); }
     .tag.build { color: #89510e; background: var(--amber-soft); }
-    .callout { border-left: 4px solid var(--accent); padding: 10px 16px; background: var(--accent-soft); border-radius: 0 10px 10px 0; color: var(--ink-2); font-size: clamp(12px, 1.25cqw, 18px); line-height: 1.45; }
+    .callout { border-left: .312cqw solid var(--accent); padding: .781cqw 1.25cqw; background: var(--accent-soft); border-radius: 0 .781cqw .781cqw 0; color: var(--ink-2); font-size: 1.25cqw; line-height: 1.45; }
     .callout.amber { border-color: var(--amber); background: var(--amber-soft); }
 
     /* Flow diagram in HTML: node → node → node */
-    .path { display: flex; align-items: stretch; gap: 10px; margin: .8em 0; }
-    .node { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 78px; padding: 12px; background: var(--white); border: 1px solid var(--line); border-radius: 14px; text-align: center; }
-    .node strong { font-size: clamp(12px, 1.3cqw, 18px); }
-    .node span { color: var(--muted); font-size: clamp(10px, .95cqw, 13px); margin-top: 6px; line-height: 1.35; }
-    .node.hl { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent); }
-    .arrow { align-self: center; color: var(--accent); font-size: clamp(18px, 2.1cqw, 30px); }
+    .path { display: flex; align-items: stretch; gap: .781cqw; margin: .8em 0; }
+    .node { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 6.094cqw; padding: .938cqw; background: var(--white); border: 1px solid var(--line); border-radius: 1.094cqw; text-align: center; }
+    .node strong { font-size: 1.3cqw; }
+    .node span { color: var(--muted); font-size: .95cqw; margin-top: .469cqw; line-height: 1.35; }
+    .node.hl { border-color: var(--accent); box-shadow: 0 0 0 .156cqw color-mix(in srgb, var(--accent) 22%, transparent); }
+    .arrow { align-self: center; color: var(--accent); font-size: 2.1cqw; }
 
     /* Status matrix */
-    .matrix { width: 100%; border-collapse: collapse; background: var(--white); border-radius: 12px; overflow: hidden; font-size: clamp(11px, 1.1cqw, 15px); }
-    .matrix th, .matrix td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    .matrix { width: 100%; border-collapse: collapse; background: var(--white); border-radius: .938cqw; overflow: hidden; font-size: 1.1cqw; }
+    .matrix th, .matrix td { text-align: left; padding: .781cqw 1.094cqw; border-bottom: 1px solid var(--line); vertical-align: top; }
     .matrix th { color: var(--muted); font-size: .86em; text-transform: uppercase; letter-spacing: .07em; background: #eef2f6; }
     .matrix tr:last-child td { border-bottom: 0; }
     .matrix tbody tr { transition: background-color .12s ease; }
@@ -101,16 +113,8 @@
     .title-slide .eyebrow { color: var(--title-eyebrow); }
     .title-slide .lead { color: var(--title-soft); }
     .title-slide .footer { color: var(--title-footer); }
-    .title-mark { width: 72px; height: 5px; background: var(--highlight); margin: 1.6em 0; border-radius: 5px; }
+    .title-mark { width: 5.625cqw; height: .391cqw; background: var(--highlight); margin: 1.6em 0; border-radius: .391cqw; }
 
-    @media (max-width: 760px) {
-      body { overflow: auto; }
-      .deck { width: 100vw; height: 100vh; box-shadow: none; }
-      .slide { padding: 9% 6% 16%; }
-      .grid.two, .grid.three { grid-template-columns: 1fr; gap: 10px; }
-      .path { flex-direction: column; } .arrow { transform: rotate(90deg); }
-      .footer { left: 6%; right: 6%; bottom: 2%; }
-    }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
     @media print {
       @page { size: 13.333in 7.5in; margin: 0; }
@@ -154,7 +158,7 @@
       <div class="eyebrow">PPTD · PowerPoint is dead</div>
       <h1>Presentations you make by asking.</h1>
       <div class="title-mark"></div>
-      <p class="lead">This is a PPTD deck. Click the arrows, or use the arrow keys, to see how it works.</p>
+      <p class="lead">This is a PPTD deck. Click or tap the slide, or use the arrow keys, to see how it works.</p>
       <div class="footer"><span>Made in PPTD</span><span></span></div>
       <nav class="controls" aria-label="Slide controls"><span class="nav-ph"></span><span class="counter">1 / 6</span><label for="r2" class="nav-btn" aria-label="Next slide">›</label></nav>
       <div class="progress"><span style="width: 16.7%"></span></div>

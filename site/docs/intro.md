@@ -11,7 +11,8 @@ what you want to say and an AI agent builds the slides while you watch. Then kee
 change appears straight away.
 
 Each presentation is a **single HTML file**. It opens in any browser, previews in Microsoft
-Teams and needs nothing installed to view, so you can send it the way you'd send a PDF.
+Teams and needs nothing installed to view, so you can send it the way you'd send a PDF. On a
+phone it shows as a smaller copy of the same slide, not a rearranged web page.
 
 ## What you can do
 
@@ -31,7 +32,7 @@ Claude Code instead if you have it.
 
 ## Try one
 
-The deck on the [home page](/) is a real PPTD file. Click its arrows or use the arrow keys.
+The deck on the [home page](/) is a real PPTD file. Click or tap the slide (the left third goes back) or use the arrow keys.
 You can also [open it on its own](pathname:///demo/pptd-demo.pptd.html) and save it: it's the
 whole presentation, in one file, with no scripts.
 

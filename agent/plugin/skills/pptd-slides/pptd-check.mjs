@@ -83,6 +83,9 @@ export function checkHtml(html, { name = 'deck.pptd.html', size = Buffer.byteLen
   check(/\.deck\s*{[^}]*177\.7\d*vh/i.test(style) && /56\.25vw/i.test(style), '.deck is a 16:9 box (177.78vh / 56.25vw)');
   check(/(^|[\s,}])body\s*{[^}]*background/i.test(style) || /html\s*,\s*body\s*{[^}]*background/i.test(style), 'body has a background colour');
   check(/cqw/.test(style), 'font sizes use container units (cqw)', 'SHOULD');
+  const pxClamp = (style.match(/clamp\(\s*[\d.]+px\s*,[^)]*cqw/gi) || []).length;
+  check(!pxClamp, `no px floors on cqw sizes${pxClamp ? ' (' + pxClamp + ' clamp(…px, …cqw, …))' : ''}: the slide should scale as one picture`, 'SHOULD');
+  check(!/@media[^{]*\((max-|min-)?(width|height|aspect-ratio|orientation)\b/i.test(style), 'no narrow-screen @media layout: on a phone the deck is a miniature, not reflowed', 'SHOULD');
 
   // 8. Content and safety
   check(!/<script\b/i.test(src), 'no <script>');

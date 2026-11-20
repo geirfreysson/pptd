@@ -101,7 +101,7 @@ function Hero() {
         />
       </div>
       <div className={styles.demoCaption}>
-        That's a real PPTD deck, not a screenshot. Click the arrows to page through it.
+        That's a real PPTD deck, not a screenshot. Click the slide to page through it.
       </div>
     </header>
   );

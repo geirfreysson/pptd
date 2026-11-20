@@ -112,6 +112,9 @@ radio, and it notices nothing else.
 - They MUST sit inside an element with `class="controls"`. **The app hides every `.controls`
   element** and shows its own toolbar instead. Do not put anything inside `.controls` that
   the audience needs to see.
+- The ‹ › labels MAY also cover the slide as click zones (e.g. a `::before` that spans the left
+  third for ‹ and the rest for ›), so a click or tap on the slide navigates in a browser and on a
+  phone. They hide with `.controls` in the app. Links in a slide must stay clickable above them.
 - A `.progress` bar MAY be used. It stays visible in the app.
 - The first slide has no ‹ and the last has no ›. Use a placeholder element to keep the
   layout steady.
@@ -119,14 +122,16 @@ radio, and it notices nothing else.
 ## 6. Sizing and layout
 
 The app shows the deck in three ways: under a toolbar, filling a window, and full screen on
-black. The deck must look right at any window size.
+black. The deck must look right at any window size. A deck is a picture of a slide, not a web
+page: on a phone it shows as a miniature of the same 16:9 slide, never as a reflowed layout.
 
 | Requirement | Level |
 |---|---|
 | `.deck` is a 16:9 box that fits the viewport: `width: min(100vw, 177.78vh); height: min(100vh, 56.25vw)` | MUST |
 | `html, body { margin: 0; height: 100%; }` with `body { display: grid; place-items: start center; overflow: hidden; }` | MUST |
 | `.deck { container-type: inline-size; position: relative; overflow: hidden; }` | MUST |
-| Font sizes in container units, e.g. `clamp(14px, 1.6cqw, 30px)`, so text scales with the slide | SHOULD |
+| Font sizes, spacing and box sizes in container units only (e.g. `1.6cqw`), with no px floors or caps (`clamp(14px, …)`), so everything scales with the slide. Hairline borders MAY stay `1px` | SHOULD |
+| No layout changes for narrow screens: no `@media (max-width…)`, `(min-width…)` or `(orientation…)` rules that restyle the slides | SHOULD |
 | `body` has an explicit background colour | MUST |
 | Nothing essential in the bottom-right corner (about 12% × 8% of the slide). The in-page controls sit there in a browser | SHOULD |
 
@@ -308,11 +313,11 @@ Before handing a deck over:
     .slide-radio { position: fixed; top: 0; left: 0; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
     .slide { display: none; position: absolute; inset: 0; padding: 6%; flex-direction: column; }
     #r1:checked ~ #s1, #r2:checked ~ #s2 { display: flex; }
-    h1 { font-size: clamp(28px, 5cqw, 96px); margin: 0; }
-    p  { font-size: clamp(14px, 2cqw, 40px); }
-    .controls { position: absolute; right: 2.4%; bottom: 2%; display: flex; gap: 8px; }
-    .controls label, .controls span { width: 40px; height: 36px; display: grid; place-items: center;
-            border: 1px solid #ccc; border-radius: 8px; cursor: pointer; }
+    h1 { font-size: 5cqw; margin: 0; }
+    p  { font-size: 2cqw; }
+    .controls { position: absolute; right: 2.4%; bottom: 2%; display: flex; gap: .6cqw; }
+    .controls label, .controls span { width: 3.1cqw; height: 2.8cqw; display: grid; place-items: center;
+            border: 1px solid #ccc; border-radius: .6cqw; cursor: pointer; font-size: 1.4cqw; }
     .controls .ph { visibility: hidden; }
     @media print {
       html, body { height: auto; overflow: visible; display: block; }

@@ -5,7 +5,9 @@ slides while you watch. Then keep going: "make the headline shorter", "turn this
 chart", "add a slide about pricing". Every change appears straight away.
 
 Each presentation is a single HTML file. It opens in any browser, previews in Microsoft Teams
-and needs nothing installed to view, so you can send it the way you'd send a PDF.
+and needs nothing installed to view, so you can send it the way you'd send a PDF. On a phone it
+shows as a smaller copy of the same slide, like a PDF would, not a rearranged web page. Outside
+the app, click or tap a slide to go forward, or its left third to go back.
 
 **Website and docs:** <https://geirfreysson.github.io/pptd/>
 
