@@ -1,7 +1,7 @@
 {
   "name": "pptd",
   "productName": "PPTD",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "PPTD (PowerPoint is dead): play and edit single-file HTML presentations.",
   "license": "GPL-3.0-or-later",
   "author": "Geir Freysson",

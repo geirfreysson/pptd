@@ -1,28 +1,16 @@
-# PPTD v1.0.0
+# PPTD v1.1.0
 
-## Light and dark
+## Decks look right on phones
 
-- PPTD now comes in light and dark. It follows your Mac by default; choose
-  View › Appearance › Light or Dark to pick one for PPTD alone. The agent pane switches with it.
+New decks now scale as one picture. On a phone, or in any small window, a deck shows as a
+smaller copy of the same 16:9 slide, the way a PDF would, instead of rearranging itself
+into a cramped web page.
 
-## A new start screen
+## Click or tap a slide to move through it
 
-- With no deck open, the start screen offers two choices: **Drop a presentation** (or press ⌘O)
-  and **Make a new one**, which opens the agent.
-- While the agent builds your first deck, an animation shows it's working, and the deck opens
-  as soon as it's saved.
+When a deck is opened outside the app (in a browser, in Teams, on a phone), a click or tap
+anywhere on a slide goes to the next one, and a click on its left third goes back. The ‹ ›
+buttons and the arrow keys still work, and links on a slide stay clickable.
 
-## Slides switch instantly
-
-- New decks no longer fade or slide in when you change slides. The fade let the background show
-  through for a moment on every change; now the next slide simply appears, in PPTD, in a browser
-  and in Teams.
-
-## Credits
-
-- PPTD's built-in agent is [Pi](https://github.com/earendil-works/pi) by Mario Zechner, under
-  the MIT licence. Its licence notice now ships with the app.
-
-## Website
-
-- PPTD has a website with a guide to getting started: <https://geirfreysson.github.io/pptd/>
+The agent writes new decks this way, and the deck checker now warns about decks that set
+minimum text sizes in pixels or switch to a separate phone layout.
