@@ -85,6 +85,14 @@ gh secret set APPLE_API_KEY_ID
 gh secret set APPLE_API_ISSUER
 ```
 
+**Update check.** Installed copies ask GitHub's API for the latest release
+(`lib/updates.js`) and show a banner when it is newer; Download opens the installer by its
+versioned name (`PPTD-<version>-mac-arm64.dmg`, `PPTD-<version>-windows-x64-setup.exe`), so
+keep those asset names stable, or old copies fall back to the release page. Only
+non-prerelease, non-draft releases count. `npm start` doesn't check unless
+`PPTD_UPDATE_FEED` points at a JSON file shaped like GitHub's release response (`tag_name`,
+`html_url`, `assets[].name`/`browser_download_url`), e.g. a tiny local HTTP server.
+
 The certificate and App Store Connect key may be shared with another app released by the
 same Apple developer account. GitHub repository secrets are write-only, so copy them from
 the original local `.p12` and `.p8` files (or export the Developer ID identity from Keychain
@@ -209,6 +217,9 @@ applied with `nativeTheme.themeSource`, so `index.html` switches its colour toke
 - `deck-preload.js`: runs inside the deck. Catches navigation keys (so the deck's own radio
   group can't wrap from last to first) and dropped files (with the photo slot they landed on).
 - `index.html` / `renderer.js` / `preload.js`: toolbar, slides drawer, terminal (xterm.js).
+- `toast.html` / `toast.js` / `toast-preload.js`: notifications, in a transparent view of
+  their own laid over the top centre of the window (above the deck view). main's
+  `toast(w, text, kind, { undo })` shows one; the page reports its size and main fits the view to it.
 - `building.js`: the canvas animation on the empty stage while the agent runs a prompt
   (`agent-busy` IPC from `setBusy` in main, body class `agent-busy`).
 - `lib/thumbs.js`: renders slide pictures in a hidden offscreen window (one per app window).
@@ -217,6 +228,10 @@ applied with `nativeTheme.themeSource`, so `index.html` switches its colour toke
 - `lib/app-socket.js`: a local socket (`PPTD_SOCKET`, owner-only) through which the skill's
   `pptd-app.mjs` asks the running app for screenshots and the key test.
 - `lib/styles.js`: the user's own styles folder; lists them and resolves a style name.
+- `lib/extract.js`: turns a dropped .docx/.xlsx/.pptx/.txt/.md/.csv/.tsv/.json into Markdown
+  (with the pictures copied out) in the agent session's drops folder, for `handleDocuments`
+  in main to point the agent at. Node built-ins only: a small zip reader over `zlib` and
+  regex scanning of the XML, with caps on sizes, rows and pictures.
 - `lib/media.js`: embeds images/video into a slide's `<section>`, or fills a photo slot
   (`figure.photo`, spec "Photo slots") with an image.
 - `lib/history.js`: the prompt history: reads and writes the deck's
@@ -243,6 +258,10 @@ applied with `nativeTheme.themeSource`, so `index.html` switches its colour toke
   `tools/vendor-pi.mjs` installs both (checking each download's SHA-256) after `npm install` and
   before builds; they ship as `Resources/pi` and `Resources/pi/bin`, with their licences.
 - `lib/brand.js`: reads a deck's brand block and finds the default brand.
+- `lib/updates.js`: the update check: fetches the latest GitHub release and compares versions.
+  Main checks 8 s after launch and every 6 h (setting `checkUpdates`; `skippedVersion` for
+  Skip This Version) and sends `update` to every window; the banner (`#update`) is a grid row
+  under the toolbar, so the deck view moves down rather than covering it.
 - `tools/validate-release.mjs` / `tools/verify-release-bundle.mjs`: release gates: version,
   tag and `release-draft.md` agree; a packaged app has pi, rg, fd, the skill and node-pty.
 - `.github/workflows/release.yml`: builds macOS, Linux and Windows and publishes tagged releases.

@@ -45,7 +45,7 @@ jobs:
           set -euo pipefail
           sh tools/sync-skill.sh
           git diff --exit-code -- agent/plugin/skills || { echo "The skill's copies of the spec, checker or deck tool, or its style templates, are stale: run npm run sync-skill and commit." >&2; exit 1; }
-          for f in main.js preload.js deck-preload.js renderer.js lib/*.js agent/pi/*.js agent/pi/*.mjs tools/*.mjs; do node --check "$f"; done
+          for f in main.js preload.js deck-preload.js toast-preload.js toast.js renderer.js lib/*.js agent/pi/*.js agent/pi/*.mjs tools/*.mjs; do node --check "$f"; done
           node tools/build-styles.mjs --check
 
       - name: Validate Apple release secrets

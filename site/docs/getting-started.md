@@ -22,6 +22,22 @@ notarized by Apple.
 **Windows:** the installer is not signed yet, so Windows may ask you to confirm you trust it.
 The release notes explain how.
 
+### New versions
+
+PPTD checks for a new version when it starts and every few hours after. When there is one, a
+bar appears under the toolbar:
+
+- **Download** opens the installer for your computer in your browser (the Releases page on
+  Linux, where you choose AppImage or .deb). Install it over the old copy as you did the first
+  time.
+- **What's new** opens the release notes.
+- **Later** hides the bar until PPTD next starts.
+- **Skip This Version** hides it until a newer version comes out.
+
+PPTD never downloads or installs anything by itself, and the check sends nothing about you or
+your decks. **Check for Updates…** in the PPTD menu (the Help menu on Windows and Linux) checks
+right away; **Check for Updates Automatically** in the same menu turns the check off.
+
 ## Sign in once
 
 PPTD comes with its own agent, [Pi](./pi.md), so there's nothing else to install. The first time you open

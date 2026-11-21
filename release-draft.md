@@ -1,16 +1,13 @@
-# PPTD v1.1.0
+# PPTD v1.2.0
 
-## Decks look right on phones
+## Give documents to the agent
 
-New decks now scale as one picture. On a phone, or in any small window, a deck shows as a
-smaller copy of the same 16:9 slide, the way a PDF would, instead of rearranging itself
-into a cramped web page.
+Drop a Word, Excel, or PowerPoint file onto PPTD and it becomes readable Markdown for the agent, with embedded pictures extracted alongside it. Text, Markdown, CSV, TSV, and JSON files work too. The agent opens so you can ask it to make a chart, summarize a report, or rebuild an older presentation. Nothing in the open deck changes until you ask.
 
-## Click or tap a slide to move through it
+## Update notifications
 
-When a deck is opened outside the app (in a browser, in Teams, on a phone), a click or tap
-anywhere on a slide goes to the next one, and a click on its left third goes back. The ‹ ›
-buttons and the arrow keys still work, and links on a slide stay clickable.
+PPTD can check for new releases and show a download and release notes banner. Choose Later or Skip This Version, check manually, or turn automatic checks off from the app menu. PPTD never downloads or installs updates on its own.
 
-The agent writes new decks this way, and the deck checker now warns about decks that set
-minimum text sizes in pixels or switch to a separate phone layout.
+## Clearer notifications and undo
+
+Notifications now appear above the deck, with an Undo action when an edit can be undone. Dropping an image on a slide without a photo placeholder adds it to the slide and opens the agent with context.

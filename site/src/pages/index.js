@@ -150,7 +150,7 @@ function Prompts() {
 }
 
 const FEATURES = [
-  {icon: '⇅', title: 'Edit by hand too', body: 'Drag slides to reorder them. Drop in photos and video. The agent hears about it.'},
+  {icon: '⇅', title: 'Edit by hand too', body: 'Drag slides to reorder them. Drop in photos and video, or a spreadsheet for the agent to chart. The agent hears about it.'},
   {icon: '↺', title: 'Go back to any prompt', body: 'Optionally keep every prompt with the deck and rewind to any point. Nothing is lost.'},
   {icon: '▶', title: 'Present', body: 'Full screen or in the window, with the keyboard you already know.'},
   {icon: '⧉', title: 'Copy as an image', body: 'Paste a slide into an email or chat, or export every slide as a PNG.'},

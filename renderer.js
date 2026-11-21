@@ -36,20 +36,28 @@ $('playMenu').addEventListener('click', (e) => {
 $('drawerBtn').addEventListener('click', () => setDrawer(!body.classList.contains('drawer-open')));
 $('agentBtn').addEventListener('click', () => toggleAgent());
 
-let toastTimer = null;
-v.onToast(({ text, kind }) => {
-  const t = $('toast');
-  t.textContent = text;
-  t.title = text;
-  t.classList.toggle('error', kind === 'error');
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), kind === 'error' ? 9000 : 5000);
+// ---------------------------------------------------------------- new version
+
+// Main sends { version, current } when a newer release is out, null to hide the banner.
+// Showing or hiding it resizes #stage, and the ResizeObserver moves the deck view.
+v.onUpdate((u) => {
+  const bar = $('update');
+  if (!u) { bar.hidden = true; bar.classList.remove('in'); return; }
+  const fresh = bar.hidden || bar.dataset.version !== u.version;
+  $('updateTitle').textContent = `PPTD ${u.version} is available`;
+  $('updateHave').textContent = `You have ${u.current}.`;
+  bar.dataset.version = u.version;
+  bar.hidden = false;
+  if (fresh) { bar.classList.remove('in'); void bar.offsetWidth; bar.classList.add('in'); }
 });
+for (const [id, action] of [['updateDownload', 'download'], ['updateNotes', 'notes'], ['updateLater', 'later'], ['updateSkip', 'skip']]) {
+  $(id).addEventListener('click', () => v.updateAction(action));
+}
 
 v.onToggle((what) => {
   if (what === 'drawer') setDrawer(!body.classList.contains('drawer-open'));
   else if (what === 'prompts') { setTab('prompts'); setDrawer(true); }
+  else if (what === 'agent-open') toggleAgent(true);   // open (or just focus) the agent
   else toggleAgent();
 });
 

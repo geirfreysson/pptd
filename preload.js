@@ -34,11 +34,13 @@ contextBridge.exposeInMainWorld('viewer', {
   loginUseClaude: () => ipcRenderer.send('login-use-claude'),
   loginOpenUrl: () => ipcRenderer.send('login-open-url'),
   openLink: (url) => ipcRenderer.send('open-link', url),
+  // The new-version banner: 'download', 'notes', 'later' or 'skip'.
+  updateAction: (action) => ipcRenderer.send('update-action', action),
 
   onState: on('state'),
   onThumb: on('thumb'),
   onPrompts: on('prompts'),
-  onToast: on('toast'),
+  onUpdate: on('update'),
   onToggle: on('toggle'),
   onPtyData: on('pty-data'),
   onPtyExit: on('pty-exit'),

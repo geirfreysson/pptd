@@ -16,7 +16,8 @@ PPTD adds what Pi needs to make presentations:
 - a **note with every prompt** saying which deck and which slide are on screen, so "make this
   shorter" means the slide you're looking at;
 - **notes about your own edits** (slide moves, media drops, undos), so Pi never works from an
-  out-of-date picture of the deck.
+  out-of-date picture of the deck;
+- **the documents you drop in** (Word, Excel, PowerPoint, text), turned into text it can read.
 
 ## Signing in
 

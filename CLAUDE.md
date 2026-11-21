@@ -35,8 +35,9 @@ When a change alters behaviour, update the docs in the same change:
   `frameCss()` in `main.js`. Keep them in step with section 6 of the spec.
 - **The agent** runs in a pty, one per window: pi (bundled, the default) or Claude Code,
   chosen in View › Agent and stored as `agent` in `userData/settings.json`. Each session has
-  its own state and events files in `userData/agent/`. Those are removed when its window
-  closes or the app quits. Both agents get the same skill, system prompt, per-prompt note
+  its own state and events files in `userData/agent/`, plus a `drops-<tag>/` folder of dropped
+  documents as Markdown (`lib/extract.js`, kept dependency-free). Those are removed when its
+  window closes or the app quits. Both agents get the same skill, system prompt, per-prompt note
   and written-file events. Claude gets them through `--settings` hooks, pi through
   `agent/pi/pptd-extension.js` (env `PPTD_STATE_FILE`/`PPTD_EVENTS_FILE`). Change both together.
 - **pi is vendored** in `vendor/pi` (own `package.json` + lockfile; `node_modules` is not in
@@ -143,6 +144,11 @@ When a change alters behaviour, update the docs in the same change:
   match `--bg`/`--bar`. The terminal has two xterm themes in `renderer.js`; on a switch it sends
   pi the mode-2031 light/dark report (`ESC[?997;1n`/`2n`), which xterm.js doesn't, and pi
   re-reads the colours.
+- **Toasts** are `toast.html` in their own transparent `WebContentsView`, added after the deck
+  view so it sits on top; don't put them back in `index.html` (the deck would cover them).
+  Call `toast(w, text, kind, { undo: true })` rather than writing "⌘Z to undo" in the text.
+  The view is sized to the card, so the rest of the window stays clickable. A click in it
+  takes the keyboard, so `giveBackFocus` returns it to the deck or the terminal (`w.lastFocus`).
 - `index.html` CSS: `.main` is the layout grid under the toolbar. Don't reuse generic class
   names like `main` on components (a Play button that did got squashed to zero width).
 - **Keyboard focus:** the deck is a separate WebContentsView and usually holds keyboard focus,
@@ -161,6 +167,9 @@ When a change alters behaviour, update the docs in the same change:
 - A standalone Electron test script that destroys its only window quits the app (Electron's
   default without a `window-all-closed` handler), so the next load fails with `ERR_FAILED (-2)`.
   Add `app.on('window-all-closed', () => {})` to such scripts; main.js already has one.
+- In a standalone test script, `app.getVersion()` is Electron's version (45.x), not PPTD's;
+  stub it when testing the update check. Stub `app.requestSingleInstanceLock` too if an
+  `npm start` copy may be running, or the script quits (and pokes that copy).
 - Running `npx @electron/asar extract-file` writes into the current directory. Run it from
   the scratchpad, not the repo, or it overwrites repo files.
 

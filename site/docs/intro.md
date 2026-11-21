@@ -21,7 +21,7 @@ phone it shows as a smaller copy of the same slide, not a rearranged web page.
 - **Change it by talking about what you see.** Every message carries the slide on screen, so
   "make this shorter" means *this* slide.
 - **[Edit by hand](./editing-by-hand.md).** Drag slides to reorder them, drop in photos and
-  video, copy a slide as an image.
+  video, hand the agent a Word, Excel or PowerPoint file, copy a slide as an image.
 - **Keep your brand.** The agent asks once how your decks should look and uses it from then on.
 - **[Pick a style](./making-decks.md#pick-a-style).** Grid, Bold, Folio, Signal, Atelier, Keynote, Mono, Sticker, Playful or Classic
   for the layout, with any brand's colours; switch a finished deck by asking.

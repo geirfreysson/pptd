@@ -20,6 +20,7 @@ const { app, BrowserWindow, WebContentsView, Menu, dialog, ipcMain, shell, clipb
 const path = require('path');
 const fs = require('fs');
 const media = require('./lib/media');
+const extract = require('./lib/extract');
 // Structural deck edits (also the agents' command-line tool); an ES module, loaded on use.
 // Packaged, it is unpacked next to app.asar (asarUnpack), so it loads as a plain file.
 const deckOps = () => import(require('url').pathToFileURL(
@@ -31,6 +32,7 @@ const { AgentSession, AGENTS } = require('./lib/agent');
 const piLogin = require('./lib/pi-login');
 const brand = require('./lib/brand');
 const history = require('./lib/history');
+const updates = require('./lib/updates');
 
 const TOOLBAR_HEIGHT = 46;
 
@@ -72,6 +74,9 @@ function newWindowState() {
   return {
     win: null,
     deckView: null,
+    toastView: null,             // the notification over the top of the window (toast.html)
+    toast: { ready: false, pending: null, size: null, shown: false },
+    lastFocus: 'deck',           // 'ui' or 'deck': where the keyboard goes back to after a toast click
     thumbs: createThumbs(),
     currentFile: null,
     pendingFile: null,           // file to open once index.html has loaded
@@ -138,8 +143,30 @@ function createWindow(file = null) {
   deckView.setVisible(false);
   win.contentView.addChildView(deckView);
 
+  // Toasts get a transparent view of their own, added last so it sits above the deck.
+  const toastView = w.toastView = new WebContentsView({
+    webPreferences: {
+      preload: path.join(__dirname, 'toast-preload.js'),
+      contextIsolation: true,
+      sandbox: true,
+      nodeIntegration: false,
+    },
+  });
+  toastView.setBackgroundColor('#00000000');
+  toastView.setVisible(false);
+  win.contentView.addChildView(toastView);
+  toastView.webContents.loadFile(path.join(__dirname, 'toast.html'));
+  toastView.webContents.once('did-finish-load', () => {
+    w.toast.ready = true;
+    if (w.toast.pending) { const p = w.toast.pending; w.toast.pending = null; showToast(w, p); }
+  });
+  toastView.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  toastView.webContents.on('will-navigate', (e) => e.preventDefault());
+
   const wc = deckView.webContents;
-  const ids = [win.webContents.id, wc.id];
+  win.webContents.on('focus', () => { w.lastFocus = 'ui'; });
+  wc.on('focus', () => { w.lastFocus = 'deck'; });
+  const ids = [win.webContents.id, wc.id, toastView.webContents.id];
   for (const id of ids) byContents.set(id, w);
   windows.add(w);
   lastFocused = w;
@@ -203,6 +230,7 @@ function createWindow(file = null) {
 
   win.webContents.once('did-finish-load', () => {
     sendState(w);
+    sendUpdate(w);
     if (w.pendingFile) { const f = w.pendingFile; w.pendingFile = null; openFile(w, f); }
   });
 
@@ -214,6 +242,7 @@ function createWindow(file = null) {
 function disposeWindow(w) {
   w.win = null;
   w.deckView = null;
+  w.toastView = null;
   w.thumbs.dispose();
   unwatch(w);
   clearTimeout(w.settleTimer);
@@ -231,6 +260,7 @@ function layout(w) {
   const { win, deckView } = w;
   if (!win || !deckView) return;
   const [width, height] = win.getContentSize();
+  placeToast(w);
   if (w.mode !== 'normal') { deckView.setBounds({ x: 0, y: 0, width, height }); return; }
   const r = w.stageRect || { x: 0, y: TOOLBAR_HEIGHT, width, height: height - TOOLBAR_HEIGHT };
   deckView.setBounds({
@@ -253,7 +283,42 @@ function settleLayout(w) {
 }
 
 const send = (w, channel, payload) => { if (w?.win && !w.win.isDestroyed()) w.win.webContents.send(channel, payload); };
-const toast = (w, text, kind = 'info') => send(w, 'toast', { text, kind });
+
+// ---------------------------------------------------------------- toasts
+// toast.html in its own transparent view, centred at the top of the window just under the
+// toolbar (and the update banner). kind: 'info', 'error' or 'busy' (a spinner, stays until
+// the next toast). opts.undo adds an Undo button that runs the undo stack; opts.hint is a
+// second line pointing at the agent.
+const toast = (w, text, kind = 'info', opts = {}) => {
+  if (!w?.toastView) return;
+  showToast(w, { text: String(text), kind, undo: !!opts.undo, hint: opts.hint ? String(opts.hint) : '' });
+};
+function showToast(w, payload) {
+  if (!w.toast.ready) { w.toast.pending = payload; return; }
+  if (w.mode !== 'normal') return;   // not over a slideshow
+  w.toast.shown = true;
+  w.toastView.webContents.send('toast', payload);
+}
+function placeToast(w) {
+  const { win, toastView, toast: t } = w;
+  if (!win || !toastView) return;
+  if (!t.shown || !t.size || w.mode !== 'normal') { toastView.setVisible(false); return; }
+  const [width] = win.getContentSize();
+  const tw = Math.min(t.size.width, width), th = t.size.height;
+  const top = Math.round(w.stageRect?.y ?? TOOLBAR_HEIGHT) - 4;
+  toastView.setBounds({ x: Math.round((width - tw) / 2), y: top, width: tw, height: th });
+  toastView.setVisible(true);
+}
+function hideToast(w) {
+  if (!w.toastView) return;
+  w.toastView.webContents.send('toast-dismiss');
+}
+// A click on the toast gives its view the keyboard; hand it back to the deck or the terminal.
+function giveBackFocus(w) {
+  if (!w.toastView?.webContents.isFocused()) return;
+  if (w.lastFocus === 'ui') w.win.webContents.focus();
+  else w.deckView?.webContents.focus();
+}
 
 // ---------------------------------------------------------------- files
 
@@ -429,9 +494,11 @@ async function handleDrop(w, paths, slideIndex, slot) {
   if (!paths?.length) return;
   const decks = paths.filter((p) => /\.html?$/i.test(p));
   const items = paths.filter((p) => media.kindOf(p));
-  const other = paths.filter((p) => !decks.includes(p) && !items.includes(p));
-  if (decks.length && !items.length) return openFile(w, decks[0]);
-  if (other.length) toast(w, `Can't add ${other.map((p) => path.basename(p)).join(', ')}: use an image (PNG, JPEG, GIF, WebP, SVG, HEIC) or a video (MP4, MOV, WebM).`, 'error');
+  const docs = paths.filter((p) => !decks.includes(p) && !items.includes(p) && extract.kindOf(p));
+  const other = paths.filter((p) => !decks.includes(p) && !items.includes(p) && !docs.includes(p));
+  if (decks.length && !items.length && !docs.length) return openFile(w, decks[0]);
+  if (docs.length) handleDocuments(w, docs, slideIndex);
+  if (other.length) toast(w, `Can't add ${other.map((p) => path.basename(p)).join(', ')}: use an image or video for a slide, or a Word, Excel, PowerPoint or text file for the agent.`, 'error');
   if (!items.length) return;
   if (!w.currentFile) return toast(w, 'Open a presentation first, then drop images or video onto a slide.', 'error');
   if (!w.isRadioDeck || !w.state.total) return toast(w, 'Media can only be added to PPTD slide decks.', 'error');
@@ -491,7 +558,13 @@ async function handleDrop(w, paths, slideIndex, slot) {
   });
   w.restoreIndex = target;
   const where = slotted.length === added ? (added === 1 ? 'the photo slot on slide' : 'photo slots on slide') : 'slide';
-  toast(w, `Added ${what} to ${where} ${n}${notes.length ? ` (${notes.join(', ')})` : ''}. ⌘Z to undo.`);
+  // Media in a photo slot is already part of the layout. Anything else lands as a plain figure
+  // at the end of the slide: open the agent (it gets the note below) so the user can say
+  // what to do with it.
+  const loose = added > slotted.length;
+  const hint = loose ? `Tell the agent what to do with ${added === 1 ? 'it' : 'them'}.` : '';
+  toast(w, `Added ${what} to ${where} ${n}${notes.length ? ` (${notes.join(', ')})` : ''}.`, 'info', { undo: true, hint });
+  if (loose) send(w, 'toggle', 'agent-open');
   const slotNote = slotted.length
     ? ` ${slotted.length === 1 ? 'It went into the photo slot' : `${slotted.length} went into photo slots`} (figure.photo${slotted[0] ? `, brief: ${JSON.stringify(slotted.join(' | '))}` : ''}), which now hold${slotted.length === 1 ? 's' : ''} an <img>.`
     : '';
@@ -522,9 +595,34 @@ async function moveSlideInDeck(w, from, to) {
     note: `The user undid their slide move: ${name || 'the slide'} is back at position ${from + 1} and all slides are in their earlier order. The file changed on disk; re-read it before editing.`,
   });
   w.restoreIndex = to;
-  toast(w, `Moved slide ${from + 1}${name ? ` ${name}` : ''} to position ${to + 1}. ⌘Z to undo.`);
+  toast(w, `Moved slide ${from + 1}${name ? ` ${name}` : ''} to position ${to + 1}.`, 'info', { undo: true });
   const [lo, hi] = from < to ? [from + 1, to + 1] : [to + 1, from + 1];
   w.agent?.noteChange(`The user moved slide ${from + 1}${name ? ` (${name})` : ''} to position ${to + 1} in ${displayName(file)} using PPTD. Slides ${lo} to ${hi} now have different numbers and section ids (<section id="sN">): the slide content moved, while each position kept its id, controls and progress bar. The file changed on disk: re-read it before editing, and don't rely on slide numbers, ids or file text from earlier in this conversation.`);
+}
+
+// ---------------------------------------------------------------- dropped documents
+
+// Word, Excel, PowerPoint and text files aren't put on a slide: they're material for the
+// agent. lib/extract.js turns each into Markdown (pictures copied out beside it) in the
+// session's drops folder, the agent gets a note pointing at it, and its pane opens.
+// The deck doesn't change, so there is nothing to undo.
+function handleDocuments(w, docs, slideIndex) {
+  const a = ensureAgent(w);
+  const done = [];
+  for (const p of docs) {
+    try { done.push({ p, ...extract.extract(p, a.dropsDir) }); }
+    catch (e) { toast(w, `Can't read ${path.basename(p)}: ${e.message}.`, 'error'); }
+  }
+  if (!done.length) return;
+  const where = !w.currentFile ? ' with no deck open'
+    : Number.isInteger(slideIndex) ? ` onto slide ${slideIndex + 1} of ${displayName(w.currentFile)}`
+    : ` while slide ${w.state.index + 1} of ${displayName(w.currentFile)} was on screen`;
+  const list = done.map((d) => `"${path.basename(d.p)}" (${d.summary}${d.cut ? ', cut short' : ''}; the original is \`${d.p}\`): read \`${d.md}\``
+    + (d.mediaDir ? `. Its pictures are in \`${d.mediaDir}\`, linked from that Markdown where they appeared; you can embed them in slides` : ''));
+  a.noteChange(`The user dropped ${done.length === 1 ? 'a document' : `${done.length} documents`} into PPTD${where}, for you to work from. The deck did not change. PPTD extracted ${done.length === 1 ? 'it' : 'them'} as Markdown: ${list.join('; ')}. Read ${done.length === 1 ? 'it' : 'them'} when the user says what to make from ${done.length === 1 ? 'it' : 'them'} (a chart, a table, a summary slide, a new deck…); don't change any deck before they ask.`, { always: true });
+  const name = done.length === 1 ? `"${path.basename(done[0].p)}"` : `${done.length} files`;
+  toast(w, `Gave ${name} to the agent.`, 'info', { hint: `Tell it what to make from ${done.length === 1 ? 'it' : 'them'}.` });
+  send(w, 'toggle', 'agent-open');
 }
 
 // ---------------------------------------------------------------- undo (media drops, slide moves)
@@ -642,6 +740,7 @@ async function setMode(w, next) {
     w.frameCssKey = await wc.insertCSS(frameCss(next === 'normal' ? editBg() : '#000'));
   }
 
+  if (next !== 'normal') { w.toast.shown = false; hideToast(w); }
   layout(w);
   settleLayout(w);
   wc.send('mode', w.mode);
@@ -815,6 +914,7 @@ function ensureAgent(w) {
   w.agent = new AgentSession({
     stateFile: path.join(dir, `current-slide-${tag}.txt`),
     eventsFile: path.join(dir, `events-${tag}.txt`),
+    dropsDir: path.join(dir, `drops-${tag}`),
     socket: appSocket?.file,
     onData: (d) => send(w, 'pty-data', d),
     onExit: (e) => {
@@ -829,7 +929,7 @@ function ensureAgent(w) {
 }
 
 function removeAgentFiles(a) {
-  for (const f of [a.stateFile, a.stateFile && `${a.stateFile}.json`, a.stateFile && a.changesFile, a.eventsFile]) { if (f) try { fs.rmSync(f, { force: true }); } catch {} }
+  for (const f of [a.stateFile, a.stateFile && `${a.stateFile}.json`, a.stateFile && a.changesFile, a.eventsFile, a.dropsDir]) { if (f) try { fs.rmSync(f, { force: true, recursive: true }); } catch {} }
 }
 
 // With a deck open, the agent starts in its folder; otherwise in ~/Documents/PPTD,
@@ -1018,7 +1118,7 @@ function revertToPrompt(w, id) {
     note: `The user undid their revert of ${displayName(file)}: the deck is back as it was before it. The file changed on disk; re-read it before editing.`,
   });
   w.restoreIndex = w.state.index;
-  toast(w, `Reverted the deck to ${label === 'the start' ? 'before the first prompt' : `prompt ${label}`}. ⌘Z to undo.`);
+  toast(w, `Reverted the deck to ${label === 'the start' ? 'before the first prompt' : `prompt ${label}`}.`, 'info', { undo: true });
   w.agent?.noteChange(`The user reverted ${displayName(file)} in PPTD to how it was ${label === 'the start' ? 'before the first prompt in its history' : `after prompt ${label} in its history`}. Slides, their number and their content may all differ from what you saw: re-read the file before editing, and don't rely on file text from earlier in this conversation.`);
 }
 
@@ -1035,7 +1135,7 @@ function removePromptHistory(w) {
     undone: 'Put the prompt history back.',
   });
   w.restoreIndex = w.state.index;
-  toast(w, 'Removed the prompt history from this deck. ⌘Z to undo.');
+  toast(w, 'Removed the prompt history from this deck.', 'info', { undo: true });
 }
 
 // ---------------------------------------------------------------- model sign-in (pi)
@@ -1093,6 +1193,72 @@ function confirmQuit() {
   app.quit();
 }
 
+// ---------------------------------------------------------------- updates
+
+// A check shortly after launch and every six hours (packaged builds, or with
+// PPTD_UPDATE_FEED set), and on demand from the menu. A newer release shows a banner in
+// every window; Later hides it until the next launch or a newer release, Skip This Version
+// until a newer one. See lib/updates.js.
+const UPDATE_FIRST_CHECK_MS = 8000;
+const UPDATE_INTERVAL_MS = 6 * 60 * 60 * 1000;
+let update = null;               // { version, page, download } of a newer release
+let updateHidden = false;        // Later / Download / Skip pressed for this one
+let updateChecking = false;
+let updateTimer = null;
+const autoUpdateChecks = () => readSettings().checkUpdates !== false;
+const canCheckUpdates = () => app.isPackaged || !!process.env.PPTD_UPDATE_FEED;
+
+function sendUpdate(w) {
+  send(w, 'update', update && !updateHidden ? { version: update.version, current: app.getVersion() } : null);
+}
+function broadcastUpdate() { for (const w of windows) sendUpdate(w); }
+
+async function checkForUpdates({ manual = false } = {}) {
+  if (updateChecking) return;
+  updateChecking = true;
+  const here = app.getVersion();
+  try {
+    const latest = await updates.fetchLatest(here);
+    if (!updates.isNewer(latest.version, here)) {
+      update = null;
+      if (manual) toast(current(), `PPTD ${here} is the latest version.`);
+    } else if (manual || readSettings().skippedVersion !== latest.version) {
+      if (manual || latest.version !== update?.version) updateHidden = false;
+      update = latest;
+    }
+    broadcastUpdate();
+  } catch (e) {
+    if (manual) toast(current(), `Couldn't check for updates: ${e.message}`, 'error');
+    else console.error('update check:', e.message);
+  } finally {
+    updateChecking = false;
+  }
+}
+
+function scheduleUpdateChecks() {
+  clearInterval(updateTimer);
+  updateTimer = null;
+  if (!canCheckUpdates() || !autoUpdateChecks()) return;
+  setTimeout(() => { if (autoUpdateChecks()) checkForUpdates(); }, UPDATE_FIRST_CHECK_MS);
+  updateTimer = setInterval(() => checkForUpdates(), UPDATE_INTERVAL_MS);
+}
+
+function toggleAutoUpdateChecks() {
+  writeSettings({ checkUpdates: !autoUpdateChecks() });
+  scheduleUpdateChecks();
+  buildMenu();
+}
+
+function updateAction(action) {
+  if (!update) return;
+  if (action === 'download' && updates.isReleaseUrl(update.download)) shell.openExternal(update.download);
+  else if (action === 'notes' && updates.isReleaseUrl(update.page)) { shell.openExternal(update.page); return; }
+  else if (action === 'skip') writeSettings({ skippedVersion: update.version });
+  else if (action !== 'later') return;
+  updateHidden = true;
+  broadcastUpdate();
+}
+
 // ---------------------------------------------------------------- slide images
 
 // Slide images for people: the 16:9 slide alone at 1920×1080, without the ‹ › controls.
@@ -1122,7 +1288,7 @@ async function exportSlideImages(w) {
   const dir = filePaths[0];
   const base = path.basename(file).replace(/\.pptd\.html?$|\.html?$/i, '');
   try {
-    toast(w, 'Exporting slides…');
+    toast(w, 'Exporting slides…', 'busy');
     const shots = await captureSlides(file, EXPORT_SIZE);
     const pad = Math.max(2, String(shots.length).length);
     for (const s of shots) fs.writeFileSync(path.join(dir, `${base}-${String(s.index + 1).padStart(pad, '0')}.png`), s.image.toPNG());
@@ -1138,12 +1304,18 @@ function buildMenu() {
   lastMenuKey = w ? `${hasFile}|${w.mode}|${w.undoStack.at(-1)?.what || ''}` : '';
   // Menu clicks act on the window in front at the time of the click.
   const on = (fn) => () => fn(current());
+  const updateMenuItems = [
+    { label: 'Check for Updates…', click: () => checkForUpdates({ manual: true }) },
+    { label: 'Check for Updates Automatically', type: 'checkbox', checked: autoUpdateChecks(), click: toggleAutoUpdateChecks },
+  ];
 
   const template = [
     ...(isMac ? [{
       label: app.name,
       submenu: [
-        { role: 'about' }, { type: 'separator' }, { role: 'services' }, { type: 'separator' },
+        { role: 'about' },
+        ...updateMenuItems,
+        { type: 'separator' }, { role: 'services' }, { type: 'separator' },
         { role: 'hide' }, { role: 'hideOthers' }, { role: 'unhide' }, { type: 'separator' },
         { label: `Quit ${app.name}`, accelerator: 'Cmd+Q', click: confirmQuit },
       ],
@@ -1225,6 +1397,7 @@ function buildMenu() {
       ],
     },
     { role: 'windowMenu' },
+    ...(isMac ? [] : [{ role: 'help', submenu: updateMenuItems }]),
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
@@ -1281,11 +1454,23 @@ handle('open-link', (_w, url) => {
   // Only the pages the sign-in panel links to.
   if (url === 'https://console.anthropic.com/settings/keys') shell.openExternal(url);
 });
+handle('update-action', (_w, action) => updateAction(action));
 handle('move-slide', (w, { from, to } = {}) => moveSlideInDeck(w, from, to));
 handle('revert-prompt', (w, id) => revertToPrompt(w, id));
 handle('pty-input', (w, data) => { if (typeof data === 'string') w.agent?.write(data); });
 handle('pty-resize', (w, { cols, rows } = {}) => w.agent?.resize(cols, rows));
 handle('focus-deck', (w) => w.deckView?.webContents.focus());
+handle('toast-size', (w, { width, height } = {}) => {
+  if (![width, height].every((n) => Number.isFinite(n) && n > 0 && n < 4000)) return;
+  w.toast.size = { width: Math.ceil(width), height: Math.ceil(height) };
+  placeToast(w);
+  w.toastView?.webContents.send('toast-placed');
+});
+handle('toast-hidden', (w) => { w.toast.shown = false; placeToast(w); giveBackFocus(w); });
+handle('toast-action', (w, name) => {
+  if (name === 'undo') { giveBackFocus(w); undoInsert(w); }
+  else if (name === 'close') giveBackFocus(w);
+});
 // The app chrome (terminal, sign-in panel) takes keyboard focus back from the deck view.
 handle('focus-ui', (w) => w.win.webContents.focus());
 
@@ -1339,6 +1524,7 @@ app.whenReady().then(() => {
   buildMenu();
   createWindow(pendingFile ? path.resolve(pendingFile) : null);
   pendingFile = null;
+  scheduleUpdateChecks();
   app.on('activate', () => { if (!windows.size) createWindow(); });
 });
 

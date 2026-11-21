@@ -25,6 +25,11 @@ Get the latest version from the
 The macOS app is Developer ID signed and notarized by Apple. The Windows installer is not
 signed yet, so Windows may ask you to confirm you trust it; the release notes explain how.
 
+PPTD tells you when a new version is out: a bar under the toolbar offers the download,
+release notes, Later, or Skip This Version. It never downloads or installs anything by
+itself. Check now, or turn the automatic check off, with **Check for Updates…** in the PPTD
+menu (the Help menu on Windows and Linux).
+
 ## Make a presentation
 
 Click **Make a new one** on the start screen (or press **⌘J**) and ask: *"Make a 6-slide deck about our Q3 results."* The agent writes the
@@ -46,7 +51,13 @@ time, sign in with your **ChatGPT** (Plus/Pro) or **Claude** (Pro/Max) account, 
   reorder.
 - **Drop images or video** onto a slide, or onto a slide in the drawer. Photos are resized
   and iPhone photos converted for you. Where the agent left a photo placeholder (with a note
-  on what picture would work), drop your photo onto it and it fills the space.
+  on what picture would work), drop your photo onto it and it fills the space. On a slide
+  without one, the picture goes at the end of the slide and the agent opens, so you can tell
+  it what to do with it.
+- **Drop in a Word, Excel or PowerPoint file** (or a text, Markdown or CSV file) and it goes to
+  the agent, which opens so you can tell it what to make: a chart from a spreadsheet, a deck
+  from a report, a PPTD version of an old PowerPoint. Pictures inside come along. The deck
+  doesn't change until you ask. Old .doc, .xls and .ppt files need saving in the newer format.
 - **Copy a slide as an image** (⇧⌘C) to paste into an email or chat, or export every slide as
   a PNG (File › Export Slides as Images…).
 - **Undo** (⌘Z) takes back the last move, drop or revert.

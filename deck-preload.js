@@ -1,7 +1,7 @@
 // Runs (isolated) inside every loaded presentation.
 //  - Catches navigation keys before the deck's own radio group sees them
 //    (which would wrap last→first) and hands them to the main process.
-//  - Catches dropped files (images/video → add to this slide; .html → open).
+//  - Catches dropped files (images/video → add to this slide; .html → open; documents → the agent).
 const { ipcRenderer, webUtils } = require('electron');
 
 let inShow = false;
@@ -34,7 +34,8 @@ window.addEventListener('keydown', (e) => {
 let overlay = null;
 let depth = 0;
 
-function showOverlay(on) {
+// What the pill says: media goes on the slide; documents go to the agent.
+function showOverlay(on, label = 'Drop to add to this slide') {
   if (on && !overlay) {
     overlay = document.createElement('div');
     overlay.setAttribute('aria-hidden', 'true');
@@ -46,7 +47,7 @@ function showOverlay(on) {
     ].join(';');
     const pill = document.createElement('span');
     pill.style.cssText = 'background:rgba(255,255,255,.95);padding:10px 18px;border-radius:999px;box-shadow:0 4px 18px rgba(0,0,0,.18)';
-    pill.textContent = 'Drop to add to this slide';
+    pill.textContent = label;
     overlay.appendChild(pill);
     document.documentElement.appendChild(overlay);
   } else if (!on && overlay) {
@@ -61,7 +62,10 @@ window.addEventListener('dragenter', (e) => {
   if (!hasFiles(e) || inShow) return;
   e.preventDefault();
   depth++;
-  showOverlay(true);
+  // File types are known while dragging (not the paths): all non-media means documents.
+  const items = [...(e.dataTransfer.items || [])].filter((i) => i.kind === 'file');
+  const docsOnly = items.length && items.every((i) => !/^(image|video)\//.test(i.type) && i.type !== 'text/html');
+  showOverlay(true, docsOnly ? 'Drop to give it to the agent' : undefined);
 }, true);
 window.addEventListener('dragover', (e) => {
   if (!hasFiles(e)) return;
