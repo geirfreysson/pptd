@@ -19,6 +19,8 @@ contextBridge.exposeInMainWorld('viewer', {
   dropPaths: (paths, slide) => ipcRenderer.send('drop-paths', { paths, slide }),
   // Reorder: 0-based positions.
   moveSlide: (from, to) => ipcRenderer.send('move-slide', { from, to }),
+  // Delete the selected slide: 0-based position.
+  deleteSlide: (index) => ipcRenderer.send('delete-slide', index),
   // Prompt history: put the deck back as it was after prompt `id` ('start': before the first).
   revertPrompt: (id) => ipcRenderer.send('revert-prompt', id),
 

@@ -12,6 +12,9 @@ You don't have to ask the agent for everything.
 Press **⌥⌘S** to open the drawer: a picture of every slide. Click one to show it, and
 **drag** it to reorder.
 
+With the slides drawer open, select a slide and press **Delete** to remove it. Press **⌘Z**
+or choose **Undo** in the message at the top of the window to restore it.
+
 ## Images and video
 
 **Drop images or video** onto a slide, or onto a slide in the drawer. Photos are resized and

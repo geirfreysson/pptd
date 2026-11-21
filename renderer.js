@@ -65,6 +65,12 @@ v.onToggle((what) => {
 window.addEventListener('keydown', (e) => {
   if (!cur.file || e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.target.closest?.('#term')) return;            // typing goes to the agent
+  const typing = e.target.matches?.('input, textarea, select') || e.target.isContentEditable;
+  if ((e.key === 'Delete' || e.key === 'Backspace') && !typing && body.classList.contains('drawer-open') && !body.classList.contains('drawer-prompts') && cur.total > 1) {
+    e.preventDefault();
+    v.deleteSlide(cur.index);
+    return;
+  }
   const radio = cur.total > 0, inShow = cur.mode !== 'normal';
   const map = {
     ArrowRight: radio && 'next', ArrowDown: radio && 'next', PageDown: radio && 'next',
@@ -162,7 +168,7 @@ function markActive(scroll = true) {
 
 $('thumbs').addEventListener('click', (e) => {
   const t = e.target.closest('.thumb');
-  if (t) v.nav(Number(t.dataset.index), { focus: true });
+  if (t) v.nav(Number(t.dataset.index));
 });
 
 // Reorder by dragging a slide in the drawer. Slide drags carry their own type, so the

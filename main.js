@@ -291,7 +291,7 @@ const send = (w, channel, payload) => { if (w?.win && !w.win.isDestroyed()) w.wi
 // second line pointing at the agent.
 const toast = (w, text, kind = 'info', opts = {}) => {
   if (!w?.toastView) return;
-  showToast(w, { text: String(text), kind, undo: !!opts.undo, hint: opts.hint ? String(opts.hint) : '' });
+  showToast(w, { text: String(text), kind, undo: !!opts.undo, hint: opts.hint ? String(opts.hint) : '', duration: opts.duration });
 };
 function showToast(w, payload) {
   if (!w.toast.ready) { w.toast.pending = payload; return; }
@@ -511,6 +511,7 @@ async function handleDrop(w, paths, slideIndex, slot) {
   const before = html;
   const notes = [];
   let added = 0;
+  const addedFiles = [];
   const slotted = [];        // briefs of the photo slots filled
   let slotPref = slot;       // only the first image goes to the slot it was dropped on
 
@@ -525,7 +526,7 @@ async function handleDrop(w, paths, slideIndex, slot) {
         // A slide with photo slots: fill the slot it was dropped on, else the first empty one.
         const filled = media.fillPhotoSlot(html, n, slotPref, mime, data, alt);
         slotPref = undefined;
-        if (filled) { html = filled.html; slotted.push(filled.brief); added++; continue; }
+        if (filled) { html = filled.html; slotted.push(filled.brief); added++; addedFiles.push(path.basename(p)); continue; }
         fig = media.figureHtml('image', mime, data, alt);
       } else {
         const size = fs.statSync(p).size;
@@ -543,6 +544,7 @@ async function handleDrop(w, paths, slideIndex, slot) {
       }
       html = media.insertFigure(html, n, fig);
       added++;
+      addedFiles.push(path.basename(p));
     } catch (e) {
       toast(w, `${path.basename(p)}: ${e.message}`, 'error');
     }
@@ -568,7 +570,7 @@ async function handleDrop(w, paths, slideIndex, slot) {
   const slotNote = slotted.length
     ? ` ${slotted.length === 1 ? 'It went into the photo slot' : `${slotted.length} went into photo slots`} (figure.photo${slotted[0] ? `, brief: ${JSON.stringify(slotted.join(' | '))}` : ''}), which now hold${slotted.length === 1 ? 's' : ''} an <img>.`
     : '';
-  w.agent?.noteChange(`The user added ${what === 'image' ? 'an image' : what === 'video' ? 'a video' : what} to slide ${n} (<section id="s${n}">) of ${displayName(file)} in PPTD; the file changed on disk.${slotNote} Re-read that slide before editing it.`);
+  w.agent?.noteChange(`The user dropped ${addedFiles.length === 1 ? 'this file' : 'these files'} into PPTD: ${addedFiles.map((name) => `"${name}"`).join(', ')}. PPTD embedded ${addedFiles.length === 1 ? 'it' : 'them'} on slide ${n} (<section id="s${n}">) of ${displayName(file)}.${slotNote} The deck changed on disk. If the user's next instruction refers to the dropped ${addedFiles.length === 1 ? 'image or video' : 'media'}, this is what they mean; re-read the slide before editing it.`, { always: true });
 }
 
 // ---------------------------------------------------------------- reorder (drag in the drawer)
@@ -598,6 +600,32 @@ async function moveSlideInDeck(w, from, to) {
   toast(w, `Moved slide ${from + 1}${name ? ` ${name}` : ''} to position ${to + 1}.`, 'info', { undo: true });
   const [lo, hi] = from < to ? [from + 1, to + 1] : [to + 1, from + 1];
   w.agent?.noteChange(`The user moved slide ${from + 1}${name ? ` (${name})` : ''} to position ${to + 1} in ${displayName(file)} using PPTD. Slides ${lo} to ${hi} now have different numbers and section ids (<section id="sN">): the slide content moved, while each position kept its id, controls and progress bar. The file changed on disk: re-read it before editing, and don't rely on slide numbers, ids or file text from earlier in this conversation.`);
+}
+
+// Delete the selected slide from the deck and retain the full prior document for Undo.
+async function deleteSlideFromDeck(w, index) {
+  const total = w.state.total;
+  if (!w.currentFile || !w.isRadioDeck || !Number.isInteger(index) || index < 0 || index >= total) return;
+  if (total <= 1) return toast(w, "Can't delete the only slide.", 'error');
+  const file = w.currentFile;
+  let html, res;
+  try { html = fs.readFileSync(file, 'utf8'); } catch (e) { return toast(w, `Can't read the deck: ${e.message}`, 'error'); }
+  try {
+    const ops = await deckOps();
+    res = ops.deleteSlide(html, index + 1);
+    ops.verify(html, res.html, file);
+  } catch (e) { return toast(w, e.message, 'error'); }
+  try { writeAtomic(file, res.html); } catch (e) { return toast(w, `Couldn't save the deck: ${e.message}`, 'error'); }
+  const title = res.title ? `“${res.title}”` : '';
+  const nextIndex = Math.min(index, total - 2);
+  pushUndo(w, {
+    file, before: html, after: res.html, index, what: 'Delete Slide', since: 'the slide was deleted',
+    undone: `Restored slide ${index + 1}${title ? ` ${title}` : ''}.`,
+    note: `The user undid their deletion of slide ${index + 1}${title ? ` (${title})` : ''} in ${displayName(file)}. The file changed on disk; re-read it before editing.`,
+  });
+  w.restoreIndex = nextIndex;
+  toast(w, `Deleted slide ${index + 1}${title ? ` ${title}` : ''}. Press ⌘Z to undo.`, 'info', { undo: true, duration: 11000 });
+  w.agent?.noteChange(`The user deleted slide ${index + 1}${title ? ` (${title})` : ''} from ${displayName(file)} using PPTD. The deck changed on disk; re-read it before editing.`);
 }
 
 // ---------------------------------------------------------------- dropped documents
@@ -1456,6 +1484,7 @@ handle('open-link', (_w, url) => {
 });
 handle('update-action', (_w, action) => updateAction(action));
 handle('move-slide', (w, { from, to } = {}) => moveSlideInDeck(w, from, to));
+handle('delete-slide', (w, index) => deleteSlideFromDeck(w, index));
 handle('revert-prompt', (w, id) => revertToPrompt(w, id));
 handle('pty-input', (w, data) => { if (typeof data === 'string') w.agent?.write(data); });
 handle('pty-resize', (w, { cols, rows } = {}) => w.agent?.resize(cols, rows));

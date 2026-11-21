@@ -26,7 +26,7 @@ function startClock(ms) {
   timer.classList.add('run');
 }
 
-t.onShow(({ text: msg, kind = 'info', undo: canUndo = false, hint = '' } = {}) => {
+t.onShow(({ text: msg, kind = 'info', undo: canUndo = false, hint = '', duration } = {}) => {
   kind = ICONS[kind] ? kind : 'info';
   text.textContent = msg;
   $('hintText').textContent = hint;
@@ -48,7 +48,8 @@ t.onShow(({ text: msg, kind = 'info', undo: canUndo = false, hint = '' } = {}) =
     card.classList.remove('in', 'out', 'bump');
     state = 'waiting';
   }
-  startClock(LIFE[kind === 'info' && (canUndo || hint) ? 'undo' : kind]);
+  const life = Number.isFinite(duration) && duration > 0 ? duration : LIFE[kind === 'info' && (canUndo || hint) ? 'undo' : kind];
+  startClock(life);
 });
 
 t.onPlaced(() => {
