@@ -189,6 +189,25 @@ writes this markup when media is dropped on a slide; agents adding media SHOULD 
 | Video: MP4 (H.264/AAC) or WebM, `controls`, no `autoplay` | SHOULD |
 | Total file size: a short clip only; warn above 25 MB of video | SHOULD |
 
+**Photo slots.** A deck may leave a place for a photo: a `<figure class="photo">` with a
+`data-brief` describing the picture wanted. Empty, it shows as a placeholder with the brief;
+the deck's CSS crops whatever fills it. When an image is dropped on a slide that has photo
+slots, the app fills the slot it was dropped on (replacing a photo already there), or else
+the first empty slot, instead of adding a `pptd-media` figure:
+
+```html
+<figure class="photo" data-brief="Photo: the store after, same angle">
+<img alt="Description" src="data:image/jpeg;base64,…">
+<figcaption>After</figcaption>
+</figure>
+```
+
+| Requirement | Level |
+|---|---|
+| A slot is a `figure` whose class list contains `photo`; it holds no nested `figure` | MUST |
+| A filled slot holds one `<img>`, its `data:` URI on a line of its own; the figure keeps its classes, `data-brief` and any `figcaption` | MUST |
+| The deck's CSS sizes the slot and crops the image to it (`object-fit: cover`) | SHOULD |
+
 ### Reordering, adding and removing slides (app and `pptd-deck.mjs`)
 
 The user can drag a slide to another position in the app's slide drawer, and agents add,
@@ -238,7 +257,8 @@ Token names used by the bundled styles: `--ink`, `--ink-2`, `--muted`, `--paper`
 `--accent`, `--accent-soft`, `--highlight`, `--title-bg`, `--title-eyebrow`, `--title-soft`,
 `--title-footer`, `--font`. A brand may also set `--on-accent` (text on accent fills),
 `--accent-text` (the accent as text) and `--on-highlight` (text on highlight fills) when the
-defaults (`--paper`, `--accent`, `--ink`) don't read against its colours.
+defaults (`--paper`, `--accent`, `--ink`) don't read against its colours, and `--on-title`
+(headlines on `--title-bg`, default `--paper`) when the brand's paper is dark.
 
 ### Style
 
@@ -254,7 +274,7 @@ design rules to follow and can switch it to another style:
 
 | Requirement | Level |
 |---|---|
-| `<meta name="pptd-style" content="…">` in `<head>` names the style (letters, digits, `-`, `_`) | MAY |
+| `<meta name="pptd-style" content="…">` in `<head>` names the style (letters, digits, `-`, `_`): a bundled style, one of the user's own, or `custom` for a style made for this deck alone | MAY |
 | One `<style id="pptd-style">` holds the style's CSS, after the main `<style>` and before the brand block | MAY |
 | The style block takes every colour from the brand tokens (directly or through `color-mix()`), so any brand works with it | SHOULD |
 

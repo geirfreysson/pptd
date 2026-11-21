@@ -29,7 +29,8 @@ need('pi/LICENSE');
 need('app.asar.unpacked/agent/pi/pptd-extension.js');
 need('app.asar.unpacked/agent/plugin/skills/pptd-slides/SKILL.md');
 need('app.asar.unpacked/agent/plugin/skills/pptd-slides/DESIGN.md');
-for (const style of ['classic', 'grid', 'bold', 'folio', 'signal', 'atelier']) {
+for (const f of ['pptd-style.mjs', 'deck-skeleton.html', 'style-template.md']) need(`app.asar.unpacked/agent/plugin/skills/pptd-slides/${f}`);
+for (const style of ['classic', 'grid', 'bold', 'folio', 'signal', 'atelier', 'keynote', 'mono', 'sticker', 'playful']) {
   need(`app.asar.unpacked/agent/plugin/skills/pptd-slides/styles/${style}/template.html`);
   need(`app.asar.unpacked/agent/plugin/skills/pptd-slides/styles/${style}/STYLE.md`);
 }

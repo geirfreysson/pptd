@@ -81,5 +81,9 @@ window.addEventListener('drop', (e) => {
   showOverlay(false);
   if (inShow) return;
   const paths = [...e.dataTransfer.files].map((f) => webUtils.getPathForFile(f)).filter(Boolean);
-  if (paths.length) ipcRenderer.send('deck-drop', paths);
+  // Dropped on a photo slot? Send its index among the slide's slots, so the app fills that one.
+  const fig = e.target instanceof Element ? e.target.closest('figure.photo') : null;
+  const sec = fig?.closest('section.slide');
+  const slot = sec ? [...sec.querySelectorAll('figure.photo')].indexOf(fig) : -1;
+  if (paths.length) ipcRenderer.send('deck-drop', paths, slot);
 }, true);

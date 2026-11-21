@@ -2,6 +2,8 @@
        no borders or shadows. One solid accent surface per slide (the hero card, the current
        step, the winning column); the highlight is a marker stroke under a few key words. */
     :root {
+      /* Style variables for the base layouts (see the frame). */
+      --hair: color-mix(in srgb, var(--ink) 12%, transparent); --radius: var(--r-card); --photo-radius: var(--r-card); --head-weight: 800; --label-track: .06em;
       --tint: color-mix(in srgb, var(--ink) 6%, var(--paper));   /* neutral surface */
       --r-card: 1.563cqw;          /* 20px: cards and panels */
       --r-item: 1.25cqw;           /* 16px: table and list items */
@@ -29,10 +31,10 @@
     .key { background: linear-gradient(to top, transparent 6%, var(--marker) 6%, var(--marker) 38%, transparent 38%); -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 
     /* ---------- Title / closing slide ---------- */
-    .title-slide { background: var(--title-bg); color: var(--paper); }
+    .title-slide { background: var(--title-bg); color: var(--on-title); }
     .title-slide .eyebrow { background: color-mix(in srgb, var(--title-eyebrow) 18%, transparent); color: var(--title-eyebrow); }
     .title-slide .content { justify-content: center; gap: 1.875cqw; margin: 0; }
-    .title-slide h1, .title-slide h2 { color: var(--paper); }
+    .title-slide h1, .title-slide h2 { color: var(--on-title); }
     .title-slide .lead, .title-slide p { color: var(--title-soft); }
     .title-slide .footer { color: var(--title-footer); }
     .title-slide .footer::before { display: none; }

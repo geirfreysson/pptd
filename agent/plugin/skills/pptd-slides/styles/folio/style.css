@@ -5,6 +5,8 @@
        is structural (numerals, the recommended column, the data); the highlight is the
        editor's pen: one underline, one "now" marker or one annotation per slide. */
     :root {
+      /* Style variables for the base layouts (see the frame). */
+      --font-display: var(--font-serif); --head-weight: 400; --label-track: .1em;
       --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Charter, "Book Antiqua", Georgia, serif;
       --hair: color-mix(in srgb, var(--ink) 16%, transparent);
       --rule: .156cqw;             /* 2px at 1280 */
@@ -34,11 +36,11 @@
     .key { text-decoration: underline; text-decoration-color: var(--highlight); text-decoration-thickness: .156cqw; text-underline-offset: .18em; }
 
     /* ---------- Title / closing slide ---------- */
-    .title-slide { background: var(--title-bg); color: var(--paper); }
+    .title-slide { background: var(--title-bg); color: var(--on-title); }
     .title-slide::before { border-right-color: color-mix(in srgb, var(--paper) 14%, transparent); }
     .title-slide > .eyebrow { position: static; width: auto; color: var(--title-eyebrow); }
     .title-slide .content { justify-content: center; gap: 2.5cqw; margin: 0; }
-    .title-slide h1, .title-slide h2 { color: var(--paper); }
+    .title-slide h1, .title-slide h2 { color: var(--on-title); }
     .title-slide .key { font-style: italic; text-decoration: none; color: var(--title-eyebrow); }
     .title-slide .lead, .title-slide p { color: var(--title-soft); }
     .title-slide .footer { color: var(--title-footer); }

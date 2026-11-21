@@ -22,8 +22,11 @@ unless the user asks.
   element, colour roles, type scale, the repeating frame, density, data, words). Read it
   before designing.
 - `styles/<name>/`: one folder per style (§1): `STYLE.md` (its rules and when to use it),
-  `style.css` (its layout CSS) and `template.html` (a starting deck in that style, with an
-  example of every layout). Styles: `grid`, `bold`, `folio`, `signal`, `atelier`, `classic`.
+  `style.css` (its layout CSS), `template.html` (a starting deck in that style, with an
+  example of every layout) and `preview.jpg` (nine slides in the style's own palette: look at
+  it when choosing a style or borrowing from one). Styles: `grid`, `bold`, `folio`, `signal`, `atelier`, `keynote`,
+  `mono`, `sticker`, `playful`, `classic`. The user may also have styles of their own, listed in
+  the `<pptd-brand>` note; they work exactly like these.
 - `pptd-app.mjs`: asks the running PPTD app (which renders decks itself, no browser needed):
   - `node pptd-app.mjs shot deck.pptd.html [3|2,5|1-4|all] [--size WxH] [--out DIR]`
     screenshots slides (default: all, 1280×720) and prints one PNG path per slide. Read the
@@ -36,6 +39,10 @@ unless the user asks.
 - `pptd-deck.mjs`: adds, removes and reorders slides with all the numbering done for you
   (§3). Use it for every structural change; you only write slide content.
 - `brand-template.md`: the shape of the user's default brand file.
+- `pptd-style.mjs`: lists styles (bundled and the user's own), checks and builds a style
+  folder, and previews it with a brand (`PPTD.md`, "Styles of your own").
+- `style-template.md`: the shape of a style's `STYLE.md`.
+- `deck-skeleton.html`: the shared deck every style's `template.html` is built from.
 
 ## 1. Style, layouts and brand
 
@@ -58,6 +65,10 @@ A deck's look has three independent layers, each in its own block in `<head>`:
 | `folio` | Editorial, like an annual report: serif headlines, a margin rail with section and page numeral, roman numerals | Operating and board reviews, strategy, research and policy findings |
 | `signal` | Technical, dashboard-like: mono headlines, panels with shared dividers, a header bar; dark with a dark brand | Engineering and platform reviews, architecture, metrics, developer audiences |
 | `atelier` | Geometric and warm: a kit of flat shapes that carry the data, colour panels bleeding off the edge, Futura headlines | Workshops, training, public-sector and community talks, friendly launches |
+| `keynote` | Photo first: photos bleeding to the edge, huge type, little chrome; dark with a dark brand | Kick-offs, all-hands, launches, customer stories |
+| `mono` | Black, white and one red dot: light type, inverted blocks, dense and calm | Design reviews, RFCs, proposals, pre-reads |
+| `sticker` | Loud pitch deck: ink-bordered boxes with hard shadows, black-weight type, one tilted sticker | Investor and sales pitches, launches, consumer brands |
+| `playful` | Friendly and round: outlined chips, blobs, an adventure path, rounded type | Teaching, schools, community groups, onboarding, fun workshops |
 | `classic` | PPTD's original: white cards with borders, a gradient bar on top | Status and delivery reporting; the user's older decks |
 
 - **Read the deck's `styles/<name>/STYLE.md` before designing slides for it,** and follow its
@@ -65,7 +76,9 @@ A deck's look has three independent layers, each in its own block in `<head>`:
 - **A new deck:** use the style the user names; else the default style in their brand file,
   if it names one; else choose from the table by the deck's purpose and say which in one line
   ("I used the grid style; say 'bold style' for a warmer look"). Start from that style's
-  `template.html`.
+  `template.html`: keep its `<head>` (frame, style and brand blocks), and use its example
+  slides as references for markup, not as the deck's outline. The deck's outline comes from
+  the content.
 - **Restyle a deck** ("make this bold"): replace the `pptd-style` block with the new style's
   `style.css` and change the meta. Slides need no rewrite, because every style draws the same
   layouts. Then screenshot every slide and fix what the new style's rules ask for (e.g. bold
@@ -74,10 +87,14 @@ A deck's look has three independent layers, each in its own block in `<head>`:
   `<style>`. Keep it unless the user asks to restyle; then rebuild its `<head>` styles from a
   style's `template.html` (frame, style block, and the deck's own brand block) and keep any
   per-slide rules (`#s3 …`).
-- **Styles are a starting point, not a cage.** When content needs a layout no class covers,
-  build it from the style's tokens, type sizes and spacing (in a per-slide rule, `#s4 …`, or a
-  class added to the style block), so it looks like it belongs. `DESIGN.md` ("Using the
-  styles for inspiration") says how to borrow another style's device without mixing voices.
+- **You have design freedom.** Styles and layouts are a guide and a vocabulary, not a set of
+  forms to fill in. Compose slides from the content: combine layouts, design a layout no class
+  covers, draw a custom diagram, build a slide around one photo or one number. Build new things
+  from the style's tokens, type sizes and spacing (a per-slide rule, `#s4 …`, or a class added
+  to the deck's style block), so they belong. What is not optional: the principles in
+  `DESIGN.md`, the style's voice (`STYLE.md`), the brand's colours, and the checks in §7.
+  `DESIGN.md` ("Using the styles for inspiration") says how to borrow another style's device
+  without mixing voices.
 - **Each style draws the same markup its own way** (folio sets a `.stat.hl` as a hero figure
   beside the others, signal draws `.bars` horizontally and the timeline as a vertical log,
   atelier puts each stat inside a shape and turns the chart's `.takeaway` into an edge panel),
@@ -86,7 +103,8 @@ A deck's look has three independent layers, each in its own block in `<head>`:
 ### Layouts
 
 Every style draws these classes; the templates show each one. Put a slide's main block in
-`.content`, which takes the height between the headline and the footer.
+`.content`, which takes the height between the headline and the footer. They cover common
+shapes of content; they are not a complete list of what a slide can be.
 
 | Content | Markup |
 |---|---|
@@ -102,10 +120,28 @@ Every style draws these classes; the templates show each one. Put a slide's main
 | A worked example | inline SVG in `.diagram` (§4) |
 | A quote | `figure.quote` > `blockquote` + `figcaption` (`b` name, `span` role) |
 | Roadmap | `ol.timeline` > `li` (`.when`, `h3`, `p`); `li.now`, `li.goal` |
+| Agenda | `ol.agenda` > `li` (`.when` time · duration, `h3`, `p`); `li.now` |
+| A photo slide | `section.slide.photo-slide` with `figure.photo` (right two-thirds; `.full` for all of it); text on the scrim side, ≤25 words |
+| Photos side by side, before/after | `.photos` > `figure.photo` (+ `figcaption` label); `.hl` on the one that matters |
+| People | `.people` > `figure.person` (`figure.photo` portrait, `b` name, `span` role) |
+| Pricing or options | `.tiers` > `.tier` (`.name`, `.price` with `span.unit`, `ul`); `.tier.hl` recommended |
+| Architecture | `.layers` > `.layer` (`.name`, `.boxes` > `.box`); `.box.hl` core, `.box.read` dashed, `.box.wide` |
+| Dense numbers | `table.data` (right-aligned tabular figures, units in the header, `tr.hl`, `td.hl`, `tfoot` total) |
+| An explanation | `.columns` > `p` (two columns; under about 120 words) |
+| Appendix, references | `ol.refs` > `li` (`.num`, the item, `.page`) |
 | Older layouts | `.grid.two/.three/.four` of `.panel`, `.tag`, `.callout`, `.path` of `.node` + `.arrow` |
 
 `.hl` marks the one element a slide is about (a card, step, stat or bar); `.est` marks an
 estimated bar. Use at most one `.hl` and one `.key` per slide.
+
+**Photos.** `figure.photo` is a photo slot. Leave it empty with a `data-brief` describing
+the photo you want (subject, crop, where the empty space is); it shows as a placeholder
+with the brief, and when the user drops an image onto it, PPTD fills that slot (the image
+becomes an `<img>` inside the figure, cropped to fit). A filled slot's `data:` URI is on its
+own line: never print or retype it (`PPTD.md`, "Images and video"). The agenda, photo,
+people, tier, layer, data, columns and refs layouts live in the frame's base layer; the
+style colours and sets their fonts through its variables, so they look right in every
+style.
 
 ### Brand
 

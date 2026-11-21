@@ -106,7 +106,14 @@ When a change alters behaviour, update the docs in the same change:
   block are "classic" in their own CSS; don't change how they render. Changing the frame
   or the example slides changes every template: render all of them. Design principles
   common to all styles live in the skill's `DESIGN.md`; keep each `STYLE.md` to what is
-  particular to that style.
+  particular to that style. Shared layouts added later go in the frame's base layer
+  (`tools/style-deck.html`), styled through the style variables, not into every style. After
+  changing a style or the example slides, run `npm run style-previews` and commit the images.
+- **User styles** live in `<appData>/PPTD/styles/<name>/` (`lib/styles.js`) and may not take a
+  bundled name. `tools/pptd-style.mjs` (synced into the skill) checks, builds and previews
+  any style folder; `build-styles.mjs` uses it in strict mode. A downloaded design is only
+  ever opened through `renderPage` (`pptd-app.mjs render`): scripts stripped and blocked,
+  network off. Never run a design source's scripts (Claude Design exports include some).
 - **The spec, checker and deck tool are duplicated.** The source copies are
   `docs/pptd-spec.md`, `tools/pptd-check.mjs` and `tools/pptd-deck.mjs`. `npm run sync-skill`
   (it also runs before every build) copies them into `agent/plugin/skills/pptd-slides/` and

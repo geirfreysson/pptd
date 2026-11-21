@@ -18,6 +18,11 @@ Press **⌥⌘S** to open the drawer: a picture of every slide. Click one to sho
 iPhone photos converted for you. Everything is stored inside the deck file, so it still works
 when you send it.
 
+The agent often leaves **photo placeholders**: striped boxes with a short note on what picture
+would work ("a portrait, same crop as the others", "the store after, same angle"). Drop a
+photo onto one and it fills that box, cropped to fit. Drop it anywhere else on the slide and
+it goes into the first empty placeholder. Dropping onto a filled one replaces the photo.
+
 ## Copy and export
 
 - **Copy a slide as an image** with **⇧⌘C**, to paste into an email or chat.

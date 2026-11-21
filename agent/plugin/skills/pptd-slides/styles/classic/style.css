@@ -1,6 +1,8 @@
     /* Style: classic. PPTD's original look: white cards with hairline borders and rounded
        corners, a gradient bar along the top of content slides, centred flow nodes. */
     :root {
+      /* Style variables for the base layouts (see the frame). */
+      --hair: var(--line); --radius: 1.25cqw; --head-weight: 700;
       --line: color-mix(in srgb, var(--ink) 12%, var(--paper));
       --head-bg: color-mix(in srgb, var(--ink) 5%, var(--white));
     }

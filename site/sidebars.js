@@ -6,6 +6,8 @@ const sidebars = {
     'intro',
     'getting-started',
     'making-decks',
+    'styles',
+    'your-own-style',
     'editing-by-hand',
     'presenting',
     'pi',

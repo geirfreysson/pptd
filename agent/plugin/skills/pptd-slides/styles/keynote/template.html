@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="One-sentence description of the deck.">
+  <meta name="pptd" content="1">
+  <meta name="pptd-style" content="keynote">
+  <meta name="pptd-brand" content="PPTD neutral">
+  <title>Deck title | Subtitle</title>
+  <style>
+    /* ---------- Frame: the same in every style. Navigation, sizing and the Teams fixes. ---------- */
+    :root {
+      --white: #fff;
+      /* Status colours: the same meaning on every slide, whatever the brand or style. */
+      --green: #16856c;  --green-soft: #e5f4ef;  --green-ink: #12664f;   /* ready / signed off */
+      --amber: #b66a12;  --amber-soft: #fff1da;  --amber-ink: #89510e;   /* in progress / to agree */
+      --blue-soft: #e5f1fa;                      --blue-ink: #135a90;    /* proven / proof of concept */
+      --shadow: 0 24px 70px rgba(20, 28, 48, .14);
+      /* Readable pairings, derived from the brand. A brand whose accent or highlight is light
+         (yellow, say) overrides them in its own block. */
+      --on-accent: var(--paper);      /* text on an accent fill */
+      --accent-text: var(--accent);   /* the accent as text on --paper or --accent-soft */
+      --on-highlight: var(--ink);     /* text on a highlight fill */
+      --on-title: var(--paper);       /* headlines on --title-bg; a dark brand whose --paper is dark sets it light */
+    }
+    /* 16:9, top-anchored (Teams preview fix) */
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; background: #e9edf2; color: var(--ink); font-family: var(--font); }
+    body { display: grid; place-items: start center; overflow: hidden; }   /* start, NOT center */
+    .deck { width: min(100vw, 177.78vh); height: min(100vh, 56.25vw); container-type: inline-size; position: relative; background: var(--paper); overflow: hidden; box-shadow: var(--shadow); }
+
+    /* Script-free navigation. Radios are invisible but focusable: arrow keys move between them natively. */
+    .slide-radio { position: fixed; top: 0; left: 0; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
+    .slide { display: none; flex-direction: column; position: absolute; inset: 0; background: var(--paper); overflow: auto; }
+    /* ONE ENTRY PER SLIDE: extend this list whenever you add a slide. */
+    #r1:checked ~ #s1, #r2:checked ~ #s2, #r3:checked ~ #s3, #r4:checked ~ #s4, #r5:checked ~ #s5, #r6:checked ~ #s6, #r7:checked ~ #s7, #r8:checked ~ #s8, #r9:checked ~ #s9, #r10:checked ~ #s10, #r11:checked ~ #s11, #r12:checked ~ #s12, #r13:checked ~ #s13, #r14:checked ~ #s14, #r15:checked ~ #s15, #r16:checked ~ #s16, #r17:checked ~ #s17, #r18:checked ~ #s18, #r19:checked ~ #s19, #r20:checked ~ #s20, #r21:checked ~ #s21, #r22:checked ~ #s22 { display: flex; flex-direction: column; }
+
+    /* .controls covers the slide but lets clicks through, except on its buttons and click zones. */
+    .controls { position: absolute; z-index: 5; inset: 0; display: flex; align-items: flex-end; justify-content: flex-end; gap: .625cqw; padding: 0 2.4% 1.125cqw 0; pointer-events: none; }
+    .controls .nav-btn, .controls .counter { pointer-events: auto; }
+    /* Click zones: a click (or tap) on the left third of the slide goes back, anywhere else
+       goes forward (the whole slide on the first one). They are the ‹ › labels' ::before, so
+       they need no extra markup; the bottom 7% is left clear for the buttons. */
+    .controls label::before { content: ""; position: absolute; top: 0; bottom: 7%; pointer-events: auto; }
+    .controls label[aria-label="Previous slide"]::before { left: 0; width: 33.33%; }
+    .controls label[aria-label="Next slide"]::before { left: 33.33%; right: 0; }
+    .controls .nav-ph ~ label[aria-label="Next slide"]::before { left: 0; }
+    .slide a { position: relative; z-index: 6; }   /* links stay clickable above the zones */
+    .controls .nav-btn, .controls .nav-ph { display: inline-flex; align-items: center; justify-content: center; border: 1px solid color-mix(in srgb, var(--ink) 20%, transparent); background: color-mix(in srgb, var(--paper) 94%, transparent); color: var(--ink); width: 3.125cqw; height: 2.812cqw; border-radius: .703cqw; font-size: 1.406cqw; cursor: pointer; user-select: none; }
+    .controls .nav-btn:hover { background: var(--accent-soft); }
+    .controls .nav-ph { visibility: hidden; }
+    .counter { min-width: 3.906cqw; text-align: center; color: var(--muted); font-size: 1.016cqw; font-variant-numeric: tabular-nums; background: color-mix(in srgb, var(--paper) 94%, transparent); border: 1px solid color-mix(in srgb, var(--ink) 20%, transparent); border-radius: .703cqw; padding: .625cqw .469cqw; }
+    .progress { position: absolute; z-index: 6; bottom: 0; left: 0; height: .312cqw; width: 100%; background: color-mix(in srgb, var(--ink) 9%, transparent); }
+    .progress span { display: block; height: 100%; background: var(--accent); }
+
+    /* ---------- Base layouts: the same in every style. Photos, people, agenda, pricing tiers,
+       architecture layers, data tables, two-column text and references. They take the style's
+       voice from its variables (set in the pptd-style block's :root, all optional):
+       --font-display (headings), --font-label (labels), --label-case, --label-track,
+       --head-weight, --radius (cards), --photo-radius, --hair (1px dividers), --rule (2px rules).
+       A style may also restyle any of these classes. ---------- */
+    .photo { position: relative; margin: 0; min-height: 8cqw; overflow: hidden; border-radius: var(--photo-radius, 0); background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--ink) 8%, var(--paper)) 0 .703cqw, color-mix(in srgb, var(--ink) 13%, var(--paper)) .703cqw 1.406cqw); }
+    .photo:not(:has(img))::after { content: attr(data-brief); position: absolute; left: 1.25cqw; right: 1.25cqw; bottom: 1.25cqw; font-size: .938cqw; line-height: 1.35; color: var(--ink-2); }
+    .photo > img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .photo > figcaption { position: absolute; z-index: 1; left: 1.25cqw; top: 1.25cqw; padding: .313cqw .703cqw; background: var(--paper); color: var(--ink); font-family: var(--font-label, var(--font)); font-size: .938cqw; font-weight: 700; letter-spacing: var(--label-track, .08em); text-transform: var(--label-case, uppercase); }
+    .photo.hl > figcaption { background: var(--accent); color: var(--on-accent); }
+    /* A photo slide: the photo takes the right two-thirds (.full: all of it), joined to the text
+       side by a scrim, so text never sits on the raw photo. */
+    .photo-slide > .photo { position: absolute; top: 0; right: 0; bottom: 0; width: 64%; min-height: 0; }
+    .photo-slide.full > .photo { width: 100%; }
+    .photo-slide > .photo::before { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(90deg, var(--paper) 0, color-mix(in srgb, var(--paper) 55%, transparent) 14%, transparent 34%); }
+    .photo-slide.full > .photo::before { background: linear-gradient(90deg, color-mix(in srgb, var(--paper) 88%, transparent) 0, color-mix(in srgb, var(--paper) 60%, transparent) 30%, transparent 58%); }
+    .photo-slide > .photo:not(:has(img))::after { top: 1.25cqw; bottom: auto; left: auto; max-width: 30cqw; text-align: right; }
+    .photo-slide > :not(.photo) { z-index: 2; }
+    .photo-slide > .eyebrow, .photo-slide > h1, .photo-slide > h2, .photo-slide > .lead, .photo-slide > .content { max-width: 34cqw; }
+    .photo-slide .footer { z-index: 2; }
+    .photos { flex: 1; min-height: 18cqw; max-height: 34cqw; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: .313cqw; }
+    .photos > .photo { min-height: 0; }
+    /* People: a portrait, a name and a role each */
+    .people { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1.875cqw; }
+    .person { display: flex; flex-direction: column; gap: .313cqw; margin: 0; }
+    .person > .photo { aspect-ratio: 4 / 5; min-height: 0; margin-bottom: .938cqw; }
+    .person > b { font-family: var(--font-display, var(--font)); font-size: 1.406cqw; font-weight: var(--head-weight, 700); color: var(--ink); }
+    .person > span { font-size: 1.094cqw; line-height: 1.35; color: var(--muted); }
+    .person.hl > .photo { outline: .234cqw solid var(--accent); outline-offset: .313cqw; }
+    /* Agenda: time and duration, item, detail; .now marks where we are */
+    .agenda { list-style: none; margin: 0; padding: 0; border-top: var(--rule, .156cqw) solid var(--ink); }
+    .agenda > li { display: grid; grid-template-columns: 14cqw 1fr; column-gap: 2.5cqw; align-items: baseline; padding: 1.094cqw 1.25cqw; border-bottom: 1px solid var(--hair, color-mix(in srgb, var(--ink) 15%, transparent)); }
+    .agenda > li > .when { grid-column: 1; grid-row: 1 / span 2; align-self: start; }
+    .agenda > li > :not(.when) { grid-column: 2; margin: 0; }
+    .agenda > li > h3 { font-size: 1.563cqw; }
+    .agenda > li > p { font-size: 1.172cqw; }
+    .agenda > li.now { background: var(--accent-soft); }
+    /* Pricing or option tiers: .hl is the recommended one */
+    .tiers { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1.25cqw; }
+    .tier { display: flex; flex-direction: column; gap: .938cqw; padding: 2.188cqw 1.875cqw; border: 1px solid var(--hair, color-mix(in srgb, var(--ink) 15%, transparent)); border-radius: var(--radius, 0); background: var(--paper); }
+    .tier > .name { font-family: var(--font-label, var(--font)); font-size: .938cqw; font-weight: 700; letter-spacing: var(--label-track, .08em); text-transform: var(--label-case, uppercase); color: var(--muted); }
+    .tier > .price { font-family: var(--font-display, var(--font)); font-size: 4.063cqw; line-height: 1; font-weight: var(--head-weight, 700); letter-spacing: -.02em; color: var(--ink); }
+    .tier > .price .unit { font-size: .3em; letter-spacing: 0; font-weight: 400; color: var(--muted); }
+    .tier > ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .469cqw; }
+    .tier > ul > li { font-size: 1.172cqw; }
+    .tier.hl { background: var(--accent); border-color: var(--accent); }
+    .tier.hl > .name, .tier.hl > .price, .tier.hl > .price .unit, .tier.hl > ul > li { color: var(--on-accent); }
+    /* Architecture as layers: a label, then boxes; flow is top to bottom */
+    .layers { display: flex; flex-direction: column; }
+    .layer { display: grid; grid-template-columns: 12.5cqw 1fr; column-gap: 2.5cqw; align-items: center; padding: 1.094cqw 0; border-bottom: 1px solid var(--hair, color-mix(in srgb, var(--ink) 15%, transparent)); }
+    .layer > .name { font-family: var(--font-label, var(--font)); font-size: .938cqw; font-weight: 600; letter-spacing: var(--label-track, .08em); text-transform: var(--label-case, uppercase); color: var(--muted); }
+    .boxes { display: flex; gap: .938cqw; }
+    .box { flex: 1; padding: .938cqw 1.094cqw; border: 1px solid var(--ink); border-radius: var(--radius, 0); background: var(--paper); font-size: 1.172cqw; color: var(--ink); }
+    .box.wide { flex: 3; }
+    .box.read { border-style: dashed; }
+    .box.hl { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+    /* Dense numbers: right-aligned tabular figures, units in the header, one tinted row */
+    .data { width: 100%; border-collapse: collapse; font-size: 1.094cqw; font-variant-numeric: tabular-nums; }
+    .data th, .data td { padding: .625cqw .938cqw; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--hair, color-mix(in srgb, var(--ink) 15%, transparent)); color: var(--ink-2); }
+    .data th:first-child, .data td:first-child { text-align: left; padding-left: 0; color: var(--ink); }
+    .data th { font-family: var(--font-label, var(--font)); font-size: .859cqw; font-weight: 600; letter-spacing: var(--label-track, .08em); text-transform: var(--label-case, uppercase); color: var(--muted); border-bottom: 1px solid var(--ink); }
+    .data tr.hl td { background: var(--accent-soft); color: var(--ink); }
+    .data td.hl { color: var(--accent-text); font-weight: 700; }
+    .data tfoot td { font-weight: 700; color: var(--ink); border-top: var(--rule, .156cqw) solid var(--ink); border-bottom: 0; }
+    /* Explanation: two columns of prose */
+    .columns { columns: 2; column-gap: 3.75cqw; }
+    .columns > p { margin: 0 0 1.094cqw; }
+    /* References and appendix items: a number, the item, a page */
+    .refs { list-style: none; margin: 0; padding: 0; border-top: var(--rule, .156cqw) solid var(--ink); }
+    .refs > li { display: grid; grid-template-columns: 4.375cqw 1fr auto; column-gap: 1.563cqw; align-items: baseline; padding: .938cqw 0; border-bottom: 1px solid var(--hair, color-mix(in srgb, var(--ink) 15%, transparent)); font-size: 1.172cqw; color: var(--ink); }
+    .refs .page { color: var(--muted); }
+
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+    @media print {
+      @page { size: 13.333in 7.5in; margin: 0; }
+      html, body { width: auto; height: auto; background: white; overflow: visible; display: block; }
+      .deck { width: 13.333in; height: auto; overflow: visible; box-shadow: none; }
+      .slide { display: flex !important; position: relative; width: 13.333in; height: 7.5in; overflow: hidden; break-after: page; }
+      .controls, .progress { display: none !important; }
+    }
+  </style>
+  <!-- PPTD style block: this deck's layout and type. The meta above names it. Every size is in
+       cqw (1cqw = 12.8px at 1280×720) and every colour comes from the brand tokens, so any brand
+       works with any style. Replace this block (and the meta) to restyle the deck. -->
+  <style id="pptd-style">
+    /* Style: keynote. Photo first, words second, like a product keynote. Big confident type,
+       photos that bleed to the edge, very little chrome. Square corners, no shadows, 1px rules
+       at low contrast. The accent marks the one featured thing (the core node, the popular
+       tier, the "after"); the highlight is for good numbers and the eyebrow on photos.
+       Designed dark: a near-black slide with warm white text. */
+    :root {
+      --font-display: "Helvetica Neue", Helvetica, "Segoe UI", Arial, sans-serif;
+      --hair: color-mix(in srgb, var(--ink) 18%, transparent);
+      --rule: .156cqw;
+      /* Style variables for the base layouts (see the frame). */
+      --head-weight: 700; --label-track: .16em;
+    }
+    /* 72 side margins, 56 top; content ends at y 660. */
+    .slide { padding: 4.375cqw 5.625cqw 4.688cqw; gap: 1.25cqw; color: var(--ink); }
+    h1, h2, h3, p, figure, blockquote { margin: 0; }
+
+    /* ---------- Type scale: cqw = 1% of deck width (12.8px at 1280×720) ---------- */
+    .eyebrow { font-size: 1.016cqw; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--accent-text); }
+    h1 { font-family: var(--font-display); font-size: 6.563cqw; line-height: 1; font-weight: 700; letter-spacing: -.03em; max-width: 70cqw; text-wrap: balance; }
+    h2 { font-family: var(--font-display); font-size: 3.438cqw; line-height: 1.08; font-weight: 700; letter-spacing: -.02em; max-width: 72cqw; text-wrap: balance; }
+    h3 { font-family: var(--font-display); font-size: 1.719cqw; line-height: 1.2; font-weight: 700; letter-spacing: -.01em; }
+    p, li { font-size: 1.289cqw; line-height: 1.5; color: var(--ink-2); }
+    .lead { font-size: 1.719cqw; line-height: 1.4; color: var(--ink-2); max-width: 60cqw; }
+    .footer { position: absolute; left: 5.625cqw; width: 77cqw; bottom: 0; height: 2.344cqw; display: flex; align-items: center; gap: .625cqw; font-size: .938cqw; color: var(--muted); }
+    .footer span:last-child::before { content: "· "; }
+    .footer span:last-child:empty::before { content: none; }
+    .content { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; margin-top: 1.875cqw; }
+    .statement { font-family: var(--font-display); font-size: 4.688cqw; line-height: 1.05; font-weight: 700; letter-spacing: -.03em; color: var(--ink); max-width: 66cqw; text-wrap: balance; }
+    .statement::before { content: ""; display: block; width: 3.125cqw; height: var(--rule); margin-bottom: 2.5cqw; background: var(--accent); }
+    .key { color: var(--accent-text); }
+
+    /* ---------- Title / closing slide ---------- */
+    .title-slide { background: var(--title-bg); color: var(--on-title); }
+    .title-slide .eyebrow { color: var(--title-eyebrow); }
+    .title-slide .content { justify-content: center; gap: 1.875cqw; margin: 0; }
+    .title-slide h1, .title-slide h2 { color: var(--on-title); }
+    .title-slide .lead, .title-slide p { color: var(--title-soft); }
+    .title-slide .footer { color: var(--title-footer); }
+    .title-slide .split { grid-template-columns: 1fr; gap: 2.5cqw; justify-items: center; text-align: center; }
+    .title-slide .split h2 { font-size: 5.625cqw; max-width: none; }
+    .title-slide:has(.split) .eyebrow { align-self: center; }
+    .title-mark { display: none; }
+    /* ---------- Section divider: a big number, the name, a rule ---------- */
+    .section-slide .content { justify-content: flex-end; gap: 1.875cqw; margin: 0 0 2.5cqw; }
+    .section-num { font-family: var(--font-display); font-size: 12.5cqw; line-height: .85; font-weight: 700; letter-spacing: -.05em; color: var(--accent-text); }
+    .section-text { display: flex; flex-direction: column; gap: 1.25cqw; padding-top: 1.875cqw; border-top: 1px solid var(--hair); }
+    .section-text h2 { font-size: 4.375cqw; }
+
+    /* ---------- Cards: open columns under a hairline ---------- */
+    .cards { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 3.125cqw; }
+    .card { display: flex; flex-direction: column; gap: 1.094cqw; padding-top: 1.563cqw; border-top: 1px solid var(--hair); }
+    .card.hl { border-top: var(--rule) solid var(--accent); }
+    .num { font-family: var(--font-display); font-size: 1.016cqw; font-weight: 700; letter-spacing: .16em; color: var(--muted); }
+    .card.hl .num { color: var(--accent-text); }
+    /* ---------- Steps: a line of stages; the current one lit ---------- */
+    .steps { list-style: none; margin: 0; padding: 0; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1.875cqw; }
+    .step { display: flex; flex-direction: column; gap: .938cqw; padding-top: 1.563cqw; border-top: .234cqw solid var(--hair); }
+    .step.hl { border-top-color: var(--accent); }
+    .step.hl .num, .step.hl h3 { color: var(--accent-text); }
+    .step h3 { font-size: 1.563cqw; }
+    .step p { font-size: 1.172cqw; }
+    /* ---------- Big numbers: large, light rules, good numbers in the highlight ---------- */
+    .stats { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 3.125cqw; }
+    .stat { display: flex; flex-direction: column; gap: .469cqw; }
+    .value { font-family: var(--font-display); font-size: 5.625cqw; line-height: 1; font-weight: 700; letter-spacing: -.04em; color: var(--ink); white-space: nowrap; margin-bottom: .625cqw; }
+    .unit { font-size: .4em; letter-spacing: 0; font-weight: 400; color: var(--ink-2); }
+    .stat .label { font-size: 1.172cqw; color: var(--ink); }
+    .delta { font-size: 1.016cqw; color: var(--muted); }
+    .stat.hl .value { color: var(--highlight); }
+    /* ---------- Comparison table ---------- */
+    .compare { width: 100%; border-collapse: collapse; font-size: 1.25cqw; }
+    .compare th, .compare td { text-align: left; padding: 1.016cqw 1.25cqw; border-bottom: 1px solid var(--hair); color: var(--ink-2); }
+    .compare th { font-size: .938cqw; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+    .compare th:first-child, .compare td:first-child { padding-left: 0; color: var(--ink); }
+    .compare .win { background: var(--accent-soft); color: var(--ink); font-weight: 700; }
+    .compare th.win { color: var(--accent-text); border-bottom: var(--rule) solid var(--accent); }
+    /* ---------- Chart + takeaway ---------- */
+    .split { display: grid; grid-template-columns: 2fr 1fr; gap: 3.75cqw; align-items: end; }
+    .bars { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; column-gap: 1.25cqw; align-items: end; border-bottom: 1px solid var(--hair); margin-bottom: 2.5cqw; }
+    .bar { position: relative; display: flex; flex-direction: column; gap: .469cqw; }
+    .bar .val { font-size: 1.094cqw; font-weight: 700; color: var(--ink-2); }
+    .bar .fill { display: block; height: calc(var(--v, .5) * 24cqw); background: color-mix(in srgb, var(--ink) 20%, transparent); }
+    .bar .cat { position: absolute; top: 100%; left: 0; margin-top: .625cqw; font-size: 1.016cqw; color: var(--muted); }
+    .bar.hl .fill { background: var(--accent); }
+    .bar.hl .val, .bar.hl .cat { color: var(--accent-text); }
+    .bar.est .fill { background: transparent; border: 1px dashed var(--muted); border-bottom: 0; }
+    .takeaway { display: flex; flex-direction: column; gap: 1.094cqw; padding-left: 1.875cqw; border-left: var(--rule) solid var(--accent); }
+    .takeaway h3 { font-size: 2.188cqw; line-height: 1.15; }
+    /* ---------- Quote: big and plain ---------- */
+    .quote { display: flex; flex-direction: column; gap: 2.5cqw; max-width: 76cqw; }
+    .quote blockquote { font-family: var(--font-display); font-size: 3.75cqw; line-height: 1.12; font-weight: 700; letter-spacing: -.02em; color: var(--ink); text-wrap: pretty; }
+    .quote blockquote::before { content: "\201C"; } .quote blockquote::after { content: "\201D"; }
+    .quote figcaption { display: flex; flex-direction: column; font-size: 1.172cqw; color: var(--muted); }
+    .quote figcaption b { color: var(--ink); }
+    /* ---------- Timeline ---------- */
+    .timeline { list-style: none; margin: 0; padding: 0; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1.875cqw; }
+    .timeline li { display: flex; flex-direction: column; gap: .781cqw; padding-top: 1.563cqw; border-top: .234cqw solid var(--hair); }
+    .timeline li.now { border-top-color: var(--accent); }
+    .timeline li.goal { border-top-color: var(--highlight); }
+    .when { font-size: 1.016cqw; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .now .when { color: var(--accent-text); }
+    .goal .when { color: var(--highlight); }
+    .asks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; gap: .781cqw; }
+    .asks li { font-size: 1.563cqw; color: inherit; }
+    .title-slide .asks li { color: var(--title-soft); }
+
+    /* ---------- Older components, drawn in this style ---------- */
+    .grid { display: grid; gap: 2.5cqw; }
+    .grid.two { grid-template-columns: repeat(2, 1fr); }
+    .grid.three { grid-template-columns: repeat(3, 1fr); }
+    .grid.four { grid-template-columns: repeat(4, 1fr); }
+    .panel { display: flex; flex-direction: column; gap: .938cqw; align-items: flex-start; padding-top: 1.563cqw; border-top: 1px solid var(--hair); }
+    .tag { font-size: .938cqw; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+    .tag.ready { color: var(--green); } .tag.proven { color: var(--ink); } .tag.build { color: var(--amber); }
+    .callout { padding-left: 1.875cqw; border-left: var(--rule) solid var(--accent); font-size: 1.563cqw; line-height: 1.4; color: var(--ink); }
+    .callout.amber { border-color: var(--amber); }
+    .path { display: flex; align-items: stretch; gap: 1.25cqw; }
+    .node { flex: 1; display: flex; flex-direction: column; gap: .469cqw; padding: 1.25cqw; border: 1px solid var(--hair); }
+    .node strong { font-size: 1.406cqw; }
+    .node span { font-size: 1.094cqw; color: var(--ink-2); }
+    .node.hl { border-color: var(--accent); background: var(--accent-soft); }
+    .arrow { align-self: center; color: var(--muted); font-size: 1.563cqw; }
+    .matrix { width: 100%; border-collapse: collapse; font-size: 1.25cqw; }
+    .matrix th, .matrix td { text-align: left; padding: .938cqw 1.875cqw .938cqw 0; border-bottom: 1px solid var(--hair); vertical-align: top; color: var(--ink-2); }
+    .matrix th { font-size: .938cqw; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+    .matrix td:first-child { color: var(--ink); }
+    .status { font-weight: 700; white-space: nowrap; }
+    .status.green { color: var(--green); } .status.blue { color: var(--ink); } .status.amber { color: var(--amber); }
+    .diagram { width: 100%; }
+    .diagram svg { width: 100%; height: auto; display: block; }
+    .dg-box { fill: var(--paper); stroke: var(--hair); stroke-width: 1.5; rx: 0; }
+    .dg-box.hl { fill: var(--accent); stroke: var(--accent); }
+    .dg-label { fill: var(--ink); font: 700 18px var(--font-display); }
+    .dg-sub { fill: var(--ink-2); font: 14px var(--font); }
+    .dg-arrow { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+    .dg-arrowhead { fill: var(--muted); }
+    .dg-step { fill: var(--accent); }
+    .dg-step-text { fill: var(--on-accent); font: 700 13px var(--font-display); }
+    /* Photos: square corners, the photo eyebrow in the highlight */
+    .photo-slide .eyebrow { color: var(--highlight); }
+    .tier.hl > .name { color: var(--on-accent); }
+  </style>
+  <!-- PPTD brand block: this deck's brand. The meta names it; the style holds its tokens and,
+       in the comment, its rules. Replace both to rebrand the deck. -->
+  <style id="pptd-brand">
+    /* Brand: PPTD neutral.
+       Rules: no logo. Title and closing slides on --title-bg; content slides on --paper. */
+    :root {
+      --ink: #1c2230;        /* headings, body text, primary marks */
+      --ink-2: #434b5c;      /* secondary text */
+      --muted: #6b7385;      /* captions, footers, axis labels */
+      --paper: #f7f7f5;      /* slide background */
+      --accent: #4361ee;     /* accents, arrows, the one highlighted element */
+      --accent-soft: #eef1fe;/* tints: callouts, the winning column */
+      --highlight: #f25c3b;  /* markers: "now", step numbers, deadlines. Sparingly */
+      --title-bg: linear-gradient(125deg, #12151d 0%, #1c2230 58%, #2b3a8c 100%);
+      --title-eyebrow: #b9c4ff;
+      --title-soft: #e3e6ee; /* lead text on title slides */
+      --title-footer: #a9b0c0;
+      --font: Inter, "Segoe UI", system-ui, Arial, sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <main class="deck">
+    <!-- One radio per slide, all BEFORE the sections (the ~ selector needs that). r1 is checked + autofocus. -->
+    <input type="radio" name="slide" id="r1" class="slide-radio" checked autofocus aria-label="Slide 1">
+    <input type="radio" name="slide" id="r2" class="slide-radio" aria-label="Slide 2">
+    <input type="radio" name="slide" id="r3" class="slide-radio" aria-label="Slide 3">
+    <input type="radio" name="slide" id="r4" class="slide-radio" aria-label="Slide 4">
+    <input type="radio" name="slide" id="r5" class="slide-radio" aria-label="Slide 5">
+    <input type="radio" name="slide" id="r6" class="slide-radio" aria-label="Slide 6">
+    <input type="radio" name="slide" id="r7" class="slide-radio" aria-label="Slide 7">
+    <input type="radio" name="slide" id="r8" class="slide-radio" aria-label="Slide 8">
+    <input type="radio" name="slide" id="r9" class="slide-radio" aria-label="Slide 9">
+    <input type="radio" name="slide" id="r10" class="slide-radio" aria-label="Slide 10">
+    <input type="radio" name="slide" id="r11" class="slide-radio" aria-label="Slide 11">
+    <input type="radio" name="slide" id="r12" class="slide-radio" aria-label="Slide 12">
+    <input type="radio" name="slide" id="r13" class="slide-radio" aria-label="Slide 13">
+    <input type="radio" name="slide" id="r14" class="slide-radio" aria-label="Slide 14">
+    <input type="radio" name="slide" id="r15" class="slide-radio" aria-label="Slide 15">
+    <input type="radio" name="slide" id="r16" class="slide-radio" aria-label="Slide 16">
+    <input type="radio" name="slide" id="r17" class="slide-radio" aria-label="Slide 17">
+    <input type="radio" name="slide" id="r18" class="slide-radio" aria-label="Slide 18">
+    <input type="radio" name="slide" id="r19" class="slide-radio" aria-label="Slide 19">
+    <input type="radio" name="slide" id="r20" class="slide-radio" aria-label="Slide 20">
+    <input type="radio" name="slide" id="r21" class="slide-radio" aria-label="Slide 21">
+    <input type="radio" name="slide" id="r22" class="slide-radio" aria-label="Slide 22">
+
+    <!-- 1 · Title: .title-slide. The eyebrow names the organisation and occasion; the footer the presenters. -->
+    <section id="s1" class="slide title-slide" aria-label="Slide 1: Title">
+      <div class="eyebrow">Organisation · Quarterly review · Q3 2026</div>
+      <div class="content">
+        <h1>The one-line message of the whole deck</h1>
+        <div class="title-mark"></div>
+        <p class="lead">A sentence of context: what this session is for and who it is for.</p>
+      </div>
+      <div class="footer"><span>Presenter, role · Presenter, role · 14 October 2026</span><span></span></div>
+      <nav class="controls" aria-label="Slide controls"><span class="nav-ph"></span><span class="counter">1 / 22</span><label for="r2" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 4.5%"></span></div>
+    </section>
+
+    <!-- 2 · Agenda: ol.agenda. Time and duration, the item, a detail or owner; .now marks where we are. Logistics go in the footer, not the list. -->
+    <section id="s2" class="slide" aria-label="Slide 2: Agenda">
+      <div class="eyebrow">Today · 09:00 to 12:30</div>
+      <h2>By 12:30 we agree the plan for next year</h2>
+      <div class="content">
+        <ol class="agenda">
+          <li><span class="when">09:00 · 30 min</span><h3>Where we are</h3><p>The quarter in numbers</p></li>
+          <li class="now"><span class="when">09:30 · 60 min</span><h3>What customers told us</h3><p>Research findings, then discussion</p></li>
+          <li><span class="when">10:45 · 75 min</span><h3>Options for next year</h3><p>Three plans, costed</p></li>
+          <li><span class="when">12:00 · 30 min</span><h3>Decide</h3><p>Choose a plan and name owners</p></li>
+        </ol>
+      </div>
+      <div class="footer"><span>Break at 10:30 · Lunch at 12:30</span><span>02</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r1" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">2 / 22</span><label for="r3" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 9.1%"></span></div>
+    </section>
+
+    <!-- 3 · Section divider: .section-slide. A number, the section's name and one line on what it covers. -->
+    <section id="s3" class="slide section-slide" aria-label="Slide 3: Section">
+      <div class="content">
+        <div class="section-num">02</div>
+        <div class="section-text">
+          <div class="eyebrow">Section</div>
+          <h2>Platform architecture</h2>
+          <p class="lead">How the system scales from 40 to 4,000 sites</p>
+        </div>
+      </div>
+      <div class="footer"><span>Deck title · Q3 2026</span><span>03</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r2" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">3 / 22</span><label for="r4" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 13.6%"></span></div>
+    </section>
+
+    <!-- 4 · Statement: one sentence, large. Mark the words that matter with .key (one phrase). -->
+    <section id="s4" class="slide" aria-label="Slide 4: Statement">
+      <div class="eyebrow">The quarter in one line</div>
+      <div class="content">
+        <p class="statement">Median planning time fell from 4 hours to <span class="key">11 minutes</span> across all 212 sites.</p>
+      </div>
+      <div class="footer"><span>Source: session logs, Jul–Sep 2026, n = 48,310</span><span>04</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r3" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">4 / 22</span><label for="r5" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 18.2%"></span></div>
+    </section>
+
+    <!-- 5 · Three points: .cards of .card (2–4). Same structure in every card; .hl on at most one. -->
+    <section id="s5" class="slide" aria-label="Slide 5: Three points">
+      <div class="eyebrow">Customer research · 38 interviews</div>
+      <h2>Why customers switch to us</h2>
+      <div class="content">
+        <div class="cards">
+          <div class="card hl"><span class="num">01</span><h3>Plans that react in real time</h3><p>Closures and late deliveries re-plan the whole network in under 30 seconds.</p></div>
+          <div class="card"><span class="num">02</span><h3>One partner network</h3><p>640 partners connected through a single booking flow, not phone and email.</p></div>
+          <div class="card"><span class="num">03</span><h3>Open by default</h3><p>Everything is in the public API, so IT teams extend it instead of working around it.</p></div>
+        </div>
+      </div>
+      <div class="footer"><span>Source: customer interviews, n = 38</span><span>05</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r4" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">5 / 22</span><label for="r6" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 22.7%"></span></div>
+    </section>
+
+    <!-- 6 · Process: .steps of .step (3–5). .hl marks the step this slide is about. -->
+    <section id="s6" class="slide" aria-label="Slide 6: Process">
+      <div class="eyebrow">Architecture · request path</div>
+      <h2>From order to reconciled invoice in five stages</h2>
+      <div class="content">
+        <ol class="steps">
+          <li class="step"><span class="num">1</span><h3>Ingest</h3><p>Orders arrive by API or file and are de-duplicated.</p></li>
+          <li class="step"><span class="num">2</span><h3>Normalise</h3><p>Addresses geocoded, loads mapped to one unit.</p></li>
+          <li class="step hl"><span class="num">3</span><h3>Plan</h3><p>Routes built against live capacity. New in Q3.</p></li>
+          <li class="step"><span class="num">4</span><h3>Dispatch</h3><p>Partners booked, drivers notified.</p></li>
+          <li class="step"><span class="num">5</span><h3>Reconcile</h3><p>Proof of delivery matched to each invoice line.</p></li>
+        </ol>
+      </div>
+      <div class="footer"><span>Architecture as of October 2026</span><span>06</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r5" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">6 / 22</span><label for="r7" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 27.3%"></span></div>
+    </section>
+
+    <!-- 7 · Big numbers: .stats of .stat (2–4). Every stat has the same parts: .value, .label, .delta. -->
+    <section id="s7" class="slide" aria-label="Slide 7: Big numbers">
+      <div class="eyebrow">Q3 2026 · vs Q2</div>
+      <h2>Our strongest quarter on every core metric</h2>
+      <div class="content">
+        <div class="stats">
+          <div class="stat hl"><div class="value">$18.4M</div><div class="label">Annual recurring revenue</div><div class="delta">+18% QoQ</div></div>
+          <div class="stat"><div class="value">132%</div><div class="label">Net revenue retention</div><div class="delta">+6 pts QoQ</div></div>
+          <div class="stat"><div class="value">99.97%</div><div class="label">Uptime</div><div class="delta">SLA 99.9%</div></div>
+          <div class="stat"><div class="value">41<span class="unit"> days</span></div><div class="label">Median time to go-live</div><div class="delta">−23 days QoQ</div></div>
+        </div>
+      </div>
+      <div class="footer"><span>Source: finance and operations dashboards, 30 Sep 2026</span><span>07</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r6" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">7 / 22</span><label for="r8" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 31.8%"></span></div>
+    </section>
+
+    <!-- 8 · Comparison: table.compare. The first column names the rows; .win marks our column's cells. -->
+    <section id="s8" class="slide" aria-label="Slide 8: Comparison">
+      <div class="eyebrow">Competitive position</div>
+      <h2>How we compare for a 50-site customer</h2>
+      <div class="content">
+        <table class="compare">
+          <thead><tr><th></th><th class="win">Us</th><th>Legacy system</th><th>Spreadsheets</th></tr></thead>
+          <tbody>
+            <tr><td>Daily planning time</td><td class="win">11 min</td><td>1.5 h</td><td>4 h</td></tr>
+            <tr><td>Live re-planning</td><td class="win">Yes, under 30 s</td><td>Nightly batch</td><td>No</td></tr>
+            <tr><td>Partner integrations</td><td class="win">640</td><td>~120</td><td>None</td></tr>
+            <tr><td>Time to go-live</td><td class="win">6 weeks</td><td>9–14 months</td><td>Immediate</td></tr>
+            <tr><td>Cost per site per month</td><td class="win">$390</td><td>$1,100</td><td>Staff time</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="footer"><span>Source: published price lists and customer references, 2026</span><span>08</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r7" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">8 / 22</span><label for="r9" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 36.4%"></span></div>
+    </section>
+
+    <!-- 9 · Chart + takeaway: .split (chart left, .takeaway right). Bars: --v is the bar's height, 0–1 of the tallest. -->
+    <section id="s9" class="slide" aria-label="Slide 9: Chart and takeaway">
+      <div class="eyebrow">Recurring revenue by quarter · $M</div>
+      <h2>Growth is accelerating, not levelling off</h2>
+      <div class="content">
+        <div class="split">
+          <div class="bars" role="img" aria-label="Recurring revenue by quarter: 11.2, 13.0, 15.6, 18.4, and 21.0 estimated">
+            <div class="bar" style="--v: .53"><span class="val">11.2</span><span class="fill"></span><span class="cat">Q4 ’25</span></div>
+            <div class="bar" style="--v: .62"><span class="val">13.0</span><span class="fill"></span><span class="cat">Q1 ’26</span></div>
+            <div class="bar" style="--v: .74"><span class="val">15.6</span><span class="fill"></span><span class="cat">Q2 ’26</span></div>
+            <div class="bar hl" style="--v: .88"><span class="val">18.4</span><span class="fill"></span><span class="cat">Q3 ’26</span></div>
+            <div class="bar est" style="--v: 1"><span class="val">21.0 est.</span><span class="fill"></span><span class="cat">Q4 ’26</span></div>
+          </div>
+          <div class="takeaway">
+            <div class="eyebrow">Takeaway</div>
+            <h3>Up 64% in three quarters; Q3 added more than Q1 and Q2 combined.</h3>
+            <p>Expansion drove 58% of net new revenue.</p>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>Source: finance, 30 Sep 2026. Q4 is the board-approved forecast.</span><span>09</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r8" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">9 / 22</span><label for="r10" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 40.9%"></span></div>
+    </section>
+
+    <!-- 10 · Dense numbers: table.data. Sorted, right-aligned tabular figures, units in the header, one .hl row or cell, a tfoot total. -->
+    <section id="s10" class="slide" aria-label="Slide 10: Data table">
+      <div class="eyebrow">Sites by region · FY26</div>
+      <h2>Every region grew; only the north misses its target</h2>
+      <div class="content">
+        <table class="data">
+          <thead><tr><th>Region</th><th>Sites</th><th>YoY</th><th>Revenue €k</th><th>Margin</th><th>Days to live</th></tr></thead>
+          <tbody>
+            <tr><td>South</td><td>412</td><td>+48%</td><td>6,820</td><td>63%</td><td>9.1</td></tr>
+            <tr><td>West</td><td>298</td><td>+52%</td><td>5,710</td><td>60%</td><td>11.4</td></tr>
+            <tr><td>East</td><td>215</td><td>+31%</td><td>4,020</td><td>61%</td><td>8.7</td></tr>
+            <tr class="hl"><td>North</td><td>176</td><td>+22%</td><td>3,180</td><td>54%</td><td class="hl">16.2</td></tr>
+            <tr><td>Central</td><td>104</td><td>+19%</td><td>1,710</td><td>62%</td><td>9.8</td></tr>
+          </tbody>
+          <tfoot><tr><td>Total</td><td>1,205</td><td>+38%</td><td>21,440</td><td>61%</td><td>10.6</td></tr></tfoot>
+        </table>
+      </div>
+      <div class="footer"><span>Source: finance, FY26 close. Target: live within 14 days.</span><span>10</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r9" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">10 / 22</span><label for="r11" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 45.5%"></span></div>
+    </section>
+
+    <!-- 11 · Status: table.matrix with .status cells. Status colours mean the same on every slide:
+         green = signed off / ready, ink (.blue) = proven / proof of concept, amber = in progress. -->
+    <section id="s11" class="slide" aria-label="Slide 11: Status">
+      <div class="eyebrow">Delivery status</div>
+      <h2>Two workstreams are ready; one needs a decision</h2>
+      <div class="content">
+        <table class="matrix">
+          <thead><tr><th>Workstream</th><th>Status</th><th>Detail</th></tr></thead>
+          <tbody>
+            <tr><td>Data processing</td><td class="status green">Signed off</td><td>Signed off by the operations lead on 2 October.</td></tr>
+            <tr><td>Live re-planning</td><td class="status blue">Pilot proven</td><td>Three-site pilot, 6 weeks, no incidents.</td></tr>
+            <tr><td>Partner billing</td><td class="status amber">In progress</td><td>Forecast 15 December; deadline 1 December.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="footer"><span>Status as of 14 October 2026</span><span>11</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r10" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">11 / 22</span><label for="r12" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 50%"></span></div>
+    </section>
+
+    <!-- 12 · Architecture as layers: .layers of .layer (.name, .boxes of .box). Flow reads top to bottom; .hl marks the core, .read a read-only part. -->
+    <section id="s12" class="slide" aria-label="Slide 12: Layers">
+      <div class="eyebrow">Architecture</div>
+      <h2>Writes flow down into one log; everything else reads from it</h2>
+      <div class="content">
+        <div class="layers">
+          <div class="layer"><span class="name">1 · Edge</span><div class="boxes"><span class="box">Web and mobile apps</span><span class="box">Partner API</span></div></div>
+          <div class="layer"><span class="name">2 · Decide</span><div class="boxes"><span class="box hl wide">Planning service</span><span class="box">Rules and limits</span></div></div>
+          <div class="layer"><span class="name">3 · Record</span><div class="boxes"><span class="box wide">Event log: append-only, the single source of truth</span></div></div>
+          <div class="layer"><span class="name">4 · Read</span><div class="boxes"><span class="box read">Dashboards</span><span class="box read">Billing</span><span class="box read">Reporting</span></div></div>
+        </div>
+      </div>
+      <div class="footer"><span>Solid: writes · dashed: reads</span><span>12</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r11" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">12 / 22</span><label for="r13" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 54.5%"></span></div>
+    </section>
+
+    <!-- 13 · Worked example: inline SVG in .diagram, styled by the dg-* classes. -->
+    <section id="s13" class="slide" aria-label="Slide 13: Worked example">
+      <div class="eyebrow">How it works</div>
+      <h2>One order, followed through the planner</h2>
+      <div class="content">
+        <div class="diagram">
+          <svg viewBox="0 0 900 260" role="img" aria-labelledby="dg10-title dg10-desc">
+            <title id="dg10-title">One order through the planner</title>
+            <desc id="dg10-desc">Step 1, an order for 12 pallets arrives. Step 2, the planner places it on the truck with spare capacity. Step 3, the driver's route updates in 20 seconds.</desc>
+            <defs><marker id="dg10-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="dg-arrowhead" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+            <rect class="dg-box" x="10" y="30" width="240" height="210" rx="14"/>
+            <circle class="dg-step" cx="38" cy="30" r="16"/><text class="dg-step-text" x="38" y="35" text-anchor="middle">1</text>
+            <text class="dg-label" x="130" y="120" text-anchor="middle">Order arrives</text>
+            <text class="dg-sub" x="130" y="146" text-anchor="middle">12 pallets, Leeds → York</text>
+            <path class="dg-arrow" d="M255 135 H325" marker-end="url(#dg10-arr)"/>
+            <rect class="dg-box hl" x="330" y="30" width="240" height="210" rx="14"/>
+            <circle class="dg-step" cx="358" cy="30" r="16"/><text class="dg-step-text" x="358" y="35" text-anchor="middle">2</text>
+            <text class="dg-label" x="450" y="120" text-anchor="middle">Planner places it</text>
+            <text class="dg-sub" x="450" y="146" text-anchor="middle">Truck 7 has 14 pallets free</text>
+            <path class="dg-arrow" d="M575 135 H645" marker-end="url(#dg10-arr)"/>
+            <rect class="dg-box" x="650" y="30" width="240" height="210" rx="14"/>
+            <circle class="dg-step" cx="678" cy="30" r="16"/><text class="dg-step-text" x="678" y="35" text-anchor="middle">3</text>
+            <text class="dg-label" x="770" y="120" text-anchor="middle">Route updates</text>
+            <text class="dg-sub" x="770" y="146" text-anchor="middle">Driver notified in 20 s</text>
+          </svg>
+        </div>
+      </div>
+      <div class="footer"><span>Illustrative example</span><span>13</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r12" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">13 / 22</span><label for="r14" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 59.1%"></span></div>
+    </section>
+
+    <!-- 14 · Photo slide: .photo-slide with a figure.photo (right two-thirds; add .full for the whole slide). Text stays on the scrim side, 25 words at most. Brief the photo in data-brief; the user drops a picture onto it. -->
+    <section id="s14" class="slide photo-slide" aria-label="Slide 14: Photo">
+      <div class="eyebrow">Growth drivers</div>
+      <div class="content">
+        <p class="statement">40% of our growth comes from local partners</p>
+        <p class="lead">1,200 partners across 14 cities</p>
+      </div>
+      <figure class="photo" data-brief="Photo: a partner at work in their shop, subject in the right third, calm background"></figure>
+      <div class="footer"><span>Source: partner programme, FY26</span><span>14</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r13" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">14 / 22</span><label for="r15" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 63.6%"></span></div>
+    </section>
+
+    <!-- 15 · Photos side by side: .photos of figure.photo (2–3), each with a figcaption label; .hl marks the one that matters (the after). -->
+    <section id="s15" class="slide" aria-label="Slide 15: Before and after">
+      <div class="eyebrow">One site, before and after</div>
+      <h2>Same store, six weeks apart</h2>
+      <div class="content">
+        <div class="photos">
+          <figure class="photo" data-brief="Photo: the store before, queue at the counter"><figcaption>Before</figcaption></figure>
+          <figure class="photo hl" data-brief="Photo: the store after, same angle, no queue"><figcaption>After</figcaption></figure>
+        </div>
+      </div>
+      <div class="footer"><span>Store 112, March and May 2026</span><span>15</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r14" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">15 / 22</span><label for="r16" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 68.2%"></span></div>
+    </section>
+
+    <!-- 16 · People: .people of figure.person (a .photo portrait, b name, span role). Portraits share crop, eye line and background. -->
+    <section id="s16" class="slide" aria-label="Slide 16: People">
+      <div class="eyebrow">The team</div>
+      <h2>The people running the rollout</h2>
+      <div class="content">
+        <div class="people">
+          <figure class="person"><figure class="photo" data-brief="Portrait"></figure><b>Name Surname</b><span>Head of operations</span></figure>
+          <figure class="person"><figure class="photo" data-brief="Portrait"></figure><b>Name Surname</b><span>Product lead</span></figure>
+          <figure class="person"><figure class="photo" data-brief="Portrait"></figure><b>Name Surname</b><span>Engineering lead</span></figure>
+          <figure class="person hl"><figure class="photo" data-brief="Portrait"></figure><b>Name Surname</b><span>New: regional lead, north</span></figure>
+        </div>
+      </div>
+      <div class="footer"><span>142 people across three sites</span><span>16</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r15" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">16 / 22</span><label for="r17" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 72.7%"></span></div>
+    </section>
+
+    <!-- 17 · Quote: figure.quote, the person and their role in the figcaption. -->
+    <section id="s17" class="slide" aria-label="Slide 17: Quote">
+      <div class="content">
+        <figure class="quote">
+          <blockquote>We used to plan Monday’s routes on Friday. Now we plan at 6 a.m. and <span class="key">re-plan whenever the road tells us to.</span></blockquote>
+          <figcaption><b>Name Surname</b> <span>VP Operations, Customer Ltd · 64 sites</span></figcaption>
+        </figure>
+      </div>
+      <div class="footer"><span>Customer interview, September 2026</span><span>17</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r16" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">17 / 22</span><label for="r18" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 77.3%"></span></div>
+    </section>
+
+    <!-- 18 · Options or pricing: .tiers of .tier (.name, .price with span.unit, ul of features); .hl is the recommended one. -->
+    <section id="s18" class="slide" aria-label="Slide 18: Tiers">
+      <div class="eyebrow">Pricing · per site, per month</div>
+      <h2>Three plans; most customers will choose Standard</h2>
+      <div class="content">
+        <div class="tiers">
+          <div class="tier"><span class="name">Starter</span><span class="price">Free</span><ul><li>Up to 5 sites</li><li>Email support</li></ul></div>
+          <div class="tier hl"><span class="name">Standard · recommended</span><span class="price">€79<span class="unit"> / month</span></span><ul><li>Unlimited sites</li><li>Live re-planning</li><li>Partner network</li></ul></div>
+          <div class="tier"><span class="name">Enterprise</span><span class="price">Custom</span><ul><li>Dedicated region</li><li>99.99% SLA</li><li>Named support team</li></ul></div>
+        </div>
+      </div>
+      <div class="footer"><span>Prices exclude VAT</span><span>18</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r17" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">18 / 22</span><label for="r19" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 81.8%"></span></div>
+    </section>
+
+    <!-- 19 · An explanation that needs sentences: .columns of p (two columns). Keep it under about 120 words; most slides should not need this. -->
+    <section id="s19" class="slide" aria-label="Slide 19: Explanation">
+      <div class="eyebrow">Why one log</div>
+      <h2>Why we record events instead of updating rows</h2>
+      <div class="content">
+        <div class="columns">
+          <p>Updating rows in place makes every write wait for the one before it. At peak, more than half of our delay is spent waiting for locks.</p>
+          <p>An append-only log removes the wait: each event is a new row, keyed by account and sequence. Balances become a view we can rebuild, replay or audit at any time.</p>
+          <p>The cost is that reads may lag by up to a quarter of a second. No customer-facing flow depends on reading its own write, so nobody notices.</p>
+        </div>
+      </div>
+      <div class="footer"><span>Detail: design document, section 2</span><span>19</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r18" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">19 / 22</span><label for="r20" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 86.4%"></span></div>
+    </section>
+
+    <!-- 20 · Timeline: ol.timeline (3–5 items). .now marks today, .goal the target. -->
+    <section id="s20" class="slide" aria-label="Slide 20: Timeline">
+      <div class="eyebrow">Roadmap · next 12 months</div>
+      <h2>Next year: from planning tool to network</h2>
+      <div class="content">
+        <ol class="timeline">
+          <li class="now"><span class="when">Now · Q4 2026</span><h3>Multi-site planning</h3><p>Shared capacity across sites, for all customers.</p></li>
+          <li><span class="when">Q1 2027</span><h3>Partner marketplace</h3><p>Spare capacity bookable inside the plan.</p></li>
+          <li><span class="when">Q2 2027</span><h3>EU region</h3><p>EU data residency, three pilot customers.</p></li>
+          <li class="goal"><span class="when">Q3 2027 · Target</span><h3>$40M ARR</h3><p>500 sites live; break-even on contribution.</p></li>
+        </ol>
+      </div>
+      <div class="footer"><span>Plan approved by the leadership team, October 2026</span><span>20</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r19" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">20 / 22</span><label for="r21" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 90.9%"></span></div>
+    </section>
+
+    <!-- 21 · Closing: .title-slide with a .split of headline and ol.asks (or just a headline). -->
+    <section id="s21" class="slide title-slide" aria-label="Slide 21: Closing">
+      <div class="eyebrow">Decisions requested today</div>
+      <div class="content">
+        <div class="split">
+          <h2>Three decisions for the board</h2>
+          <ol class="asks">
+            <li>Approve next year’s hiring plan: 34 roles</li>
+            <li>Release $2.1M for the EU region</li>
+            <li>Endorse the marketplace pricing model</li>
+          </ol>
+        </div>
+      </div>
+      <div class="footer"><span>Contact name · team@example.com</span><span></span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r20" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">21 / 22</span><label for="r22" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 95.5%"></span></div>
+    </section>
+
+    <!-- 22 · Appendix: ol.refs of li (.num, the item, .page). Not presented; for follow-up questions. -->
+    <section id="s22" class="slide" aria-label="Slide 22: Appendix">
+      <div class="eyebrow">Appendix</div>
+      <h2>Backup and sources</h2>
+      <div class="content">
+        <ol class="refs">
+          <li><span class="num">A1</span><span>Unit economics by region and month</span><span class="page">p. 23</span></li>
+          <li><span class="num">A2</span><span>Customer research: 2,400 respondents, 6 markets</span><span class="page">p. 24</span></li>
+          <li><span class="num">A3</span><span>Hiring plan and costs</span><span class="page">p. 25</span></li>
+          <li><span class="num">A4</span><span>Method: how savings are measured</span><span class="page">p. 26</span></li>
+        </ol>
+      </div>
+      <div class="footer"><span>Sources: finance FY26 close · research, Nov 2026. Figures unaudited.</span><span>22</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r21" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">22 / 22</span><span class="nav-ph"></span></nav>
+      <div class="progress"><span style="width: 100%"></span></div>
+    </section>
+  </main>
+</body>
+</html>

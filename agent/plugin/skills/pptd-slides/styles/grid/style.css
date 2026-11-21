@@ -2,6 +2,8 @@
        1px hairlines and 2px rules carry the structure. Mono uppercase labels. The accent marks
        exactly one thing per slide; the highlight is only ever a small square marker. */
     :root {
+      /* Style variables for the base layouts (see the frame). */
+      --font-label: var(--font-mono); --head-weight: 600;
       --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
       --hair: color-mix(in srgb, var(--ink) 14%, transparent);
       --rule: .156cqw;              /* 2px at 1280 */
@@ -24,10 +26,10 @@
     .key { color: var(--accent-text); }
 
     /* ---------- Title / closing slide ---------- */
-    .title-slide { background: var(--title-bg); color: var(--paper); }
+    .title-slide { background: var(--title-bg); color: var(--on-title); }
     .title-slide .eyebrow { color: var(--title-eyebrow); }
     .title-slide .content { justify-content: flex-end; gap: 1.875cqw; margin: 0 0 3.75cqw; }
-    .title-slide h1, .title-slide h2 { color: var(--paper); }
+    .title-slide h1, .title-slide h2 { color: var(--on-title); }
     .title-slide .lead, .title-slide p { color: var(--title-soft); }
     .title-slide .footer { color: var(--title-footer); border-top: 0; }
     .title-slide .split { align-items: center; grid-template-columns: 7fr 5fr; }

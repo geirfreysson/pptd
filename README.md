@@ -45,7 +45,8 @@ time, sign in with your **ChatGPT** (Plus/Pro) or **Claude** (Pro/Max) account, 
 - **Slides drawer** (⌥⌘S): a picture of every slide. Click one to show it, and **drag** it to
   reorder.
 - **Drop images or video** onto a slide, or onto a slide in the drawer. Photos are resized
-  and iPhone photos converted for you.
+  and iPhone photos converted for you. Where the agent left a photo placeholder (with a note
+  on what picture would work), drop your photo onto it and it fills the space.
 - **Copy a slide as an image** (⇧⌘C) to paste into an email or chat, or export every slide as
   a PNG (File › Export Slides as Images…).
 - **Undo** (⌘Z) takes back the last move, drop or revert.
@@ -63,12 +64,22 @@ Every deck has a style that decides its layout:
 - **Signal**: a dense, dashboard-like technical look, dark with a dark brand.
 - **Atelier**: geometric and friendly, with flat shapes that carry the numbers, for
   workshops and training.
+- **Keynote**: photo-first, big type, very little on the slide; for kick-offs and launches.
+- **Mono**: black, white and one red dot; for design reviews and pre-reads.
+- **Sticker**: loud and chunky, like a startup pitch.
+- **Playful**: friendly and round, for teaching and community groups.
 - **Classic**: PPTD's original look.
 
 The agent picks one to suit the deck and tells you which, or you can ask: *"use the folio
 style"*, *"make this deck bold"*. Switching style keeps your slides and your brand; only the
 layout changes. Whatever the style, the agent designs by the same principles: one point per
-slide, one thing to look at first, a headline that states the conclusion.
+slide, one thing to look at first, a headline that states the conclusion. The styles guide
+it; they don't box it in, so a slide can look however its content needs.
+
+**Your own styles.** Give the agent a design you like (a Claude Design export, a deck,
+screenshots) and a name: *"make a style called harbour from ~/Downloads/design.zip"*. It
+turns the design into a style that works with any brand, keeps it on your computer, and
+uses it like the built-in ones.
 
 ## Your brand, on every deck
 

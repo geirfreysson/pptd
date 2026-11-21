@@ -19,6 +19,7 @@
     "check": "node tools/pptd-check.mjs",
     "postinstall": "node tools/postinstall.mjs",
     "sync-skill": "sh tools/sync-skill.sh",
+    "style-previews": "electron tools/style-previews.js",
     "prebuild": "sh tools/sync-skill.sh && node tools/vendor-pi.mjs",
     "predist": "sh tools/sync-skill.sh && node tools/vendor-pi.mjs",
     "icon": "python3 tools/make-icon.py",

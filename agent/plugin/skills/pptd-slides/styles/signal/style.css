@@ -5,6 +5,8 @@
        highlight means "live, or watch this", at most once per slide. Designed for a dark
        brand (dark --paper, light --ink); with a light brand it is a light technical deck. */
     :root {
+      /* Style variables for the base layouts (see the frame). */
+      --font-display: var(--font-mono); --font-label: var(--font-mono); --label-track: .06em;
       --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", Menlo, Consolas, monospace;
       --hair: color-mix(in srgb, var(--ink) 18%, transparent);
       --rule: .156cqw;             /* 2px at 1280 */
@@ -31,11 +33,11 @@
     .key { background: var(--accent); color: var(--on-accent); padding: 0 .2em; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 
     /* ---------- Title / closing slide: the accent is the whole slide ---------- */
-    .title-slide { background: var(--title-bg); color: var(--paper); }
+    .title-slide { background: var(--title-bg); color: var(--on-title); }
     .title-slide > .eyebrow { color: var(--title-eyebrow); border-bottom-color: color-mix(in srgb, var(--paper) 30%, transparent); }
     .title-slide > .eyebrow::before { background: currentColor; }
     .title-slide .content { justify-content: flex-end; gap: 1.875cqw; margin: 0 0 3.125cqw; }
-    .title-slide h1, .title-slide h2 { color: var(--paper); }
+    .title-slide h1, .title-slide h2 { color: var(--on-title); }
     .title-slide .lead, .title-slide p { color: var(--title-soft); }
     .title-slide .footer { color: var(--title-footer); border-top: 1px solid color-mix(in srgb, var(--paper) 30%, transparent); }
     .title-slide .split { grid-template-columns: 1fr 1fr; align-items: end; gap: 3.75cqw; }

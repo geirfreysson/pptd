@@ -9,21 +9,25 @@
 //   node pptd-app.mjs keys deck.pptd.html
 //       Presses → → ←, clicks ›, presses → again, and checks there are no <script> tags.
 //       Prints PASS/FAIL lines; exits 1 on any FAIL.
+//   node pptd-app.mjs render design.html [--size WxH] [--out DIR]
+//       Renders any HTML page (a downloaded design, e.g. a Claude Design export) with its
+//       scripts removed and the network off: one PNG per top-level <section>, or per screen.
+//       Prints one PNG path per page.
 
 import net from 'node:net';
 import path from 'node:path';
 
 const usage = () => {
-  console.error('usage: node pptd-app.mjs shot <deck> [3|2,5|1-4|all] [--size 1280x720] [--out DIR]\n       node pptd-app.mjs keys <deck>');
+  console.error('usage: node pptd-app.mjs shot <deck> [3|2,5|1-4|all] [--size 1280x720] [--out DIR]\n       node pptd-app.mjs keys <deck>\n       node pptd-app.mjs render <page.html> [--size 1280x720] [--out DIR]');
   process.exit(2);
 };
 
 const [cmd, deckArg, ...rest] = process.argv.slice(2);
-if (!['shot', 'keys'].includes(cmd) || !deckArg) usage();
+if (!['shot', 'keys', 'render'].includes(cmd) || !deckArg) usage();
 const deck = path.resolve(deckArg);
 
-const req = { cmd, deck };
-if (cmd === 'shot') {
+const req = cmd === 'render' ? { cmd, file: deck } : { cmd, deck };
+if (cmd === 'shot' || cmd === 'render') {
   let slides = 'all';
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
@@ -36,6 +40,7 @@ if (cmd === 'shot') {
       req.out = path.resolve(rest[++i]);
     } else slides = a;
   }
+  if (slides !== 'all' && cmd === 'render') usage();
   if (slides !== 'all') {
     const list = [];
     for (const part of slides.split(',')) {
@@ -67,7 +72,7 @@ conn.on('end', () => {
   let res;
   try { res = JSON.parse(buf); } catch { console.error('PPTD sent no reply.'); process.exit(3); }
   if (res.error) { console.error(res.error); process.exit(1); }
-  if (cmd === 'shot') {
+  if (cmd === 'shot' || cmd === 'render') {
     for (const f of res.files) console.log(f);
   } else {
     for (const l of res.lines) console.log(l);

@@ -6,6 +6,8 @@
        gradients. The accent is the structure colour; the highlight is the spark, one shape or
        one short phrase per slide, and may flood a quote slide. */
     :root {
+      /* Style variables for the base layouts (see the frame). */
+      --hair: color-mix(in srgb, var(--ink) 20%, transparent); --font-label: var(--font-display);
       --font-display: Futura, "Century Gothic", "Avenir Next", "Trebuchet MS", sans-serif;
       --rule: .156cqw;             /* 2px at 1280 */
       --shape: 12.5cqw;            /* 160px: a data shape */
@@ -34,12 +36,12 @@
     .slide:has(.statement) .content::before { content: ""; width: 3.125cqw; height: 3.125cqw; border-radius: 50%; background: var(--highlight); margin-bottom: 2.5cqw; }
 
     /* ---------- Title / closing slide: a flood of the accent, a shape bleeding off the edge ---------- */
-    .title-slide { background: var(--title-bg); color: var(--paper); }
+    .title-slide { background: var(--title-bg); color: var(--on-title); }
     .title-slide::before { content: ""; position: absolute; top: -8cqw; right: -8cqw; width: 34cqw; height: 34cqw; border-radius: 50%; background: var(--highlight); }
     .title-slide:has(.asks)::before { width: 22cqw; height: 22cqw; top: -11cqw; right: 12cqw; border-radius: 0 0 50% 50%; }
     .title-slide .eyebrow { color: var(--title-eyebrow); }
     .title-slide .content { justify-content: center; gap: 1.875cqw; margin: 0; }
-    .title-slide h1, .title-slide h2 { color: var(--paper); }
+    .title-slide h1, .title-slide h2 { color: var(--on-title); }
     .title-slide .lead, .title-slide p { color: var(--title-soft); }
     .title-slide .footer { color: var(--title-footer); }
     .title-slide .footer::before { background: var(--paper); }

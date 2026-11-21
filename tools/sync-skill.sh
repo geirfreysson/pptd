@@ -9,5 +9,7 @@ DST=agent/plugin/skills/pptd-slides
 cp docs/pptd-spec.md "$DST"/pptd-spec.md
 cp tools/pptd-check.mjs "$DST"/pptd-check.mjs
 cp tools/pptd-deck.mjs "$DST"/pptd-deck.mjs
-echo "synced spec, checker and deck tool -> $DST"
+cp tools/pptd-style.mjs "$DST"/pptd-style.mjs
+cp tools/style-deck.html "$DST"/deck-skeleton.html
+echo "synced spec, checker, deck tool, style tool and deck skeleton -> $DST"
 node tools/build-styles.mjs

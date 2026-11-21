@@ -125,7 +125,7 @@ the plugin `agent/plugin`; for pi, with `--skill`). It is brand-neutral and main
 - `PPTD.md`: working inside the app (current slide, new decks, branding, media).
 - `DESIGN.md`: the design principles every style follows, and how to borrow from the styles.
   When a style teaches something new, add the principle here, not only to its `STYLE.md`.
-- `styles/<name>/` (`grid`, `bold`, `folio`, `signal`, `atelier`, `classic`): one folder per style. `STYLE.md` is its
+- `styles/<name>/` (`grid`, `bold`, `folio`, `signal`, `atelier`, `keynote`, `mono`, `sticker`, `playful`, `classic`): one folder per style. `STYLE.md` is its
   design rules, `style.css` its layout CSS (edit this), and `template.html` the starting deck
   in that style, **generated** from `tools/style-deck.html` (the frame and the example slides,
   shared by every style) plus `style.css`. Never edit a `template.html` by hand.
@@ -154,6 +154,33 @@ differently (folio's hero stat, signal's horizontal bars) as long as the markup 
 Its display and label fonts are style tokens (`--font-serif`, `--font-mono`); colours always
 come from the brand.
 
+**User styles** live in `<appData>/PPTD/styles/<name>/` (`lib/styles.js`; env
+`PPTD_USER_STYLES` for the agent; pre-approved for Claude Code as part of the brand folder),
+with the same files as a bundled style. A user style may not take a bundled name, so a name
+resolves to one style (bundled first). The per-prompt `<pptd-brand>` note lists the user's
+styles with their "Use for" line and says where the deck on screen gets its style
+(`custom` = made for that deck alone). The agent makes them by `PPTD.md` ("Making a style"):
+
+- `tools/pptd-style.mjs` (synced into the skill with `tools/style-deck.html` as
+  `deck-skeleton.html`): `list`, `check` (core layout classes required; the older ones only
+  warn, except with `--strict`, which `build-styles.mjs` uses for the bundled styles),
+  `build` and `preview --brand`.
+- `pptd-app.mjs render <page.html>` (socket command `render`, `renderPage` in
+  `lib/shot.js`): renders a downloaded design with its scripts stripped and blocked by CSP,
+  in a separate session whose requests are cancelled unless they are `file:`/`data:`, one
+  PNG per top-level `<section>`. Never load a design source any other way.
+
+**Previews:** `npm run style-previews` (Electron) writes each bundled style's `preview.jpg`
+(nine slides in the palette from its `STYLE.md`) and copies it to `site/static/img/styles/`.
+Run it after changing a style or the example slides, and commit the images.
+
+**The base layer** (in the frame of `tools/style-deck.html`) draws the newer layouts once for
+every style: photo slots and photo slides, people, agenda, tiers, layers, data tables,
+columns and references. It takes each style's voice from optional style variables in the
+style's `:root` (`--font-display`, `--font-label`, `--label-case`, `--label-track`,
+`--head-weight`, `--radius`, `--photo-radius`, `--hair`, `--rule`); a style may restyle any of
+it. New shared layouts should go there, not into every style.
+
 Pi needs nothing installed: the app ships it (`@earendil-works/pi-coding-agent`, pinned in
 `vendor/pi`) and runs it on its own Electron runtime. Claude Code must be installed (`claude` on
 your login-shell PATH, or set `PPTD_CLAUDE`). Machines without Node still get a `node` for the
@@ -180,7 +207,7 @@ applied with `nativeTheme.themeSource`, so `index.html` switches its colour toke
   changes on disk, `refreshFromDisk` patches the open page in place (`PATCH_JS` morphs the
   DOM, keeping unchanged nodes) instead of reloading it; ⌘R and non-radio pages reload.
 - `deck-preload.js`: runs inside the deck. Catches navigation keys (so the deck's own radio
-  group can't wrap from last to first) and dropped files.
+  group can't wrap from last to first) and dropped files (with the photo slot they landed on).
 - `index.html` / `renderer.js` / `preload.js`: toolbar, slides drawer, terminal (xterm.js).
 - `building.js`: the canvas animation on the empty stage while the agent runs a prompt
   (`agent-busy` IPC from `setBusy` in main, body class `agent-busy`).
@@ -189,7 +216,9 @@ applied with `nativeTheme.themeSource`, so `index.html` switches its colour toke
   offscreen window (Copy Slide as Image, Export Slides as Images, and the agent's tool).
 - `lib/app-socket.js`: a local socket (`PPTD_SOCKET`, owner-only) through which the skill's
   `pptd-app.mjs` asks the running app for screenshots and the key test.
-- `lib/media.js`: embeds images/video into a slide's `<section>`.
+- `lib/styles.js`: the user's own styles folder; lists them and resolves a style name.
+- `lib/media.js`: embeds images/video into a slide's `<section>`, or fills a photo slot
+  (`figure.photo`, spec "Photo slots") with an image.
 - `lib/history.js`: the prompt history: reads and writes the deck's
   `<template id="pptd-prompts">`, hashes decks without it, and keeps snapshots in
   `userData/history/<hash>.html.gz`. The agent reports each prompt and the end of each run;

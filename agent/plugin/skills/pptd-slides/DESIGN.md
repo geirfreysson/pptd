@@ -1,9 +1,16 @@
 # What makes a good presentation
 
-The styles in `styles/` (grid, bold, folio, signal, atelier, classic) look nothing alike, yet they
-agree on almost everything below. These principles are what make them work; the styles are
-worked examples. Follow them on every slide, and design from them when no layout fits or the
-user asks for a look none of the styles has.
+The styles in `styles/` (grid, bold, folio, signal, atelier, keynote, mono, sticker, playful,
+classic) look nothing alike, yet they agree on almost everything below. These principles are
+what make them work; the styles are worked examples.
+
+**Principles, not templates.** The principles are the rules; the styles, layouts and example
+slides are a vocabulary and a starting point. Use them when they fit, and compose something
+else when the content asks for it: a layout no template has, two layouts on one slide, a
+custom diagram, a slide built around one photo. A deck where every slide is a filled-in
+template looks like a template. What must hold is below: one point per slide, one focal
+element, clear colour roles, a consistent frame and type scale, and the style's voice. Inside
+that, design freely, and check the result in the screenshots.
 
 ## 1. Each slide makes one point
 
@@ -129,12 +136,44 @@ drop shadows.
 - The **closing slide** says what you need from the audience: the decisions, as numbered
   asks, or the next step. Not "Thank you" or "Questions?".
 
-## 10. Alignment
+## 10. Photos
+
+Photos make a deck feel real, and are the easiest thing to get wrong (keynote's rules, true
+of every style):
+
+- **Text never sits on the raw photo.** Put it on a solid field and join the two with a
+  scrim (`.photo-slide`), or move it off the photo. A slide with text over a photo carries 25
+  words at most.
+- **Brief each photo** when you leave a slot for one (`figure.photo` with `data-brief`):
+  the subject, the crop, and where the empty space is ("subject in the right third, calm
+  background, space on the left for the headline"). The user drops the picture onto the
+  slot.
+- **One hero photo per slide.** Supporting photos are details at a third of the size. No more
+  than three photos on a slide.
+- **Portraits share crop, eye line and background,** so a team slide reads as one set.
+- Before and after: same angle, same crop, side by side (`.photos`), the after marked.
+- No stock handshakes, no photos as decoration behind text, no rounded corners unless the
+  style rounds everything.
+
+## 11. Alignment
 
 - Left-align text. Centring blocks of text is the quickest way to make a slide look like a
   template.
 - Edges line up on the grid: sibling cards are equally high with aligned tops, gaps are
   equal, and the same element sits in the same place on every slide.
+
+## Bad, then good
+
+Six realistic mistakes and their fixes. Recognise them in your own screenshots.
+
+| Slide | Before (the mistake) | After (the fix) |
+|---|---|---|
+| Text | The title is a topic ("Business update"); eight equal-weight bullets; the ask buried in the last line; a centred title over a left-aligned body | The headline states the conclusion; two facts and one decision; secondary points demoted to one line in the footer; one alignment edge |
+| Photo | Light, thin text on the busiest part of the photo; no scrim; a 30-word sentence; the subject hidden behind the type | Text on a solid field, the photo on the other two-thirds, a gradient joining them; one number carries the point; 12 words in total |
+| Table | No takeaway; unsorted; centred numbers with no units or thousands separators; a traffic-light fill on every cell, so nothing stands out | The headline is the takeaway; sorted by size; right-aligned tabular numbers, units in the header; one tinted row and one accent cell |
+| Diagram | Ten crossing lines with no direction; random colours and shapes that mean nothing; no layers, so you can't tell what is core or where data flows | Layers instead of lines, flow implied top to bottom (`.layers`); one style per role (solid = write, dashed = read); the accent on the core only |
+| Numbers | A different colour for every number; decorative charts with no axes; a pie of a percentage; three metrics crammed in one card; blurry shadows | One hero number in the one accent colour; a chart of the trend that proves the headline; supporting metrics ranked, quiet and in ink |
+| Agenda | Sixteen equal items; no times, owners or durations; logistics mixed with content; no sense of where we are | The headline states the outcome; four blocks with time and duration (`.agenda`); "now" marked; logistics demoted to one line |
 
 ## Using the styles for inspiration
 
@@ -151,6 +190,10 @@ rounded tinted cards in a grid deck).
 | folio | a margin rail (section label, italic page numeral); serif for what is said, sans for what is explained; italic roman numerals; one underline as the editor's pen; numbered rows for a process |
 | signal | a header bar; panels sharing dividers; code-like tags (`[01]`, `//`, `>`); horizontal bars; a vertical release log; dark-first |
 | atelier | a four-shape kit (circle, square, arch, quarter); numbers inside shapes; arches for steps; time blocks; a takeaway panel bleeding off the edge; a flooded quote slide |
+| keynote | photos that bleed, text on a scrim side; huge type; one featured thing in the accent; good numbers in the highlight; dark-first |
+| mono | black and white; an inverted block for the core; one small red dot per slide; light-weight numbers; the eyebrow as a note at the top right; greyscale photos |
+| sticker | 3px ink borders with hard offset shadows; one tilted sticker; a staircase of steps; the hero stat in a circle; section slides in a pill |
+| playful | rounded type; outlined chips on a dotted adventure path; portraits on coloured blobs; the outcome in the highlight; one tilted badge |
 | classic | white cards on paper; a gradient bar on top; centred flow nodes |
 
 When the user asks for a look none of them has ("like a newspaper", "playful", "like our

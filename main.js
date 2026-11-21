@@ -424,7 +424,8 @@ function writeAtomic(file, text) {
 
 // ---------------------------------------------------------------- media drop
 
-async function handleDrop(w, paths, slideIndex) {
+// slot: the index of the photo slot (figure.photo) the files were dropped on, if any.
+async function handleDrop(w, paths, slideIndex, slot) {
   if (!paths?.length) return;
   const decks = paths.filter((p) => /\.html?$/i.test(p));
   const items = paths.filter((p) => media.kindOf(p));
@@ -443,6 +444,8 @@ async function handleDrop(w, paths, slideIndex) {
   const before = html;
   const notes = [];
   let added = 0;
+  const slotted = [];        // briefs of the photo slots filled
+  let slotPref = slot;       // only the first image goes to the slot it was dropped on
 
   for (const p of items) {
     const kind = media.kindOf(p);
@@ -452,6 +455,10 @@ async function handleDrop(w, paths, slideIndex) {
       if (kind === 'image') {
         const { mime, data, note } = media.encodeImage(p);
         if (note) notes.push(note);
+        // A slide with photo slots: fill the slot it was dropped on, else the first empty one.
+        const filled = media.fillPhotoSlot(html, n, slotPref, mime, data, alt);
+        slotPref = undefined;
+        if (filled) { html = filled.html; slotted.push(filled.brief); added++; continue; }
         fig = media.figureHtml('image', mime, data, alt);
       } else {
         const size = fs.statSync(p).size;
@@ -483,8 +490,12 @@ async function handleDrop(w, paths, slideIndex) {
     note: `The user removed the ${what} they had just added to slide ${n} (<section id="s${n}">) of ${displayName(file)}; the file changed on disk.`,
   });
   w.restoreIndex = target;
-  toast(w, `Added ${what} to slide ${n}${notes.length ? ` (${notes.join(', ')})` : ''}. ⌘Z to undo.`);
-  w.agent?.noteChange(`The user added ${what === 'image' ? 'an image' : what === 'video' ? 'a video' : what} to slide ${n} (<section id="s${n}">) of ${displayName(file)} in PPTD; the file changed on disk. Re-read that slide before editing it.`);
+  const where = slotted.length === added ? (added === 1 ? 'the photo slot on slide' : 'photo slots on slide') : 'slide';
+  toast(w, `Added ${what} to ${where} ${n}${notes.length ? ` (${notes.join(', ')})` : ''}. ⌘Z to undo.`);
+  const slotNote = slotted.length
+    ? ` ${slotted.length === 1 ? 'It went into the photo slot' : `${slotted.length} went into photo slots`} (figure.photo${slotted[0] ? `, brief: ${JSON.stringify(slotted.join(' | '))}` : ''}), which now hold${slotted.length === 1 ? 's' : ''} an <img>.`
+    : '';
+  w.agent?.noteChange(`The user added ${what === 'image' ? 'an image' : what === 'video' ? 'a video' : what} to slide ${n} (<section id="s${n}">) of ${displayName(file)} in PPTD; the file changed on disk.${slotNote} Re-read that slide before editing it.`);
 }
 
 // ---------------------------------------------------------------- reorder (drag in the drawer)
@@ -1247,8 +1258,8 @@ handle('drawer', (w, open) => { w.drawerOpen = !!open; if (w.drawerOpen) updateT
 handle('drop-paths', (w, { paths, slide } = {}) => {
   if (Array.isArray(paths)) handleDrop(w, paths.filter((p) => typeof p === 'string' && p), Number.isInteger(slide) ? slide : undefined);
 });
-handle('deck-drop', (w, paths) => {
-  if (Array.isArray(paths)) handleDrop(w, paths.filter((p) => typeof p === 'string' && p));
+handle('deck-drop', (w, paths, slot) => {
+  if (Array.isArray(paths)) handleDrop(w, paths.filter((p) => typeof p === 'string' && p), undefined, Number.isInteger(slot) && slot >= 0 ? slot : undefined);
 });
 handle('agent-start', (w, size) => startAgent(w, size || {}));
 handle('agent-stop', (w) => w.agent?.stop());
