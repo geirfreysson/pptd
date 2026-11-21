@@ -1,0 +1,189 @@
+    /* Style: atelier. Geometric and warm, like a design-school poster. Every slide is built
+       from a four-shape kit (circle, square, half-circle, quarter-circle), flat and in full
+       colour; shapes carry data (a number inside a shape, arches for steps, time blocks) and
+       colour panels bleed off the edge. Geometric bold headlines, a humanist sans for reading.
+       Radius is 0 or a full shape radius, never in between; 2px ink rules, no shadows or
+       gradients. The accent is the structure colour; the highlight is the spark, one shape or
+       one short phrase per slide, and may flood a quote slide. */
+    :root {
+      --font-display: Futura, "Century Gothic", "Avenir Next", "Trebuchet MS", sans-serif;
+      --rule: .156cqw;             /* 2px at 1280 */
+      --shape: 12.5cqw;            /* 160px: a data shape */
+    }
+    /* 64 side margins, 56 top; content ends at y 660. */
+    .slide { padding: 4.375cqw 5cqw 4.688cqw; gap: 1.25cqw; color: var(--ink); }
+    h1, h2, h3, p, figure, blockquote { margin: 0; }
+
+    /* ---------- Type scale: cqw = 1% of deck width (12.8px at 1280×720) ---------- */
+    .eyebrow { position: relative; z-index: 1; font-family: var(--font-display); font-size: 1.094cqw; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-text); }
+    h1 { position: relative; z-index: 1; font-family: var(--font-display); font-size: 6.25cqw; line-height: 1.02; font-weight: 700; letter-spacing: -.01em; max-width: 64cqw; text-wrap: balance; }
+    h2 { position: relative; z-index: 1; font-family: var(--font-display); font-size: 3.438cqw; line-height: 1.08; font-weight: 700; max-width: 72cqw; text-wrap: balance; }
+    h3 { font-family: var(--font-display); font-size: 1.953cqw; line-height: 1.15; font-weight: 700; }
+    p, li { font-size: 1.367cqw; line-height: 1.45; color: var(--ink-2); }
+    .lead { position: relative; z-index: 1; font-size: 1.719cqw; line-height: 1.4; color: var(--ink-2); max-width: 60cqw; }
+    /* Footer: a dot and a square (the kit, small), then the source. */
+    .footer { position: absolute; z-index: 1; left: 5cqw; width: 78cqw; bottom: 0; height: 2.344cqw; display: flex; align-items: center; gap: 1.25cqw; font-size: .938cqw; color: var(--muted); }
+    .footer::before { content: ""; flex: none; width: .625cqw; height: .625cqw; border-radius: 50%; background: var(--accent); box-shadow: .938cqw 0 0 var(--highlight); margin-right: .938cqw; }
+    .footer span:last-child { margin-left: auto; }
+    /* The main block of a slide: takes the height between the headline and the footer. */
+    .content { position: relative; z-index: 1; flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; margin-top: 1.875cqw; }
+    .statement { font-family: var(--font-display); font-size: 4.375cqw; line-height: 1.12; font-weight: 700; color: var(--ink); max-width: 72cqw; text-wrap: balance; }
+    .key { color: var(--accent-text); }
+    /* A statement slide gets two shapes: a large circle bleeding off the top right, a small dot. */
+    .slide:has(.statement)::before { content: ""; position: absolute; top: -13cqw; right: -9cqw; width: 30cqw; height: 30cqw; border-radius: 50%; background: var(--accent); }
+    .slide:has(.statement) .content::before { content: ""; width: 3.125cqw; height: 3.125cqw; border-radius: 50%; background: var(--highlight); margin-bottom: 2.5cqw; }
+
+    /* ---------- Title / closing slide: a flood of the accent, a shape bleeding off the edge ---------- */
+    .title-slide { background: var(--title-bg); color: var(--paper); }
+    .title-slide::before { content: ""; position: absolute; top: -8cqw; right: -8cqw; width: 34cqw; height: 34cqw; border-radius: 50%; background: var(--highlight); }
+    .title-slide:has(.asks)::before { width: 22cqw; height: 22cqw; top: -11cqw; right: 12cqw; border-radius: 0 0 50% 50%; }
+    .title-slide .eyebrow { color: var(--title-eyebrow); }
+    .title-slide .content { justify-content: center; gap: 1.875cqw; margin: 0; }
+    .title-slide h1, .title-slide h2 { color: var(--paper); }
+    .title-slide .lead, .title-slide p { color: var(--title-soft); }
+    .title-slide .footer { color: var(--title-footer); }
+    .title-slide .footer::before { background: var(--paper); }
+    .title-slide .split { grid-template-columns: 1fr; gap: 2.5cqw; align-items: start; }
+    .title-slide .split h2 { font-size: 5cqw; line-height: 1.05; max-width: 70cqw; }
+    .title-mark { display: none; }
+    /* ---------- Section divider: the accent, a big highlight numeral, a pie shape ---------- */
+    .section-slide { background: var(--accent); }
+    .section-slide::before { content: ""; position: absolute; top: 6cqw; right: 7cqw; width: 33cqw; height: 33cqw; border-radius: 50%; background: conic-gradient(var(--paper) 0 25%, var(--highlight) 0); }
+    .section-slide .content { justify-content: flex-end; gap: 1.25cqw; margin: 0 0 1.25cqw; }
+    .section-num { font-family: var(--font-display); font-size: 9.375cqw; line-height: .9; font-weight: 700; color: var(--highlight); }
+    .section-text { display: flex; flex-direction: column; gap: 1.25cqw; max-width: 44cqw; }
+    .section-text .eyebrow { display: none; }
+    .section-text h2 { font-size: 4.375cqw; line-height: 1.02; color: var(--on-accent); }
+    .section-text .lead { color: color-mix(in srgb, var(--on-accent) 82%, transparent); }
+    .section-slide .footer { color: color-mix(in srgb, var(--on-accent) 75%, transparent); }
+    .section-slide .footer::before { background: var(--on-accent); }
+
+    /* ---------- Cards: colour panels, each topped by a shape from the kit ---------- */
+    .cards { flex: 1; max-height: 28cqw; min-height: 20cqw; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1.25cqw; }
+    .card { position: relative; background: var(--accent-soft); padding: 2.5cqw 1.875cqw; display: flex; flex-direction: column; justify-content: flex-end; gap: .781cqw; }
+    .card .num { position: absolute; top: 2.5cqw; left: 1.875cqw; width: 3.125cqw; height: 3.125cqw; font-size: 0; background: var(--accent); }
+    .card:nth-child(4n+1) .num { border-radius: 50%; }
+    .card:nth-child(4n+3) .num { border-radius: 999px 999px 0 0; background: var(--ink); }
+    .card:nth-child(4n+4) .num { border-radius: 100% 0 0 0; }
+    .card.hl { background: var(--accent); }
+    .card.hl .num { background: var(--highlight); }
+    .card.hl h3, .card.hl p { color: var(--on-accent); }
+    .num { font-family: var(--font-display); font-weight: 700; }
+    /* ---------- Process steps: arches, the current one taller and solid ---------- */
+    .steps { list-style: none; margin: 0; padding: 0; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1.25cqw; }
+    .step { display: grid; grid-template-rows: 10cqw auto 1fr; row-gap: .938cqw; }
+    .step .num { align-self: end; height: 7cqw; display: flex; align-items: flex-end; justify-content: center; padding-bottom: .938cqw; border-radius: 999px 999px 0 0; background: var(--accent-soft); color: var(--accent-text); font-size: 1.406cqw; }
+    .step h3 { font-size: 1.563cqw; }
+    .step p { font-size: 1.172cqw; }
+    .step.hl .num { height: 10cqw; background: var(--accent); color: var(--on-accent); }
+    .step.hl h3 { color: var(--accent-text); }
+    /* ---------- Big numbers: each number inside a shape from the kit ---------- */
+    .stats { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2.5cqw; }
+    .stat { display: flex; flex-direction: column; align-items: flex-start; gap: .781cqw; }
+    .value { display: flex; align-items: center; justify-content: center; width: var(--shape); height: var(--shape); margin-bottom: .938cqw; background: var(--accent-soft); color: var(--accent-text); font-family: var(--font-display); font-size: 2.5cqw; font-weight: 700; line-height: 1; white-space: nowrap; letter-spacing: -.02em; }
+    .unit { font-size: .5em; margin-left: .15em; }
+    .stat:nth-child(4n+1) .value { border-radius: 50%; }
+    .stat:nth-child(4n+2) .value { background: var(--highlight); color: var(--on-highlight); }
+    .stat:nth-child(4n+3) .value { border-radius: 999px 999px 0 0; background: var(--ink); color: var(--paper); }
+    .stat:nth-child(4n+4) .value { border-radius: 100% 0 0 0; align-items: flex-end; justify-content: flex-end; padding: 0 .938cqw .938cqw 0; }
+    .stat.hl .value { background: var(--accent); color: var(--on-accent); }
+    .stat .label { font-size: 1.25cqw; font-weight: 600; color: var(--ink); }
+    .delta { font-size: 1.094cqw; color: var(--muted); }
+    /* ---------- Comparison table: 2px rules, our column's header solid ---------- */
+    .compare { width: 100%; border-collapse: collapse; font-size: 1.25cqw; }
+    .compare th, .compare td { text-align: left; padding: 1.016cqw 1.25cqw; border-bottom: var(--rule) solid var(--ink); color: var(--ink-2); }
+    .compare th { font-family: var(--font-display); font-weight: 700; color: var(--ink); background: var(--accent-soft); border-bottom: 0; }
+    .compare th:first-child { background: transparent; }
+    .compare td:first-child { padding-left: 0; font-weight: 700; color: var(--ink); }
+    .compare th.win { background: var(--accent); color: var(--on-accent); }
+    .compare th.win::before { content: ""; display: inline-block; width: .781cqw; height: .781cqw; margin-right: .625cqw; border-radius: 50%; background: var(--highlight); }
+    .compare td.win { color: var(--ink); font-weight: 600; }
+    /* ---------- Chart + takeaway: the takeaway is a colour panel bleeding off the right edge ---------- */
+    .split { display: grid; grid-template-columns: 2fr 1fr; gap: 3.125cqw; align-items: end; }
+    .slide:has(.takeaway) > h2, .slide:has(.takeaway) > .eyebrow, .slide:has(.takeaway) > .lead { max-width: 52cqw; }
+    .slide:has(.takeaway) .split { grid-template-columns: 1fr; padding-right: 40cqw; }
+    .slide:has(.takeaway) .footer { width: 52cqw; }
+    .slide:has(.takeaway) .content { position: static; }
+    .takeaway { position: absolute; z-index: 0; top: 0; bottom: 0; right: 0; width: 36cqw; padding: 0 5cqw 5.5cqw 3.75cqw; background: var(--accent); display: flex; flex-direction: column; justify-content: flex-end; gap: 1.094cqw; overflow: hidden; }
+    .takeaway::before { content: ""; position: absolute; top: -6cqw; right: -6cqw; width: 14cqw; height: 14cqw; border-radius: 50%; background: var(--highlight); }
+    .takeaway .eyebrow { color: var(--highlight); }
+    .takeaway h3 { font-size: 2.188cqw; line-height: 1.2; color: var(--on-accent); }
+    .takeaway p { color: color-mix(in srgb, var(--on-accent) 82%, transparent); }
+    /* Bars with round heads: --v on each .bar is its height, 0–1 */
+    .bars { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; column-gap: .938cqw; align-items: end; border-bottom: var(--rule) solid var(--ink); margin-bottom: 2.5cqw; }
+    .bar { position: relative; display: flex; flex-direction: column; gap: .469cqw; }
+    .bar .val { text-align: center; font-size: 1.016cqw; font-weight: 700; color: var(--ink-2); }
+    .bar .fill { display: block; align-self: center; width: 56%; height: calc(var(--v, .5) * 24cqw); border-radius: 999px 999px 0 0; background: var(--accent-soft); }
+    .bar .cat { position: absolute; top: 100%; left: 0; right: 0; margin-top: .625cqw; text-align: center; font-size: .938cqw; color: var(--muted); }
+    .bar.hl .fill { background: var(--accent); }
+    .bar.hl .val, .bar.hl .cat { color: var(--accent-text); }
+    .bar.est .fill { background: transparent; border: var(--rule) dashed var(--accent); border-bottom: 0; }
+    /* ---------- Quote: the slide floods with the highlight ---------- */
+    .slide:has(.quote) { background: var(--highlight); }
+    .slide:has(.quote) .footer { color: color-mix(in srgb, var(--on-highlight) 70%, transparent); }
+    .slide:has(.quote) .footer::before { background: var(--on-highlight); box-shadow: .938cqw 0 0 var(--accent); }
+    .quote { display: flex; flex-direction: column; gap: 1.875cqw; max-width: 80cqw; }
+    .quote blockquote { font-family: var(--font-display); font-size: 3.125cqw; line-height: 1.18; font-weight: 700; color: var(--on-highlight); text-wrap: pretty; }
+    .quote blockquote::before { content: "\201C"; } .quote blockquote::after { content: "\201D"; }
+    .quote figcaption { display: flex; flex-direction: column; font-size: 1.172cqw; color: color-mix(in srgb, var(--on-highlight) 75%, transparent); }
+    .quote figcaption b { font-family: var(--font-display); color: var(--on-highlight); }
+    .quote .key { color: inherit; }
+    /* ---------- Timeline: a strip of time blocks ---------- */
+    .timeline { list-style: none; margin: 0; padding: 0; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }
+    .timeline li { display: flex; flex-direction: column; gap: .625cqw; padding-right: 1.25cqw; }
+    .timeline li::before { content: ""; height: 3.125cqw; margin: 0 -1.25cqw 1.25cqw 0; background: var(--accent-soft); }
+    .timeline li:first-child::before { border-radius: 999px 0 0 999px; }
+    .timeline li:last-child::before { border-radius: 0 999px 999px 0; margin-right: 0; }
+    .timeline li.now::before { background: var(--accent); border-radius: 0 999px 999px 0; }
+    .timeline li.now:first-child::before { border-radius: 999px; }
+    .timeline li.goal::before { background: var(--ink); }
+    .timeline h3 { font-size: 1.563cqw; }
+    .timeline p { font-size: 1.172cqw; }
+    .when { font-size: 1.016cqw; font-weight: 600; color: var(--muted); }
+    .now .when { color: var(--accent-text); }
+    .goal .when { color: var(--ink); }
+    /* ---------- Asks: arrows ---------- */
+    .asks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .781cqw; }
+    .asks li { display: flex; gap: .938cqw; font-size: 1.563cqw; line-height: 1.35; color: inherit; }
+    .asks li::before { content: "\2192"; font-family: var(--font-display); font-weight: 700; color: var(--accent-text); }
+    .title-slide .asks li { color: var(--title-soft); }
+    .title-slide .asks li::before { color: var(--title-eyebrow); }
+
+    /* ---------- Older components, drawn in this style ---------- */
+    .grid { display: grid; gap: 1.25cqw; }
+    .grid.two { grid-template-columns: repeat(2, 1fr); }
+    .grid.three { grid-template-columns: repeat(3, 1fr); }
+    .grid.four { grid-template-columns: repeat(4, 1fr); }
+    .panel { background: var(--accent-soft); padding: 1.875cqw; display: flex; flex-direction: column; gap: .781cqw; align-items: flex-start; }
+    /* Tags are for status only: a dot in the status colour and a label. */
+    .tag { display: inline-flex; align-items: center; gap: .469cqw; font-family: var(--font-display); font-size: 1.016cqw; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink); }
+    .tag::before { content: ""; width: .781cqw; height: .781cqw; border-radius: 50%; background: currentColor; }
+    .tag.ready::before { background: var(--green); }
+    .tag.proven::before { background: var(--ink); }
+    .tag.build::before { background: var(--amber); }
+    .callout { background: var(--accent-soft); padding: 1.25cqw 1.875cqw; font-size: 1.406cqw; line-height: 1.45; color: var(--ink); }
+    .callout.amber { background: var(--amber-soft); }
+    .path { display: flex; align-items: stretch; gap: 1.25cqw; }
+    .node { flex: 1; display: flex; flex-direction: column; gap: .469cqw; background: var(--accent-soft); padding: 1.563cqw; }
+    .node strong { font-family: var(--font-display); font-size: 1.563cqw; }
+    .node span { font-size: 1.172cqw; color: var(--ink-2); line-height: 1.4; }
+    .node.hl { background: var(--accent); }
+    .node.hl strong, .node.hl span { color: var(--on-accent); }
+    .arrow { align-self: center; color: var(--accent-text); font-family: var(--font-display); font-size: 1.875cqw; font-weight: 700; }
+    .matrix { width: 100%; border-collapse: collapse; font-size: 1.25cqw; }
+    .matrix th, .matrix td { text-align: left; padding: 1.016cqw 1.875cqw 1.016cqw 0; border-bottom: var(--rule) solid var(--ink); vertical-align: top; color: var(--ink-2); }
+    .matrix th { font-family: var(--font-display); font-size: 1.016cqw; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--accent-text); }
+    .matrix td:first-child { font-weight: 700; color: var(--ink); }
+    .status { font-weight: 700; white-space: nowrap; }
+    .status.green { color: var(--green); } .status.blue { color: var(--ink); } .status.amber { color: var(--amber); }
+    /* Inline SVG diagrams: flat panels, round step markers in the highlight. */
+    .diagram { width: 100%; }
+    .diagram svg { width: 100%; height: auto; display: block; }
+    .dg-box { fill: var(--accent-soft); stroke: none; rx: 0; }
+    .dg-box.hl { fill: color-mix(in srgb, var(--accent) 32%, var(--paper)); }
+    .dg-label { fill: var(--ink); font: 700 19px var(--font-display); }
+    .dg-sub { fill: var(--ink-2); font: 14px var(--font); }
+    .dg-arrow { stroke: var(--ink); stroke-width: 2; fill: none; }
+    .dg-arrowhead { fill: var(--ink); }
+    .dg-step { fill: var(--highlight); }
+    .dg-step-text { fill: var(--on-highlight); font: 700 14px var(--font-display); }

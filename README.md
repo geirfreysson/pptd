@@ -53,6 +53,23 @@ time, sign in with your **ChatGPT** (Plus/Pro) or **Claude** (Pro/Max) account, 
 
 The agent hears about your changes, so it never works from an out-of-date picture of the deck.
 
+## Styles: the layout, separate from your brand
+
+Every deck has a style that decides its layout:
+
+- **Grid**: quiet and precise, for reviews, reports and technical talks.
+- **Bold**: warm and confident, for pitches and workshops.
+- **Folio**: editorial, like an annual report, for board papers and strategy.
+- **Signal**: a dense, dashboard-like technical look, dark with a dark brand.
+- **Atelier**: geometric and friendly, with flat shapes that carry the numbers, for
+  workshops and training.
+- **Classic**: PPTD's original look.
+
+The agent picks one to suit the deck and tells you which, or you can ask: *"use the folio
+style"*, *"make this deck bold"*. Switching style keeps your slides and your brand; only the
+layout changes. Whatever the style, the agent designs by the same principles: one point per
+slide, one thing to look at first, a headline that states the conclusion.
+
 ## Your brand, on every deck
 
 The first time you make a presentation, the agent asks how your decks should look: "Google
@@ -62,7 +79,7 @@ your default brand.
 Every deck keeps its own copy of its brand, so it looks the same wherever it's opened, and
 changing your default later doesn't restyle old decks. Want something different for one
 deck? Just ask: *"use red and grey for this one."* To change the default: *"make this my
-default brand."*
+default brand."* Any brand works with any style.
 
 ## Go back to any prompt
 

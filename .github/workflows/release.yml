@@ -44,10 +44,9 @@ jobs:
         run: |
           set -euo pipefail
           sh tools/sync-skill.sh
-          git diff --exit-code -- agent/plugin/skills || { echo "The skill's copies of the spec, checker or deck tool are stale: run npm run sync-skill and commit." >&2; exit 1; }
+          git diff --exit-code -- agent/plugin/skills || { echo "The skill's copies of the spec, checker or deck tool, or its style templates, are stale: run npm run sync-skill and commit." >&2; exit 1; }
           for f in main.js preload.js deck-preload.js renderer.js lib/*.js agent/pi/*.js agent/pi/*.mjs tools/*.mjs; do node --check "$f"; done
-          cp agent/plugin/skills/pptd-slides/template.html "$RUNNER_TEMP/template.pptd.html"
-          node tools/pptd-check.mjs "$RUNNER_TEMP/template.pptd.html"
+          node tools/build-styles.mjs --check
 
       - name: Validate Apple release secrets
         env:

@@ -31,6 +31,31 @@ new line.
 When you [edit by hand](./editing-by-hand.md), the agent hears about your changes, so it never
 works from an out-of-date picture of the deck.
 
+## Pick a style
+
+Every deck has a style that decides its layout, separate from its colours:
+
+- **Grid**: quiet and editorial. Hairlines, square corners, one accent per slide. For board
+  and quarterly reviews, reports, research and technical talks.
+- **Bold**: warm and confident. Heavy headlines and rounded cards that fill the slide. For
+  pitches, launches, all-hands and workshops.
+- **Folio**: editorial, like a well-set annual report. Serif headlines and a margin rail with
+  the section and page number. For board and operating reviews, strategy and research.
+- **Signal**: technical and dense, like a good dashboard. Mono headlines and panels; dark
+  when your brand is dark. For engineering reviews, architecture and metrics.
+- **Atelier**: geometric and warm, like a design-school poster. Flat circles, squares and
+  arches carry the numbers. For workshops, training and community talks.
+- **Classic**: PPTD's original look, with white cards and a coloured bar along the top.
+
+The agent picks the style that suits what you asked for and tells you which. To choose:
+*"use the grid style"*. To switch a finished deck: *"make this deck bold"*. Your slides and
+your brand stay; only the layout changes. Want the same style every time? *"Always use
+grid."*
+
+Whatever the style, the agent designs by the same principles: each slide makes one point,
+its headline states the conclusion, there is one thing to look at first, and the closing
+slide says what you need from the audience.
+
 ## Your brand, on every deck
 
 The first time you make a presentation, the agent asks how your decks should look:
@@ -42,6 +67,7 @@ changing your default later doesn't restyle old decks.
 
 - Something different for one deck? *"Use red and grey for this one."*
 - Change the default? *"Make this my default brand."*
+- Any brand works with any style.
 
 ## Go back to any prompt
 

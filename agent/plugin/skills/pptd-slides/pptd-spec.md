@@ -30,8 +30,8 @@ An agent producing a PPTD deck MUST:
 7. Size the deck as a **16:9 box** in a `.deck` element, with text scaled to the deck.
 
 Everything else is free: content, layout and branding. The `pptd-slides` skill bundled with
-the app has a template that follows all seven rules, with its brand colours in one `:root`
-block that a brand file can replace.
+the app has a starting deck per style that follows all seven rules, with its layout in one
+style block and its brand colours in one `:root` block, each of which can be replaced.
 
 ---
 
@@ -234,9 +234,31 @@ agent editing it knows which brand to follow:
 | The rest of the CSS takes brand colours and the font from those tokens, not hard-coded values | SHOULD |
 | The brand's rules (logo use, wording) are summarised in a CSS comment at the top of the block | MAY |
 
-Token names used by the bundled template: `--ink`, `--ink-2`, `--muted`, `--paper`,
+Token names used by the bundled styles: `--ink`, `--ink-2`, `--muted`, `--paper`,
 `--accent`, `--accent-soft`, `--highlight`, `--title-bg`, `--title-eyebrow`, `--title-soft`,
-`--title-footer`, `--font`.
+`--title-footer`, `--font`. A brand may also set `--on-accent` (text on accent fills),
+`--accent-text` (the accent as text) and `--on-highlight` (text on highlight fills) when the
+defaults (`--paper`, `--accent`, `--ink`) don't read against its colours.
+
+### Style
+
+A deck may also record the style its layout comes from, so an agent editing it knows which
+design rules to follow and can switch it to another style:
+
+```html
+<meta name="pptd-style" content="grid">
+<style> … frame: navigation, sizing, print … </style>
+<style id="pptd-style"> /* Style: grid. … */ .card { … } .stats { … } … </style>
+<style id="pptd-brand"> … </style>
+```
+
+| Requirement | Level |
+|---|---|
+| `<meta name="pptd-style" content="…">` in `<head>` names the style (letters, digits, `-`, `_`) | MAY |
+| One `<style id="pptd-style">` holds the style's CSS, after the main `<style>` and before the brand block | MAY |
+| The style block takes every colour from the brand tokens (directly or through `color-mix()`), so any brand works with it | SHOULD |
+
+A deck without these keeps whatever look its CSS gives it.
 
 ### Prompt history
 

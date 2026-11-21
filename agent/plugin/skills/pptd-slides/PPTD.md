@@ -39,8 +39,9 @@ the deck next to this terminal.
   app's record of the user's prompts. Leave it as it is (keep it when rewriting the file).
   The app updates it after you finish, which changes the file on disk in that block only.
 - New decks: see "New presentations" below. They keep `<meta name="pptd" content="1">`.
-- Slide design follows SKILL.md (≤40 words per slide, headline states the conclusion, §6 type
-  and alignment) and the deck's brand.
+- Slide design follows SKILL.md (≤40 words per slide, headline states the conclusion, §6
+  design and alignment), the deck's style (`styles/<name>/STYLE.md`, named by its
+  `pptd-style` meta) and its brand.
 - **When the user says something looks wrong** (a line wraps, a box is cramped, things don't
   line up), fix the cause without making that element different from its siblings. Don't
   shrink one element's font or add one-off inline styles. Reword, restructure or re-layout
@@ -51,14 +52,21 @@ the deck next to this terminal.
 
 - The user creates presentations by asking you ("make a 6-slide deck about our Q3 results").
   There's no New button.
-- Start from `template.html` in this folder. Save as `<name>.pptd.html` in the folder the
-  `<pptd-current-slide>` note gives (or one the user names). PPTD opens it as soon as you
+- Pick a style (SKILL.md §1: the one the user names, else the default style in the brand
+  file, else the one that suits the deck's purpose) and start from `styles/<style>/template.html`
+  in this folder. Read `DESIGN.md` and that style's `STYLE.md` first. Save as `<name>.pptd.html` in the folder
+  the `<pptd-current-slide>` note gives (or one the user names). PPTD opens it as soon as you
   save, so write the file once with all slides, then refine it with edits.
-- Give it the brand first (below), then the content.
+- Give it the brand first (below), then the content. Keep only the example slides whose
+  layouts the content needs, and fill them in; don't leave unused examples in the deck.
+- When you chose the style yourself, say which in one line when you hand over, and that the
+  user can ask for another ("say 'bold style' for a warmer look").
 
 ## Brand
 
-Branding is handled by talking to you; the app has no brand settings.
+Branding is handled by talking to you; the app has no brand settings. The brand (colours,
+font) is separate from the style (layout, SKILL.md §1): any brand works with any style, and
+the user can change either without the other ("use our colours", "make this bold").
 
 - **Each deck carries its own brand**, so it looks the same wherever it's opened:
   `<meta name="pptd-brand" content="Brand name">` and a `<style id="pptd-brand">` block that
@@ -71,6 +79,8 @@ Branding is handled by talking to you; the app has no brand settings.
   change only that deck's meta and brand block. The default stays as it is.
 - **Change the default:** only when the user asks ("make this my default brand"). Rewrite
   the default brand file; existing decks keep their own brand.
+- **A default style:** if the user says which style they want by default ("always use grid"),
+  record it on the brand file's `Style:` line. Leave it blank otherwise.
 - The deck on screen keeps its brand unless the user asks to change it. A deck with no brand
   block keeps its current look; when asked to brand it, add the meta and the block, and point
   its hard-coded colours at the tokens.

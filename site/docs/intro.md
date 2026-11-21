@@ -23,6 +23,8 @@ phone it shows as a smaller copy of the same slide, not a rearranged web page.
 - **[Edit by hand](./editing-by-hand.md).** Drag slides to reorder them, drop in photos and
   video, copy a slide as an image.
 - **Keep your brand.** The agent asks once how your decks should look and uses it from then on.
+- **[Pick a style](./making-decks.md#pick-a-style).** Grid, Bold, Folio, Signal, Atelier or Classic
+  for the layout, with any brand's colours; switch a finished deck by asking.
 - **[Go back to any prompt](./making-decks.md#go-back-to-any-prompt).** Optionally keep every
   prompt with the deck and rewind to any of them.
 - **[Present](./presenting.md)** full screen or in the window, with the keyboard.

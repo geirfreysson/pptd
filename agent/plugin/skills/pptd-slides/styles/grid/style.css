@@ -1,0 +1,150 @@
+    /* Style: grid. Quiet, precise, editorial. Square corners, no shadows, no filled cards:
+       1px hairlines and 2px rules carry the structure. Mono uppercase labels. The accent marks
+       exactly one thing per slide; the highlight is only ever a small square marker. */
+    :root {
+      --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      --hair: color-mix(in srgb, var(--ink) 14%, transparent);
+      --rule: .156cqw;              /* 2px at 1280 */
+    }
+    /* 56 top, 64 sides; content ends at y 660, the footer band is the bottom 30px. */
+    .slide { padding: 4.375cqw 5cqw 4.688cqw; gap: 1.25cqw; color: var(--ink); }
+    h1, h2, h3, p, figure, blockquote { margin: 0; }
+
+    /* ---------- Type scale: cqw = 1% of deck width (12.8px at 1280×720) ---------- */
+    .eyebrow { font-family: var(--font-mono); font-size: 1.016cqw; font-weight: 400; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+    h1 { font-size: 5.625cqw; line-height: 1.02; font-weight: 500; letter-spacing: -.025em; max-width: 72cqw; text-wrap: balance; }
+    h2 { font-size: 3.125cqw; line-height: 1.1; font-weight: 500; letter-spacing: -.015em; max-width: 72cqw; text-wrap: balance; }
+    h3 { font-size: 1.719cqw; line-height: 1.25; font-weight: 600; }
+    p, li { font-size: 1.406cqw; line-height: 1.45; color: var(--ink-2); }
+    .lead { font-size: 1.875cqw; line-height: 1.35; color: var(--ink-2); max-width: 66cqw; }
+    .footer { position: absolute; left: 5cqw; width: 78.125cqw; bottom: 0; height: 2.344cqw; display: flex; align-items: center; justify-content: space-between; gap: 1.25cqw; border-top: 1px solid var(--hair); font-size: .938cqw; color: var(--muted); }
+    /* The main block of a slide: takes the height between the headline and the footer. */
+    .content { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; margin-top: 2.5cqw; }
+    .statement { font-size: 4.375cqw; line-height: 1.1; font-weight: 500; letter-spacing: -.02em; color: var(--ink); max-width: 80cqw; text-wrap: balance; }
+    .key { color: var(--accent-text); }
+
+    /* ---------- Title / closing slide ---------- */
+    .title-slide { background: var(--title-bg); color: var(--paper); }
+    .title-slide .eyebrow { color: var(--title-eyebrow); }
+    .title-slide .content { justify-content: flex-end; gap: 1.875cqw; margin: 0 0 3.75cqw; }
+    .title-slide h1, .title-slide h2 { color: var(--paper); }
+    .title-slide .lead, .title-slide p { color: var(--title-soft); }
+    .title-slide .footer { color: var(--title-footer); border-top: 0; }
+    .title-slide .split { align-items: center; grid-template-columns: 7fr 5fr; }
+    .title-slide .split h2 { font-size: 5.625cqw; line-height: 1.02; letter-spacing: -.025em; }
+    .title-mark { order: -1; width: 3.75cqw; height: .313cqw; background: var(--accent); }
+    /* ---------- Section divider ---------- */
+    .section-slide .content { display: grid; grid-template-columns: 3fr 9fr; column-gap: 1.875cqw; align-content: end; align-items: end; margin: 0 0 1.25cqw; padding-bottom: 3.75cqw; border-bottom: 1px solid var(--ink); }
+    .section-num { font-size: 12.5cqw; line-height: .8; font-weight: 300; letter-spacing: -.04em; color: var(--accent-text); }
+    .section-text { display: flex; flex-direction: column; gap: 1.25cqw; }
+    .section-text h2 { font-size: 4.375cqw; line-height: 1.05; letter-spacing: -.02em; }
+
+    /* ---------- Cards: 2–4 parallel points, divided by rules, not boxes ---------- */
+    .cards { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1.875cqw; }
+    .card { border-top: var(--rule) solid var(--ink); padding-top: 1.875cqw; display: flex; flex-direction: column; gap: 1.25cqw; }
+    .card.hl { border-top-color: var(--accent-text); }
+    .num { font-family: var(--font-mono); font-size: 1.016cqw; color: var(--muted); }
+    .card.hl .num { color: var(--accent-text); }
+    .card h3 { font-size: 2.031cqw; line-height: 1.2; }
+    .card p { font-size: 1.563cqw; }
+    /* ---------- Process steps: numbered squares joined by a line ---------- */
+    .steps { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1.875cqw; list-style: none; margin: 0; padding: 0; }
+    .step { position: relative; display: flex; flex-direction: column; gap: 1.25cqw; }
+    .step .num { display: grid; place-items: center; width: 2.5cqw; height: 2.5cqw; border: 1px solid var(--ink); color: var(--ink); background: var(--paper); position: relative; z-index: 1; }
+    .step:not(:last-child)::after { content: ""; position: absolute; top: 1.25cqw; left: 3.125cqw; right: -1.25cqw; height: 1px; background: var(--ink); }
+    .step.hl .num { background: var(--accent); border-color: var(--accent-text); color: var(--on-accent); }
+    .step.hl h3 { color: var(--accent-text); }
+    /* ---------- Big numbers: a left rule per stat ---------- */
+    .stats { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1.875cqw; }
+    .stat { border-left: 1px solid var(--ink); padding-left: 1.875cqw; display: flex; flex-direction: column; gap: .625cqw; }
+    .value { font-size: 5.625cqw; line-height: 1; font-weight: 400; letter-spacing: -.03em; color: var(--ink); white-space: nowrap; margin-bottom: .625cqw; }
+    .unit { font-size: .45em; letter-spacing: 0; }
+    .stat .label { font-size: 1.406cqw; color: var(--ink); }
+    .delta { font-family: var(--font-mono); font-size: 1.016cqw; color: var(--muted); }
+    .stat.hl .value { color: var(--accent-text); }
+    /* ---------- Comparison table: our column tinted ---------- */
+    .compare { width: 100%; border-collapse: collapse; font-size: 1.406cqw; }
+    .compare th, .compare td { text-align: left; padding: 1.094cqw 1.25cqw; border-bottom: 1px solid var(--hair); color: var(--ink); }
+    .compare th { font-weight: 600; border-bottom: 1px solid var(--ink); }
+    .compare th:first-child, .compare td:first-child { padding-left: 0; color: var(--ink-2); font-weight: 400; }
+    .compare .win { background: var(--accent-soft); font-weight: 600; }
+    .compare th.win { color: var(--accent-text); border-bottom: var(--rule) solid var(--accent); }
+    .compare tr:last-child td { border-bottom: 0; }
+    /* ---------- Two columns, main and side (8 + 4 of 12) ---------- */
+    .split { display: grid; grid-template-columns: 2fr 1fr; gap: 1.875cqw; align-items: end; }
+    /* ---------- Bar chart in HTML: --v on each .bar is its height, 0–1 ---------- */
+    .bars { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; column-gap: 1.875cqw; align-items: end; border-bottom: 1px solid var(--ink); margin-bottom: 2.5cqw; }
+    .bar { position: relative; display: flex; flex-direction: column; gap: .625cqw; }
+    .bar .val { font-size: 1.094cqw; color: var(--ink-2); }
+    .bar .fill { display: block; height: calc(var(--v, .5) * 22cqw); background: color-mix(in srgb, var(--ink) 22%, transparent); }
+    .bar .cat { position: absolute; top: 100%; left: 0; margin-top: .625cqw; font-family: var(--font-mono); font-size: 1.016cqw; color: var(--muted); }
+    .bar.hl .val { color: var(--accent-text); font-weight: 600; }
+    .bar.hl .cat { color: var(--accent-text); }
+    .bar.hl .fill { background: var(--accent); }
+    .bar.est .val { color: var(--muted); }
+    .bar.est .fill { background: transparent; border: 1px dashed var(--muted); border-bottom: 0; }
+    .takeaway { border-top: var(--rule) solid var(--ink); padding-top: 1.875cqw; display: flex; flex-direction: column; gap: 1.25cqw; }
+    .takeaway h3 { font-size: 1.875cqw; line-height: 1.3; font-weight: 500; }
+    /* ---------- Quote: left-aligned, an accent mark in the first column ---------- */
+    .quote { display: grid; grid-template-columns: 1fr 11fr; column-gap: 1.875cqw; }
+    .quote::before { content: "\201C"; grid-row: 1 / span 2; font-size: 9.375cqw; line-height: .8; font-weight: 500; color: var(--accent-text); }
+    .quote blockquote { font-size: 3.438cqw; line-height: 1.2; font-weight: 400; letter-spacing: -.015em; color: var(--ink); max-width: 70cqw; text-wrap: pretty; }
+    .quote figcaption { display: flex; gap: 1.25cqw; margin-top: 3.125cqw; padding-top: 1.25cqw; border-top: 1px solid var(--ink); font-size: 1.406cqw; color: var(--ink-2); }
+    .quote figcaption b { color: var(--ink); font-weight: 600; }
+    .quote .key { color: inherit; }
+    /* ---------- Timeline: square markers on a rule; the highlight square is "now" ---------- */
+    .timeline { list-style: none; margin: 0; padding: 0; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1.875cqw; }
+    .timeline li { position: relative; padding-top: 2.5cqw; display: flex; flex-direction: column; gap: 1.25cqw; }
+    .timeline li::before { content: ""; position: absolute; z-index: 1; top: 0; left: 0; width: .938cqw; height: .938cqw; border: var(--rule) solid var(--ink); background: var(--paper); }
+    .timeline li::after { content: ""; position: absolute; top: .391cqw; left: .938cqw; right: -1.875cqw; height: var(--rule); background: var(--ink); }
+    .timeline li:last-child::after { display: none; }
+    .timeline li.now::before { background: var(--highlight); border-color: var(--highlight); }
+    .timeline li.goal::before { background: var(--accent); border-color: var(--accent-text); }
+    .when { font-family: var(--font-mono); font-size: 1.016cqw; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+    .now .when { color: var(--ink); }
+    .goal .when, .goal h3 { color: var(--accent-text); }
+    /* ---------- Numbered asks, e.g. on a closing slide ---------- */
+    .asks { list-style: none; margin: 0; padding: 0; counter-reset: ask; display: flex; flex-direction: column; gap: 1.875cqw; }
+    .asks li { counter-increment: ask; display: flex; gap: 1.25cqw; align-items: baseline; padding-top: 1.25cqw; border-top: 1px solid color-mix(in srgb, currentColor 25%, transparent); font-size: 1.563cqw; line-height: 1.35; color: inherit; }
+    .asks li::before { content: counter(ask, decimal-leading-zero); font-family: var(--font-mono); font-size: 1.016cqw; color: var(--accent-text); }
+    .title-slide .asks li::before { color: var(--title-eyebrow); }
+
+    /* ---------- Older components, drawn in this style ---------- */
+    .grid { display: grid; gap: 1.875cqw; }
+    .grid.two { grid-template-columns: repeat(2, 1fr); }
+    .grid.three { grid-template-columns: repeat(3, 1fr); }
+    .grid.four { grid-template-columns: repeat(4, 1fr); }
+    .panel { border-top: var(--rule) solid var(--ink); padding-top: 1.875cqw; display: flex; flex-direction: column; gap: 1.25cqw; align-items: flex-start; }
+    /* Tags are for status only: a small square in the status colour and a mono label. */
+    .tag { display: inline-flex; align-items: center; gap: .625cqw; font-family: var(--font-mono); font-size: 1.016cqw; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); }
+    .tag::before { content: ""; width: .781cqw; height: .781cqw; background: currentColor; }
+    .tag.ready::before { background: var(--green); }
+    .tag.proven::before { background: var(--ink); }
+    .tag.build::before { background: var(--amber); }
+    .callout { border-left: var(--rule) solid var(--accent); padding: .313cqw 0 .313cqw 1.25cqw; font-size: 1.406cqw; line-height: 1.45; color: var(--ink); }
+    .callout.amber { border-color: var(--amber); }
+    .path { display: flex; align-items: stretch; gap: 1.25cqw; }
+    .node { flex: 1; display: flex; flex-direction: column; gap: .625cqw; border-top: 1px solid var(--ink); padding-top: 1.25cqw; }
+    .node strong { font-size: 1.719cqw; font-weight: 600; }
+    .node span { font-size: 1.406cqw; color: var(--ink-2); line-height: 1.4; }
+    .node.hl { border-top: var(--rule) solid var(--accent); }
+    .node.hl strong { color: var(--accent-text); }
+    .arrow { align-self: center; color: var(--muted); font-size: 1.875cqw; }
+    .matrix { width: 100%; border-collapse: collapse; font-size: 1.406cqw; }
+    .matrix th, .matrix td { text-align: left; padding: 1.094cqw 1.875cqw 1.094cqw 0; border-bottom: 1px solid var(--hair); vertical-align: top; color: var(--ink-2); }
+    .matrix th { font-family: var(--font-mono); font-size: 1.016cqw; font-weight: 400; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--ink); }
+    .matrix td:first-child { color: var(--ink); }
+    .matrix tr:last-child td { border-bottom: 0; }
+    .status { font-weight: 600; white-space: nowrap; }
+    .status.green { color: var(--green); } .status.blue { color: var(--ink); } .status.amber { color: var(--amber); }
+    /* Inline SVG diagrams: square boxes, ink lines, the accent on the one box that matters. */
+    .diagram { width: 100%; }
+    .diagram svg { width: 100%; height: auto; display: block; }
+    .dg-box { fill: var(--paper); stroke: var(--ink); stroke-width: 1; rx: 0; }
+    .dg-box.hl { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; }
+    .dg-label { fill: var(--ink); font: 600 18px var(--font); }
+    .dg-sub { fill: var(--ink-2); font: 15px var(--font); }
+    .dg-arrow { stroke: var(--ink); stroke-width: 1.5; fill: none; }
+    .dg-arrowhead { fill: var(--ink); }
+    .dg-step { fill: var(--ink); }
+    .dg-step-text { fill: var(--paper); font: 500 13px var(--font-mono); }

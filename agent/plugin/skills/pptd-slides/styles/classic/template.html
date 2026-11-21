@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="One-sentence description of the deck.">
+  <meta name="pptd" content="1">
+  <meta name="pptd-style" content="classic">
+  <meta name="pptd-brand" content="PPTD neutral">
+  <title>Deck title | Subtitle</title>
+  <style>
+    /* ---------- Frame: the same in every style. Navigation, sizing and the Teams fixes. ---------- */
+    :root {
+      --white: #fff;
+      /* Status colours: the same meaning on every slide, whatever the brand or style. */
+      --green: #16856c;  --green-soft: #e5f4ef;  --green-ink: #12664f;   /* ready / signed off */
+      --amber: #b66a12;  --amber-soft: #fff1da;  --amber-ink: #89510e;   /* in progress / to agree */
+      --blue-soft: #e5f1fa;                      --blue-ink: #135a90;    /* proven / proof of concept */
+      --shadow: 0 24px 70px rgba(20, 28, 48, .14);
+      /* Readable pairings, derived from the brand. A brand whose accent or highlight is light
+         (yellow, say) overrides them in its own block. */
+      --on-accent: var(--paper);      /* text on an accent fill */
+      --accent-text: var(--accent);   /* the accent as text on --paper or --accent-soft */
+      --on-highlight: var(--ink);     /* text on a highlight fill */
+    }
+    /* 16:9, top-anchored (Teams preview fix) */
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; background: #e9edf2; color: var(--ink); font-family: var(--font); }
+    body { display: grid; place-items: start center; overflow: hidden; }   /* start, NOT center */
+    .deck { width: min(100vw, 177.78vh); height: min(100vh, 56.25vw); container-type: inline-size; position: relative; background: var(--paper); overflow: hidden; box-shadow: var(--shadow); }
+
+    /* Script-free navigation. Radios are invisible but focusable: arrow keys move between them natively. */
+    .slide-radio { position: fixed; top: 0; left: 0; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
+    .slide { display: none; flex-direction: column; position: absolute; inset: 0; background: var(--paper); overflow: auto; }
+    /* ONE ENTRY PER SLIDE: extend this list whenever you add a slide. */
+    #r1:checked ~ #s1, #r2:checked ~ #s2, #r3:checked ~ #s3, #r4:checked ~ #s4, #r5:checked ~ #s5, #r6:checked ~ #s6, #r7:checked ~ #s7, #r8:checked ~ #s8, #r9:checked ~ #s9, #r10:checked ~ #s10, #r11:checked ~ #s11, #r12:checked ~ #s12, #r13:checked ~ #s13 { display: flex; flex-direction: column; }
+
+    /* .controls covers the slide but lets clicks through, except on its buttons and click zones. */
+    .controls { position: absolute; z-index: 5; inset: 0; display: flex; align-items: flex-end; justify-content: flex-end; gap: .625cqw; padding: 0 2.4% 1.125cqw 0; pointer-events: none; }
+    .controls .nav-btn, .controls .counter { pointer-events: auto; }
+    /* Click zones: a click (or tap) on the left third of the slide goes back, anywhere else
+       goes forward (the whole slide on the first one). They are the ‹ › labels' ::before, so
+       they need no extra markup; the bottom 7% is left clear for the buttons. */
+    .controls label::before { content: ""; position: absolute; top: 0; bottom: 7%; pointer-events: auto; }
+    .controls label[aria-label="Previous slide"]::before { left: 0; width: 33.33%; }
+    .controls label[aria-label="Next slide"]::before { left: 33.33%; right: 0; }
+    .controls .nav-ph ~ label[aria-label="Next slide"]::before { left: 0; }
+    .slide a { position: relative; z-index: 6; }   /* links stay clickable above the zones */
+    .controls .nav-btn, .controls .nav-ph { display: inline-flex; align-items: center; justify-content: center; border: 1px solid color-mix(in srgb, var(--ink) 20%, transparent); background: color-mix(in srgb, var(--paper) 94%, transparent); color: var(--ink); width: 3.125cqw; height: 2.812cqw; border-radius: .703cqw; font-size: 1.406cqw; cursor: pointer; user-select: none; }
+    .controls .nav-btn:hover { background: var(--accent-soft); }
+    .controls .nav-ph { visibility: hidden; }
+    .counter { min-width: 3.906cqw; text-align: center; color: var(--muted); font-size: 1.016cqw; font-variant-numeric: tabular-nums; background: color-mix(in srgb, var(--paper) 94%, transparent); border: 1px solid color-mix(in srgb, var(--ink) 20%, transparent); border-radius: .703cqw; padding: .625cqw .469cqw; }
+    .progress { position: absolute; z-index: 6; bottom: 0; left: 0; height: .312cqw; width: 100%; background: color-mix(in srgb, var(--ink) 9%, transparent); }
+    .progress span { display: block; height: 100%; background: var(--accent); }
+
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+    @media print {
+      @page { size: 13.333in 7.5in; margin: 0; }
+      html, body { width: auto; height: auto; background: white; overflow: visible; display: block; }
+      .deck { width: 13.333in; height: auto; overflow: visible; box-shadow: none; }
+      .slide { display: flex !important; position: relative; width: 13.333in; height: 7.5in; overflow: hidden; break-after: page; }
+      .controls, .progress { display: none !important; }
+    }
+  </style>
+  <!-- PPTD style block: this deck's layout and type. The meta above names it. Every size is in
+       cqw (1cqw = 12.8px at 1280×720) and every colour comes from the brand tokens, so any brand
+       works with any style. Replace this block (and the meta) to restyle the deck. -->
+  <style id="pptd-style">
+    /* Style: classic. PPTD's original look: white cards with hairline borders and rounded
+       corners, a gradient bar along the top of content slides, centred flow nodes. */
+    :root {
+      --line: color-mix(in srgb, var(--ink) 12%, var(--paper));
+      --head-bg: color-mix(in srgb, var(--ink) 5%, var(--white));
+    }
+    .slide { padding: 5% 7.2% 7.4%; }
+
+    /* ---------- Type scale: cqw = 1% of deck width (12.8px at 1280×720) ---------- */
+    .slide::before { content: ""; position: absolute; top: 0; left: 0; height: .625cqw; width: 100%; background: linear-gradient(90deg, var(--ink), var(--accent)); }
+    h1, h2, h3, p { margin-top: 0; }
+    .eyebrow { color: var(--ink); text-transform: uppercase; letter-spacing: .16em; font-size: 1cqw; font-weight: 700; margin-bottom: 1.15em; }
+    h1 { font-size: 5.6cqw; line-height: 1.02; letter-spacing: -.045em; margin-bottom: .3em; max-width: 75cqw; }
+    h2 { font-size: 3.3cqw; line-height: 1.04; letter-spacing: -.035em; margin-bottom: .45em; }
+    h3 { font-size: 1.55cqw; line-height: 1.15; margin-bottom: .5em; }
+    p, li { font-size: 1.3cqw; line-height: 1.45; }
+    .lead { color: var(--ink-2); font-size: 1.75cqw; line-height: 1.34; }
+    .footer { position: absolute; left: 7.2%; right: 22%; bottom: 2.8%; display: flex; justify-content: space-between; gap: .938cqw; color: var(--muted); font-size: .9cqw; letter-spacing: .03em; }
+    /* The main block of a slide: takes the height between the headline and the footer. */
+    .content { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
+    .content > :last-child { margin-bottom: 0; }
+    .statement { font-size: 4cqw; line-height: 1.12; letter-spacing: -.035em; font-weight: 700; color: var(--ink); max-width: 80cqw; margin: 0; }
+    .key { color: var(--accent-text); }
+
+    /* ---------- Components ---------- */
+    .grid { display: grid; gap: 1.406cqw; }
+    .grid.two { grid-template-columns: repeat(2, 1fr); }
+    .grid.three { grid-template-columns: repeat(3, 1fr); }
+    .grid.four { grid-template-columns: repeat(4, 1fr); }
+    .panel { background: var(--white); border: 1px solid var(--line); border-radius: 1.25cqw; padding: 1.7cqw; }
+    .panel p:last-child { margin-bottom: 0; }
+    /* Tags are for status only (the status colours). */
+    .tag { display: inline-flex; padding: .469cqw .781cqw; border-radius: 999px; font-size: .9cqw; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin-bottom: .6em; }
+    .tag.ready { color: var(--green-ink); background: var(--green-soft); }
+    .tag.proven { color: var(--blue-ink); background: var(--blue-soft); }
+    .tag.build { color: var(--amber-ink); background: var(--amber-soft); }
+    .callout { border-left: .312cqw solid var(--accent); padding: .781cqw 1.25cqw; background: var(--accent-soft); border-radius: 0 .781cqw .781cqw 0; color: var(--ink-2); font-size: 1.25cqw; line-height: 1.45; }
+    .callout.amber { border-color: var(--amber); background: var(--amber-soft); }
+    /* Flow diagram in HTML: node → node → node */
+    .path { display: flex; align-items: stretch; gap: .781cqw; margin: .8em 0; }
+    .node { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 6.094cqw; padding: .938cqw; background: var(--white); border: 1px solid var(--line); border-radius: 1.094cqw; text-align: center; }
+    .node strong { font-size: 1.3cqw; }
+    .node span { color: var(--muted); font-size: .95cqw; margin-top: .469cqw; line-height: 1.35; }
+    .node.hl { border-color: var(--accent-text); box-shadow: 0 0 0 .156cqw color-mix(in srgb, var(--accent) 22%, transparent); }
+    .arrow { align-self: center; color: var(--accent-text); font-size: 2.1cqw; }
+    /* Status matrix */
+    .matrix { width: 100%; border-collapse: collapse; background: var(--white); border-radius: .938cqw; overflow: hidden; font-size: 1.1cqw; }
+    .matrix th, .matrix td { text-align: left; padding: .781cqw 1.094cqw; border-bottom: 1px solid var(--line); vertical-align: top; }
+    .matrix th { color: var(--muted); font-size: .86em; text-transform: uppercase; letter-spacing: .07em; background: var(--head-bg); }
+    .matrix tr:last-child td { border-bottom: 0; }
+    .matrix tbody tr { transition: background-color .12s ease; }
+    .matrix tbody tr:hover { background: var(--accent-soft); }   /* CSS hover: no script */
+    .status { font-weight: 700; white-space: nowrap; }
+    .status.green { color: var(--green); } .status.blue { color: var(--ink); } .status.amber { color: var(--amber); }
+    /* Inline SVG diagrams: style with classes, size with the slide */
+    .diagram { width: min(100%, 78cqw); margin: .4em auto 0; }
+    .diagram svg { width: 100%; height: auto; display: block; }
+    .dg-box { fill: var(--white); stroke: var(--line); stroke-width: 1.5; }
+    .dg-box.hl { stroke: var(--accent); stroke-width: 2.5; }
+    .dg-label { fill: var(--ink); font: 700 15px var(--font); }
+    .dg-sub { fill: var(--muted); font: 12px var(--font); }
+    .dg-arrow { stroke: var(--accent); stroke-width: 2.5; fill: none; }
+    .dg-arrowhead { fill: var(--accent); }
+    .dg-step { fill: var(--highlight); }
+    .dg-step-text { fill: var(--white); font: 700 13px var(--font); }
+
+    /* Cards: 2–4 parallel points */
+    .cards { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1.406cqw; }
+    .card { background: var(--white); border: 1px solid var(--line); border-radius: 1.25cqw; padding: 2cqw 1.9cqw; display: flex; flex-direction: column; gap: .8cqw; min-height: 17cqw; }
+    .card h3, .card p { margin: 0; }
+    .card h3 { font-size: 1.9cqw; }
+    .card p { font-size: 1.45cqw; color: var(--ink-2); }
+    .card.hl { border-color: var(--accent-text); box-shadow: 0 0 0 .156cqw color-mix(in srgb, var(--accent) 22%, transparent); }
+    .num { color: var(--accent-text); font-size: 1.1cqw; font-weight: 700; letter-spacing: .08em; }
+    /* Process steps */
+    .steps { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: .781cqw; list-style: none; margin: 0; padding: 0; counter-reset: none; }
+    .step { position: relative; background: var(--white); border: 1px solid var(--line); border-radius: 1.094cqw; padding: 1.6cqw 1.3cqw; display: flex; flex-direction: column; gap: .6cqw; min-height: 14cqw; }
+    .step h3, .step p { margin: 0; }
+    .step h3 { font-size: 1.55cqw; }
+    .step p { font-size: 1.25cqw; color: var(--ink-2); }
+    .step .num { display: grid; place-items: center; width: 2.4cqw; height: 2.4cqw; border-radius: 50%; background: var(--line); color: var(--ink); font-size: 1.1cqw; letter-spacing: 0; margin-bottom: .4cqw; }
+    .step.hl { border-color: var(--accent-text); box-shadow: 0 0 0 .156cqw color-mix(in srgb, var(--accent) 22%, transparent); }
+    .step.hl .num { background: var(--highlight); color: var(--on-highlight); }
+    /* Big numbers */
+    .stats { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1.406cqw; }
+    .stat { background: var(--white); border: 1px solid var(--line); border-radius: 1.25cqw; padding: 2.2cqw 1.9cqw; display: flex; flex-direction: column; gap: .5cqw; }
+    .value { font-size: 4.6cqw; line-height: 1; font-weight: 700; letter-spacing: -.04em; color: var(--ink); white-space: nowrap; margin-bottom: .6cqw; }
+    .unit { font-size: .45em; letter-spacing: 0; }
+    .stat .label { font-size: 1.35cqw; font-weight: 600; color: var(--ink); }
+    .delta { font-size: 1.15cqw; color: var(--muted); }
+    .stat.hl { border-color: var(--accent-text); box-shadow: 0 0 0 .156cqw color-mix(in srgb, var(--accent) 22%, transparent); }
+    .stat.hl .value { color: var(--accent-text); }
+    /* Comparison table: .win marks the column that wins */
+    .compare { width: 100%; border-collapse: collapse; background: var(--white); border-radius: .938cqw; overflow: hidden; font-size: 1.35cqw; }
+    .compare th, .compare td { text-align: left; padding: 1cqw 1.25cqw; border-bottom: 1px solid var(--line); color: var(--ink-2); }
+    .compare th { color: var(--ink); font-weight: 700; background: var(--head-bg); }
+    .compare td:first-child { color: var(--ink); }
+    .compare .win { background: var(--accent-soft); color: var(--ink); font-weight: 700; }
+    .compare th.win { background: var(--accent); color: var(--on-accent); }
+    .compare tr:last-child td { border-bottom: 0; }
+    /* Two columns: main and side (2 : 1) */
+    .split { display: grid; grid-template-columns: 2fr 1fr; gap: 2.5cqw; align-items: end; }
+    /* Bar chart in HTML: --v on each .bar is its height, 0–1 */
+    .bars { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; column-gap: 1.406cqw; align-items: end; border-bottom: 1px solid var(--line); margin-bottom: 2.6cqw; }
+    .bar { position: relative; display: flex; flex-direction: column; gap: .5cqw; }
+    .bar .val { font-size: 1.15cqw; font-weight: 700; color: var(--ink-2); text-align: center; }
+    .bar .fill { display: block; height: calc(var(--v, .5) * 22cqw); background: color-mix(in srgb, var(--accent) 28%, var(--white)); border-radius: .5cqw .5cqw 0 0; }
+    .bar .cat { position: absolute; top: 100%; left: 0; right: 0; margin-top: .6cqw; text-align: center; font-size: 1.05cqw; color: var(--muted); }
+    .bar.hl .fill { background: var(--accent); }
+    .bar.hl .val, .bar.hl .cat { color: var(--accent-text); }
+    .bar.est .fill { background: transparent; border: 1px dashed var(--muted); border-bottom: 0; }
+    .takeaway { background: var(--accent-soft); border-left: .312cqw solid var(--accent); border-radius: 0 1.094cqw 1.094cqw 0; padding: 1.9cqw; display: flex; flex-direction: column; gap: .8cqw; }
+    .takeaway .eyebrow { margin: 0; color: var(--accent-text); }
+    .takeaway h3, .takeaway p { margin: 0; }
+    .takeaway h3 { font-size: 1.9cqw; line-height: 1.2; }
+    .takeaway p { color: var(--ink-2); }
+    /* Quote */
+    .quote { margin: 0; display: flex; flex-direction: column; gap: 2cqw; padding-left: 2.2cqw; border-left: .468cqw solid var(--accent); }
+    .quote blockquote { margin: 0; font-size: 3.2cqw; line-height: 1.2; letter-spacing: -.025em; font-weight: 600; color: var(--ink); max-width: 76cqw; }
+    .quote figcaption { font-size: 1.35cqw; color: var(--ink-2); }
+    .quote figcaption b { color: var(--ink); margin-right: .6cqw; }
+    /* Timeline */
+    .timeline { list-style: none; margin: 0; padding: 0; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1.406cqw; }
+    .timeline li { position: relative; padding-top: 2.6cqw; display: flex; flex-direction: column; gap: .6cqw; }
+    .timeline li::before { content: ""; position: absolute; z-index: 1; top: 0; left: 0; width: 1.4cqw; height: 1.4cqw; border-radius: 50%; background: var(--white); border: .234cqw solid var(--accent); }
+    .timeline li::after { content: ""; position: absolute; top: .6cqw; left: 0; right: -1.406cqw; height: .234cqw; background: var(--line); }
+    .timeline li:last-child::after { right: 0; }
+    .timeline li.now::before { background: var(--highlight); border-color: var(--highlight); }
+    .timeline li.goal::before { background: var(--accent); }
+    .timeline h3, .timeline p { margin: 0; }
+    .when { font-size: 1cqw; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+    .now .when { color: var(--highlight); }
+    .goal .when, .goal h3 { color: var(--accent-text); }
+    /* Numbered asks, e.g. on a closing slide */
+    .asks { list-style: none; margin: 0; padding: 0; counter-reset: ask; display: flex; flex-direction: column; gap: 1.2cqw; }
+    .asks li { counter-increment: ask; display: flex; gap: 1.2cqw; align-items: baseline; padding-top: 1.2cqw; border-top: 1px solid color-mix(in srgb, currentColor 22%, transparent); font-size: 1.55cqw; line-height: 1.35; }
+    .asks li::before { content: counter(ask); color: var(--highlight); font-weight: 700; }
+
+    /* ---------- Title / closing slide ---------- */
+    .title-slide { background: var(--title-bg); color: var(--white); }
+    .title-slide::before { background: var(--highlight); }
+    .title-slide .eyebrow { color: var(--title-eyebrow); }
+    .title-slide .lead { color: var(--title-soft); }
+    .title-slide .footer { color: var(--title-footer); }
+    .title-slide .content { justify-content: flex-start; }
+    .title-slide .split { align-items: center; grid-template-columns: 7fr 5fr; }
+    .title-slide .split h2 { font-size: 4.6cqw; margin: 0; }
+    .title-mark { width: 5.625cqw; height: .391cqw; background: var(--highlight); margin: 1.6em 0; border-radius: .391cqw; }
+    /* ---------- Section divider ---------- */
+    .section-slide .content { flex-direction: row; align-items: center; justify-content: flex-start; gap: 3cqw; }
+    .section-num { font-size: 11cqw; line-height: 1; font-weight: 800; letter-spacing: -.05em; color: var(--accent); }
+    .section-text { padding-left: 3cqw; border-left: 1px solid var(--line); }
+    .section-text h2 { font-size: 4.4cqw; }
+    .section-text .lead { margin-bottom: 0; }
+  </style>
+  <!-- PPTD brand block: this deck's brand. The meta names it; the style holds its tokens and,
+       in the comment, its rules. Replace both to rebrand the deck. -->
+  <style id="pptd-brand">
+    /* Brand: PPTD neutral.
+       Rules: no logo. Title and closing slides on --title-bg; content slides on --paper. */
+    :root {
+      --ink: #1c2230;        /* headings, body text, primary marks */
+      --ink-2: #434b5c;      /* secondary text */
+      --muted: #6b7385;      /* captions, footers, axis labels */
+      --paper: #f7f7f5;      /* slide background */
+      --accent: #4361ee;     /* accents, arrows, the one highlighted element */
+      --accent-soft: #eef1fe;/* tints: callouts, the winning column */
+      --highlight: #f25c3b;  /* markers: "now", step numbers, deadlines. Sparingly */
+      --title-bg: linear-gradient(125deg, #12151d 0%, #1c2230 58%, #2b3a8c 100%);
+      --title-eyebrow: #b9c4ff;
+      --title-soft: #e3e6ee; /* lead text on title slides */
+      --title-footer: #a9b0c0;
+      --font: Inter, "Segoe UI", system-ui, Arial, sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <main class="deck">
+    <!-- One radio per slide, all BEFORE the sections (the ~ selector needs that). r1 is checked + autofocus. -->
+    <input type="radio" name="slide" id="r1" class="slide-radio" checked autofocus aria-label="Slide 1">
+    <input type="radio" name="slide" id="r2" class="slide-radio" aria-label="Slide 2">
+    <input type="radio" name="slide" id="r3" class="slide-radio" aria-label="Slide 3">
+    <input type="radio" name="slide" id="r4" class="slide-radio" aria-label="Slide 4">
+    <input type="radio" name="slide" id="r5" class="slide-radio" aria-label="Slide 5">
+    <input type="radio" name="slide" id="r6" class="slide-radio" aria-label="Slide 6">
+    <input type="radio" name="slide" id="r7" class="slide-radio" aria-label="Slide 7">
+    <input type="radio" name="slide" id="r8" class="slide-radio" aria-label="Slide 8">
+    <input type="radio" name="slide" id="r9" class="slide-radio" aria-label="Slide 9">
+    <input type="radio" name="slide" id="r10" class="slide-radio" aria-label="Slide 10">
+    <input type="radio" name="slide" id="r11" class="slide-radio" aria-label="Slide 11">
+    <input type="radio" name="slide" id="r12" class="slide-radio" aria-label="Slide 12">
+    <input type="radio" name="slide" id="r13" class="slide-radio" aria-label="Slide 13">
+
+    <!-- 1 · Title: .title-slide. The eyebrow names the organisation and occasion; the footer the presenters. -->
+    <section id="s1" class="slide title-slide" aria-label="Slide 1: Title">
+      <div class="eyebrow">Organisation · Quarterly review · Q3 2026</div>
+      <div class="content">
+        <h1>The one-line message of the whole deck</h1>
+        <div class="title-mark"></div>
+        <p class="lead">A sentence of context: what this session is for and who it is for.</p>
+      </div>
+      <div class="footer"><span>Presenter, role · Presenter, role · 14 October 2026</span><span></span></div>
+      <nav class="controls" aria-label="Slide controls"><span class="nav-ph"></span><span class="counter">1 / 13</span><label for="r2" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 7.7%"></span></div>
+    </section>
+
+    <!-- 2 · Section divider: .section-slide. A number, the section's name and one line on what it covers. -->
+    <section id="s2" class="slide section-slide" aria-label="Slide 2: Section">
+      <div class="content">
+        <div class="section-num">02</div>
+        <div class="section-text">
+          <div class="eyebrow">Section</div>
+          <h2>Platform architecture</h2>
+          <p class="lead">How the system scales from 40 to 4,000 sites</p>
+        </div>
+      </div>
+      <div class="footer"><span>Deck title · Q3 2026</span><span>02</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r1" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">2 / 13</span><label for="r3" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 15.4%"></span></div>
+    </section>
+
+    <!-- 3 · Statement: one sentence, large. Mark the words that matter with .key (one phrase). -->
+    <section id="s3" class="slide" aria-label="Slide 3: Statement">
+      <div class="eyebrow">The quarter in one line</div>
+      <div class="content">
+        <p class="statement">Median planning time fell from 4 hours to <span class="key">11 minutes</span> across all 212 sites.</p>
+      </div>
+      <div class="footer"><span>Source: session logs, Jul–Sep 2026, n = 48,310</span><span>03</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r2" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">3 / 13</span><label for="r4" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 23.1%"></span></div>
+    </section>
+
+    <!-- 4 · Three points: .cards of .card (2–4). Same structure in every card; .hl on at most one. -->
+    <section id="s4" class="slide" aria-label="Slide 4: Three points">
+      <div class="eyebrow">Customer research · 38 interviews</div>
+      <h2>Why customers switch to us</h2>
+      <div class="content">
+        <div class="cards">
+          <div class="card hl"><span class="num">01</span><h3>Plans that react in real time</h3><p>Closures and late deliveries re-plan the whole network in under 30 seconds.</p></div>
+          <div class="card"><span class="num">02</span><h3>One partner network</h3><p>640 partners connected through a single booking flow, not phone and email.</p></div>
+          <div class="card"><span class="num">03</span><h3>Open by default</h3><p>Everything is in the public API, so IT teams extend it instead of working around it.</p></div>
+        </div>
+      </div>
+      <div class="footer"><span>Source: customer interviews, n = 38</span><span>04</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r3" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">4 / 13</span><label for="r5" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 30.8%"></span></div>
+    </section>
+
+    <!-- 5 · Process: .steps of .step (3–5). .hl marks the step this slide is about. -->
+    <section id="s5" class="slide" aria-label="Slide 5: Process">
+      <div class="eyebrow">Architecture · request path</div>
+      <h2>From order to reconciled invoice in five stages</h2>
+      <div class="content">
+        <ol class="steps">
+          <li class="step"><span class="num">1</span><h3>Ingest</h3><p>Orders arrive by API or file and are de-duplicated.</p></li>
+          <li class="step"><span class="num">2</span><h3>Normalise</h3><p>Addresses geocoded, loads mapped to one unit.</p></li>
+          <li class="step hl"><span class="num">3</span><h3>Plan</h3><p>Routes built against live capacity. New in Q3.</p></li>
+          <li class="step"><span class="num">4</span><h3>Dispatch</h3><p>Partners booked, drivers notified.</p></li>
+          <li class="step"><span class="num">5</span><h3>Reconcile</h3><p>Proof of delivery matched to each invoice line.</p></li>
+        </ol>
+      </div>
+      <div class="footer"><span>Architecture as of October 2026</span><span>05</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r4" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">5 / 13</span><label for="r6" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 38.5%"></span></div>
+    </section>
+
+    <!-- 6 · Big numbers: .stats of .stat (2–4). Every stat has the same parts: .value, .label, .delta. -->
+    <section id="s6" class="slide" aria-label="Slide 6: Big numbers">
+      <div class="eyebrow">Q3 2026 · vs Q2</div>
+      <h2>Our strongest quarter on every core metric</h2>
+      <div class="content">
+        <div class="stats">
+          <div class="stat hl"><div class="value">$18.4M</div><div class="label">Annual recurring revenue</div><div class="delta">+18% QoQ</div></div>
+          <div class="stat"><div class="value">132%</div><div class="label">Net revenue retention</div><div class="delta">+6 pts QoQ</div></div>
+          <div class="stat"><div class="value">99.97%</div><div class="label">Uptime</div><div class="delta">SLA 99.9%</div></div>
+          <div class="stat"><div class="value">41<span class="unit"> days</span></div><div class="label">Median time to go-live</div><div class="delta">−23 days QoQ</div></div>
+        </div>
+      </div>
+      <div class="footer"><span>Source: finance and operations dashboards, 30 Sep 2026</span><span>06</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r5" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">6 / 13</span><label for="r7" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 46.2%"></span></div>
+    </section>
+
+    <!-- 7 · Comparison: table.compare. The first column names the rows; .win marks our column's cells. -->
+    <section id="s7" class="slide" aria-label="Slide 7: Comparison">
+      <div class="eyebrow">Competitive position</div>
+      <h2>How we compare for a 50-site customer</h2>
+      <div class="content">
+        <table class="compare">
+          <thead><tr><th></th><th class="win">Us</th><th>Legacy system</th><th>Spreadsheets</th></tr></thead>
+          <tbody>
+            <tr><td>Daily planning time</td><td class="win">11 min</td><td>1.5 h</td><td>4 h</td></tr>
+            <tr><td>Live re-planning</td><td class="win">Yes, under 30 s</td><td>Nightly batch</td><td>No</td></tr>
+            <tr><td>Partner integrations</td><td class="win">640</td><td>~120</td><td>None</td></tr>
+            <tr><td>Time to go-live</td><td class="win">6 weeks</td><td>9–14 months</td><td>Immediate</td></tr>
+            <tr><td>Cost per site per month</td><td class="win">$390</td><td>$1,100</td><td>Staff time</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="footer"><span>Source: published price lists and customer references, 2026</span><span>07</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r6" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">7 / 13</span><label for="r8" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 53.8%"></span></div>
+    </section>
+
+    <!-- 8 · Chart + takeaway: .split (chart left, .takeaway right). Bars: --v is the bar's height, 0–1 of the tallest. -->
+    <section id="s8" class="slide" aria-label="Slide 8: Chart and takeaway">
+      <div class="eyebrow">Recurring revenue by quarter · $M</div>
+      <h2>Growth is accelerating, not levelling off</h2>
+      <div class="content">
+        <div class="split">
+          <div class="bars" role="img" aria-label="Recurring revenue by quarter: 11.2, 13.0, 15.6, 18.4, and 21.0 estimated">
+            <div class="bar" style="--v: .53"><span class="val">11.2</span><span class="fill"></span><span class="cat">Q4 ’25</span></div>
+            <div class="bar" style="--v: .62"><span class="val">13.0</span><span class="fill"></span><span class="cat">Q1 ’26</span></div>
+            <div class="bar" style="--v: .74"><span class="val">15.6</span><span class="fill"></span><span class="cat">Q2 ’26</span></div>
+            <div class="bar hl" style="--v: .88"><span class="val">18.4</span><span class="fill"></span><span class="cat">Q3 ’26</span></div>
+            <div class="bar est" style="--v: 1"><span class="val">21.0 est.</span><span class="fill"></span><span class="cat">Q4 ’26</span></div>
+          </div>
+          <div class="takeaway">
+            <div class="eyebrow">Takeaway</div>
+            <h3>Up 64% in three quarters; Q3 added more than Q1 and Q2 combined.</h3>
+            <p>Expansion drove 58% of net new revenue.</p>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>Source: finance, 30 Sep 2026. Q4 is the board-approved forecast.</span><span>08</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r7" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">8 / 13</span><label for="r9" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 61.5%"></span></div>
+    </section>
+
+    <!-- 9 · Status: table.matrix with .status cells. Status colours mean the same on every slide:
+         green = signed off / ready, ink (.blue) = proven / proof of concept, amber = in progress. -->
+    <section id="s9" class="slide" aria-label="Slide 9: Status">
+      <div class="eyebrow">Delivery status</div>
+      <h2>Two workstreams are ready; one needs a decision</h2>
+      <div class="content">
+        <table class="matrix">
+          <thead><tr><th>Workstream</th><th>Status</th><th>Detail</th></tr></thead>
+          <tbody>
+            <tr><td>Data processing</td><td class="status green">Signed off</td><td>Signed off by the operations lead on 2 October.</td></tr>
+            <tr><td>Live re-planning</td><td class="status blue">Pilot proven</td><td>Three-site pilot, 6 weeks, no incidents.</td></tr>
+            <tr><td>Partner billing</td><td class="status amber">In progress</td><td>Forecast 15 December; deadline 1 December.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="footer"><span>Status as of 14 October 2026</span><span>09</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r8" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">9 / 13</span><label for="r10" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 69.2%"></span></div>
+    </section>
+
+    <!-- 10 · Worked example: inline SVG in .diagram, styled by the dg-* classes. -->
+    <section id="s10" class="slide" aria-label="Slide 10: Worked example">
+      <div class="eyebrow">How it works</div>
+      <h2>One order, followed through the planner</h2>
+      <div class="content">
+        <div class="diagram">
+          <svg viewBox="0 0 900 260" role="img" aria-labelledby="dg10-title dg10-desc">
+            <title id="dg10-title">One order through the planner</title>
+            <desc id="dg10-desc">Step 1, an order for 12 pallets arrives. Step 2, the planner places it on the truck with spare capacity. Step 3, the driver's route updates in 20 seconds.</desc>
+            <defs><marker id="dg10-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="dg-arrowhead" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+            <rect class="dg-box" x="10" y="30" width="240" height="210" rx="14"/>
+            <circle class="dg-step" cx="38" cy="30" r="16"/><text class="dg-step-text" x="38" y="35" text-anchor="middle">1</text>
+            <text class="dg-label" x="130" y="120" text-anchor="middle">Order arrives</text>
+            <text class="dg-sub" x="130" y="146" text-anchor="middle">12 pallets, Leeds → York</text>
+            <path class="dg-arrow" d="M255 135 H325" marker-end="url(#dg10-arr)"/>
+            <rect class="dg-box hl" x="330" y="30" width="240" height="210" rx="14"/>
+            <circle class="dg-step" cx="358" cy="30" r="16"/><text class="dg-step-text" x="358" y="35" text-anchor="middle">2</text>
+            <text class="dg-label" x="450" y="120" text-anchor="middle">Planner places it</text>
+            <text class="dg-sub" x="450" y="146" text-anchor="middle">Truck 7 has 14 pallets free</text>
+            <path class="dg-arrow" d="M575 135 H645" marker-end="url(#dg10-arr)"/>
+            <rect class="dg-box" x="650" y="30" width="240" height="210" rx="14"/>
+            <circle class="dg-step" cx="678" cy="30" r="16"/><text class="dg-step-text" x="678" y="35" text-anchor="middle">3</text>
+            <text class="dg-label" x="770" y="120" text-anchor="middle">Route updates</text>
+            <text class="dg-sub" x="770" y="146" text-anchor="middle">Driver notified in 20 s</text>
+          </svg>
+        </div>
+      </div>
+      <div class="footer"><span>Illustrative example</span><span>10</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r9" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">10 / 13</span><label for="r11" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 76.9%"></span></div>
+    </section>
+
+    <!-- 11 · Quote: figure.quote, the person and their role in the figcaption. -->
+    <section id="s11" class="slide" aria-label="Slide 11: Quote">
+      <div class="content">
+        <figure class="quote">
+          <blockquote>We used to plan Monday’s routes on Friday. Now we plan at 6 a.m. and <span class="key">re-plan whenever the road tells us to.</span></blockquote>
+          <figcaption><b>Name Surname</b> <span>VP Operations, Customer Ltd · 64 sites</span></figcaption>
+        </figure>
+      </div>
+      <div class="footer"><span>Customer interview, September 2026</span><span>11</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r10" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">11 / 13</span><label for="r12" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 84.6%"></span></div>
+    </section>
+
+    <!-- 12 · Timeline: ol.timeline (3–5 items). .now marks today, .goal the target. -->
+    <section id="s12" class="slide" aria-label="Slide 12: Timeline">
+      <div class="eyebrow">Roadmap · next 12 months</div>
+      <h2>Next year: from planning tool to network</h2>
+      <div class="content">
+        <ol class="timeline">
+          <li class="now"><span class="when">Now · Q4 2026</span><h3>Multi-site planning</h3><p>Shared capacity across sites, for all customers.</p></li>
+          <li><span class="when">Q1 2027</span><h3>Partner marketplace</h3><p>Spare capacity bookable inside the plan.</p></li>
+          <li><span class="when">Q2 2027</span><h3>EU region</h3><p>EU data residency, three pilot customers.</p></li>
+          <li class="goal"><span class="when">Q3 2027 · Target</span><h3>$40M ARR</h3><p>500 sites live; break-even on contribution.</p></li>
+        </ol>
+      </div>
+      <div class="footer"><span>Plan approved by the leadership team, October 2026</span><span>12</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r11" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">12 / 13</span><label for="r13" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 92.3%"></span></div>
+    </section>
+
+    <!-- 13 · Closing: .title-slide with a .split of headline and ol.asks (or just a headline). -->
+    <section id="s13" class="slide title-slide" aria-label="Slide 13: Closing">
+      <div class="eyebrow">Decisions requested today</div>
+      <div class="content">
+        <div class="split">
+          <h2>Three decisions for the board</h2>
+          <ol class="asks">
+            <li>Approve next year’s hiring plan: 34 roles</li>
+            <li>Release $2.1M for the EU region</li>
+            <li>Endorse the marketplace pricing model</li>
+          </ol>
+        </div>
+      </div>
+      <div class="footer"><span>Contact name · team@example.com</span><span></span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r12" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">13 / 13</span><span class="nav-ph"></span></nav>
+      <div class="progress"><span style="width: 100%"></span></div>
+    </section>
+  </main>
+</body>
+</html>

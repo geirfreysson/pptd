@@ -1,10 +1,11 @@
 ---
 name: pptd-slides
-description: "Build and edit PPTD presentations (*.pptd.html) shown in the PPTD app: slide structure, layout, diagrams, media, branding via brand files, and the PPTD conformance rules. Use for any change to a slide or deck."
+description: "Build and edit PPTD presentations (*.pptd.html) shown in the PPTD app: slide structure, styles and layouts, diagrams, media, branding via brand files, and the PPTD conformance rules. Use for any change to a slide or deck."
 ---
 
 > **Inside the PPTD app, read `PPTD.md` in this folder first.** It covers the current slide,
-> live reload, embedded media and the brand file.
+> live reload, embedded media and the brand file. **Before designing slides, read
+> `DESIGN.md`:** what makes a presentation good, which every style follows.
 
 # Presentations as web pages
 
@@ -17,8 +18,12 @@ unless the user asks.
 
 ## Files in this skill
 
-- `template.html`: starting point. Copy it, keep the `<style>` block, and replace the six
-  example slides (title, cards, HTML flow, SVG worked example, status matrix, thank you).
+- `DESIGN.md`: the design principles behind every style (one point per slide, one focal
+  element, colour roles, type scale, the repeating frame, density, data, words). Read it
+  before designing.
+- `styles/<name>/`: one folder per style (§1): `STYLE.md` (its rules and when to use it),
+  `style.css` (its layout CSS) and `template.html` (a starting deck in that style, with an
+  example of every layout). Styles: `grid`, `bold`, `folio`, `signal`, `atelier`, `classic`.
 - `pptd-app.mjs`: asks the running PPTD app (which renders decks itself, no browser needed):
   - `node pptd-app.mjs shot deck.pptd.html [3|2,5|1-4|all] [--size WxH] [--out DIR]`
     screenshots slides (default: all, 1280×720) and prints one PNG path per slide. Read the
@@ -32,28 +37,99 @@ unless the user asks.
   (§3). Use it for every structural change; you only write slide content.
 - `brand-template.md`: the shape of the user's default brand file.
 
-## 1. Branding
+## 1. Style, layouts and brand
 
-Each deck carries its brand: `<meta name="pptd-brand" content="Name">` and a
-`<style id="pptd-brand">` block after the main `<style>`, holding the brand tokens `--ink`,
-`--ink-2`, `--muted`, `--paper`, `--accent`, `--accent-soft`, `--highlight`, `--title-bg`,
-`--title-eyebrow`, `--title-soft`, `--title-footer` and `--font`, with the brand's rules in a
-leading CSS comment. The rest of the CSS only uses these variables. (`PPTD.md` covers where
-brands come from: the user's default brand, or what they ask for.)
+A deck's look has three independent layers, each in its own block in `<head>`:
+
+1. **The frame** (the first `<style>`): navigation, sizing, print and the Teams fixes. It is
+   the same in every deck. Don't restyle it.
+2. **The style** (`<style id="pptd-style">`, named by `<meta name="pptd-style">`): layout,
+   type scale, spacing, corners, how cards and charts are drawn. Copied from
+   `styles/<name>/style.css`.
+3. **The brand** (`<style id="pptd-brand">`, named by `<meta name="pptd-brand">`): colours and
+   font, as tokens. Any brand works with any style.
+
+### Styles
+
+| Style | Look | Use for |
+|---|---|---|
+| `grid` | Quiet, editorial: hairlines, square corners, mono labels, one accent | Board and quarterly reviews, reports, research, technical and architecture talks |
+| `bold` | Warm, confident: heavy headlines, rounded tinted cards that fill the slide, one solid accent surface | Pitches, launches, all-hands, workshops and training |
+| `folio` | Editorial, like an annual report: serif headlines, a margin rail with section and page numeral, roman numerals | Operating and board reviews, strategy, research and policy findings |
+| `signal` | Technical, dashboard-like: mono headlines, panels with shared dividers, a header bar; dark with a dark brand | Engineering and platform reviews, architecture, metrics, developer audiences |
+| `atelier` | Geometric and warm: a kit of flat shapes that carry the data, colour panels bleeding off the edge, Futura headlines | Workshops, training, public-sector and community talks, friendly launches |
+| `classic` | PPTD's original: white cards with borders, a gradient bar on top | Status and delivery reporting; the user's older decks |
+
+- **Read the deck's `styles/<name>/STYLE.md` before designing slides for it,** and follow its
+  rules (how much of the slide to fill, where the accent goes, what never to do).
+- **A new deck:** use the style the user names; else the default style in their brand file,
+  if it names one; else choose from the table by the deck's purpose and say which in one line
+  ("I used the grid style; say 'bold style' for a warmer look"). Start from that style's
+  `template.html`.
+- **Restyle a deck** ("make this bold"): replace the `pptd-style` block with the new style's
+  `style.css` and change the meta. Slides need no rewrite, because every style draws the same
+  layouts. Then screenshot every slide and fix what the new style's rules ask for (e.g. bold
+  wants one solid accent surface and a `.key` phrase; grid wants an eyebrow on every slide).
+- **A deck with no `pptd-style` block** (made before styles existed) has its look in its first
+  `<style>`. Keep it unless the user asks to restyle; then rebuild its `<head>` styles from a
+  style's `template.html` (frame, style block, and the deck's own brand block) and keep any
+  per-slide rules (`#s3 …`).
+- **Styles are a starting point, not a cage.** When content needs a layout no class covers,
+  build it from the style's tokens, type sizes and spacing (in a per-slide rule, `#s4 …`, or a
+  class added to the style block), so it looks like it belongs. `DESIGN.md` ("Using the
+  styles for inspiration") says how to borrow another style's device without mixing voices.
+- **Each style draws the same markup its own way** (folio sets a `.stat.hl` as a hero figure
+  beside the others, signal draws `.bars` horizontally and the timeline as a vertical log,
+  atelier puts each stat inside a shape and turns the chart's `.takeaway` into an edge panel),
+  so look at the screenshot, not just the markup.
+
+### Layouts
+
+Every style draws these classes; the templates show each one. Put a slide's main block in
+`.content`, which takes the height between the headline and the footer.
+
+| Content | Markup |
+|---|---|
+| Title / closing | `section.slide.title-slide`: `.eyebrow`, `.content` > `h1` + `.title-mark` + `.lead`; closing: `.content` > `.split` > `h2` + `ol.asks` |
+| Section divider | `section.slide.section-slide` > `.content` > `.section-num` + `.section-text` (`.eyebrow`, `h2`, `.lead`) |
+| One claim | `p.statement`, with the words that matter in `span.key` |
+| 2–4 parallel points | `.cards` > `.card` (`.num`, `h3`, `p`) |
+| A process, 3–5 steps | `ol.steps` > `li.step` (`.num`, `h3`, `p`) |
+| 2–4 numbers | `.stats` > `.stat` (`.value` with optional `span.unit`, `.label`, `.delta`) |
+| Us vs alternatives | `table.compare`, our column's cells `.win` |
+| Chart + takeaway | `.split` > `.bars` (`.bar` with `style="--v: .62"`: `.val`, `.fill`, `.cat`) + `.takeaway` (`.eyebrow`, `h3`, `p`) |
+| Status | `table.matrix` with `td.status.green` / `.blue` / `.amber` |
+| A worked example | inline SVG in `.diagram` (§4) |
+| A quote | `figure.quote` > `blockquote` + `figcaption` (`b` name, `span` role) |
+| Roadmap | `ol.timeline` > `li` (`.when`, `h3`, `p`); `li.now`, `li.goal` |
+| Older layouts | `.grid.two/.three/.four` of `.panel`, `.tag`, `.callout`, `.path` of `.node` + `.arrow` |
+
+`.hl` marks the one element a slide is about (a card, step, stat or bar); `.est` marks an
+estimated bar. Use at most one `.hl` and one `.key` per slide.
+
+### Brand
+
+The brand block holds the tokens `--ink`, `--ink-2`, `--muted`, `--paper`, `--accent`,
+`--accent-soft`, `--highlight`, `--title-bg`, `--title-eyebrow`, `--title-soft`,
+`--title-footer` and `--font`, with the brand's rules in a leading CSS comment. Styles take
+every colour from these. (`PPTD.md` covers where brands come from: the user's default brand,
+or what they ask for.)
 
 - Follow the deck's brand. Don't invent brand colours, and don't imitate a company's branding
   unless the user asks for it.
 - Don't add logos or other copyrighted assets unless the user or the brand supplies the file.
   Embed supplied images as `data:` URIs (see `PPTD.md`, "Images and video").
-- Title and closing slides use `.title-slide` (`--title-bg`, `--highlight` top bar and rule).
-- Content slides: paper background, an 8px `--ink`→`--accent` bar at the top, an `.eyebrow`
-  (`01 · Section`), an `h2` headline, an optional `.lead`, and a `.footer` with the source.
 - Fonts: system fonts only, through `--font`. No web-font download, which Teams and offline
   viewing may block.
 - Status colours (`--green`, `--amber`, and `--ink` for proven) are not brand colours and mean
   the same on every slide: green = signed off/ready, ink = proven/proof of concept/agreed,
   amber = in progress/to agree.
-- Check contrast: body text on `--paper` and white text on `--title-bg` must stay readable.
+- **Check contrast** when a brand meets a style: body text on `--paper`, text on
+  `--title-bg`, and anything drawn on the accent. Three optional tokens fix the pairings a
+  brand's colours break: `--on-accent` (text on accent fills; default `--paper`),
+  `--accent-text` (the accent used as text; default `--accent`) and `--on-highlight` (text on
+  highlight fills; default `--ink`). A light accent such as yellow needs all of them. Set them
+  in the deck's brand block and in the brand file.
 
 ## 2. Teams compatibility (the important part)
 
@@ -99,7 +175,7 @@ Teams opens shared HTML in a sandboxed preview. Learned the hard way:
 - **Clicking:** each slide's ‹ › are `<label for="rN±1">`. Clicking a label checks that radio,
   and the `~` sibling selector shows the matching section.
 - **Click zones:** a click or tap on the slide itself also navigates: the left third goes back,
-  the rest goes forward (the whole slide on the first one). The template does this with the
+  the rest goes forward (the whole slide on the first one). The frame CSS does this with the
   labels' `::before` (the `.controls` rules), so keep its `.controls` CSS and the labels'
   `aria-label="Previous slide"` / `"Next slide"` exactly. Links in a slide sit above the zones.
   There is no swipe: that would need a script.
@@ -149,8 +225,8 @@ node pptd-deck.mjs delete deck.pptd.html 4
 
 If a slide needs more than two sentences to explain how something works, draw it.
 
-- **Linear flow (3–6 steps):** HTML `.path` of `.node` + `.arrow`. Highlight the step the slide
-  is about with `.node.hl`.
+- **Linear flow (3–5 steps):** `ol.steps` of `li.step` (§1, Layouts). Highlight the step the
+  slide is about with `.step.hl`.
 - **Anything with structure** (data going in and out, tables, branching, before/after):
   inline SVG inside `.diagram`, with a `viewBox` and `width: 100%`, styled with classes
   (`dg-box`, `dg-label`, `dg-sub`, `dg-arrow`, `dg-step`) rather than inline colours. Give it
@@ -159,10 +235,11 @@ If a slide needs more than two sentences to explain how something works, draw it
 - **Prefer a worked example to an abstract box diagram.** Show real-looking data moving
   through the steps (e.g. a respondent table → the new column → the resulting table) and
   label it "Illustrative" in the footer if the numbers are made up.
-- Number the steps (`.dg-step` circles in `--highlight`) when there is an order, and say on the slide what is
+- Number the steps (`.dg-step` circles) when there is an order, and say on the slide what is
   live, what is proof of concept and what is only designed.
-- Charts (burn-ups, trends): inline SVG, label lines directly instead of using a legend
-  where possible, and keep labels clear of the lines.
+- Bar charts of up to about 8 values: the HTML `.bars` layout. Other charts (burn-ups,
+  trends): inline SVG, label lines directly instead of using a legend where possible, and keep
+  labels clear of the lines.
 - One idea per diagram. If labels need to shrink below about 11px at 1280×720, split the slide.
 
 ## 5. Writing the slides
@@ -180,15 +257,22 @@ If a slide needs more than two sentences to explain how something works, draw it
 A deck looks designed when the same kind of thing looks the same everywhere. That matters more
 than any one element fitting perfectly.
 
+- **Design by `DESIGN.md`:** one point per slide, one focal element, the colour roles,
+  the style's density (no small block over an empty half-slide), one numbering system, and
+  status tags only for status.
+- **Pick the layout from the content's shape:** parallel points → `.cards`; an order →
+  `.steps`; numbers → `.stats`; us vs others → `.compare`; one claim → `.statement`; a trend
+  → `.bars` beside a `.takeaway`. Don't put a process in cards or numbers in prose.
+
 - **One type scale, set in the stylesheet.** Font sizes come from the classes in the
   `<style>` block (`h2`, `.lead`, `h3`, `p`, `.tag`, `.footer`, …). Never put `font-size`,
   `line-height`, `letter-spacing` or `white-space: nowrap` in a `style=""` attribute.
 - **Same role, same size, on every slide.** All card headings match, all big numbers
   match, all body text matches, within a slide and across the deck. If one element needs a
   different size, the design is wrong, not the size.
-- **Readable floors at 1280×720:** body text and card text no smaller than the template's `p`
-  size, labels and tags no smaller than the `.tag` size, nothing (SVG labels included) under
-  about 11px. Never shrink text to make it fit.
+- **Readable floors at 1280×720:** body text and card text no smaller than the style's `p`
+  size, labels and tags no smaller than its `.eyebrow` size, nothing (SVG labels included)
+  under about 11px. Never shrink text to make it fit.
 - **When text wraps, overflows or looks cramped, fix it in this order:**
   1. Reword: shorter words, fewer words ("3 developers" → "3 devs" only if that reads well).
   2. Restructure: e.g. a big number with its unit as a smaller label underneath, used the
@@ -199,10 +283,10 @@ than any one element fitting perfectly.
 - **Parallel things are built alike.** Sibling cards have the same structure (tag, heading,
   one sentence), similar text length, equal height and aligned tops. A row of stats uses the
   same form in every cell: all numbers, or all words.
-- **Align to the grid.** Use the template's layout classes (`.grid`, `.panel`, …) and their gaps.
-  No one-off `margin`/`padding` nudges in `style=""`. Text is left-aligned unless the
-  template centres it. Edges line up across a slide.
-- **Spacing follows the template.** Keep the same distance between eyebrow, headline, lead and
+- **Align to the grid.** Use the style's layout classes (§1) and their gaps. No one-off
+  `margin`/`padding` nudges in `style=""`. Text is left-aligned unless the style centres it.
+  Edges line up across a slide.
+- **Spacing follows the style.** Keep the same distance between eyebrow, headline, lead and
   content on every slide.
 - If the user's request can only be met by breaking these rules, say so, propose the
   alternatives above and let them choose.
@@ -213,7 +297,9 @@ than any one element fitting perfectly.
 2. `node pptd-app.mjs shot deck.pptd.html` (every slide at 1280×720), then Read each PNG:
    no overlapping or clipped text, nothing hidden behind the ‹ › controls or the footer,
    no labels crossing chart lines, no heading or label that wraps on its own while its
-   siblings don't, and matching sizes and alignment for elements of the same kind (§6).
+   siblings don't, matching sizes and alignment for elements of the same kind, no slide whose
+   content ends in the top half with the rest empty, and one focal point per slide (§6).
+   Then go through the checklist at the end of `DESIGN.md`.
    `grep -n 'style="[^"]*font-size' deck.pptd.html` should find nothing. After a change to one
    slide, shoot that slide and its neighbours (`shot deck 2-4`) rather than the whole deck.
 3. Spot-check a couple of slides with `--size 1920x1080` and `--size 1000x1000` (Teams-like frame).

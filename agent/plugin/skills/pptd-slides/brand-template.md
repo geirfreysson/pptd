@@ -9,6 +9,8 @@
 -->
 
 Name: (your organisation or project)
+Style: (optional: the default style for new decks: `grid`, `bold`, `folio`, `signal`,
+`atelier` or `classic`. Blank: the agent chooses per deck.)
 
 ## Colours
 
@@ -28,6 +30,10 @@ Tokens for the deck's `<style id="pptd-brand">` block. Keep the names; set the v
   --title-soft: #e3e6ee;
   --title-footer: #a9b0c0;
   --font: Inter, "Segoe UI", system-ui, Arial, sans-serif;
+  /* Only when the defaults don't read, e.g. a light (yellow) accent or a dark highlight: */
+  /* --on-accent: #111;      text on accent fills (default --paper) */
+  /* --accent-text: #7a6200; the accent as text on paper (default --accent) */
+  /* --on-highlight: #fff;   text on highlight fills (default --ink) */
 }
 ```
 

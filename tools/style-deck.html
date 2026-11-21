@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="One-sentence description of the deck.">
+  <meta name="pptd" content="1">
+  <meta name="pptd-style" content="{{STYLE_NAME}}">
+  <meta name="pptd-brand" content="PPTD neutral">
+  <title>Deck title | Subtitle</title>
+  <style>
+    /* ---------- Frame: the same in every style. Navigation, sizing and the Teams fixes. ---------- */
+    :root {
+      --white: #fff;
+      /* Status colours: the same meaning on every slide, whatever the brand or style. */
+      --green: #16856c;  --green-soft: #e5f4ef;  --green-ink: #12664f;   /* ready / signed off */
+      --amber: #b66a12;  --amber-soft: #fff1da;  --amber-ink: #89510e;   /* in progress / to agree */
+      --blue-soft: #e5f1fa;                      --blue-ink: #135a90;    /* proven / proof of concept */
+      --shadow: 0 24px 70px rgba(20, 28, 48, .14);
+      /* Readable pairings, derived from the brand. A brand whose accent or highlight is light
+         (yellow, say) overrides them in its own block. */
+      --on-accent: var(--paper);      /* text on an accent fill */
+      --accent-text: var(--accent);   /* the accent as text on --paper or --accent-soft */
+      --on-highlight: var(--ink);     /* text on a highlight fill */
+    }
+    /* 16:9, top-anchored (Teams preview fix) */
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; background: #e9edf2; color: var(--ink); font-family: var(--font); }
+    body { display: grid; place-items: start center; overflow: hidden; }   /* start, NOT center */
+    .deck { width: min(100vw, 177.78vh); height: min(100vh, 56.25vw); container-type: inline-size; position: relative; background: var(--paper); overflow: hidden; box-shadow: var(--shadow); }
+
+    /* Script-free navigation. Radios are invisible but focusable: arrow keys move between them natively. */
+    .slide-radio { position: fixed; top: 0; left: 0; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
+    .slide { display: none; flex-direction: column; position: absolute; inset: 0; background: var(--paper); overflow: auto; }
+    /* ONE ENTRY PER SLIDE: extend this list whenever you add a slide. */
+    #r1:checked ~ #s1, #r2:checked ~ #s2, #r3:checked ~ #s3, #r4:checked ~ #s4, #r5:checked ~ #s5, #r6:checked ~ #s6, #r7:checked ~ #s7, #r8:checked ~ #s8, #r9:checked ~ #s9, #r10:checked ~ #s10, #r11:checked ~ #s11, #r12:checked ~ #s12, #r13:checked ~ #s13 { display: flex; flex-direction: column; }
+
+    /* .controls covers the slide but lets clicks through, except on its buttons and click zones. */
+    .controls { position: absolute; z-index: 5; inset: 0; display: flex; align-items: flex-end; justify-content: flex-end; gap: .625cqw; padding: 0 2.4% 1.125cqw 0; pointer-events: none; }
+    .controls .nav-btn, .controls .counter { pointer-events: auto; }
+    /* Click zones: a click (or tap) on the left third of the slide goes back, anywhere else
+       goes forward (the whole slide on the first one). They are the ‹ › labels' ::before, so
+       they need no extra markup; the bottom 7% is left clear for the buttons. */
+    .controls label::before { content: ""; position: absolute; top: 0; bottom: 7%; pointer-events: auto; }
+    .controls label[aria-label="Previous slide"]::before { left: 0; width: 33.33%; }
+    .controls label[aria-label="Next slide"]::before { left: 33.33%; right: 0; }
+    .controls .nav-ph ~ label[aria-label="Next slide"]::before { left: 0; }
+    .slide a { position: relative; z-index: 6; }   /* links stay clickable above the zones */
+    .controls .nav-btn, .controls .nav-ph { display: inline-flex; align-items: center; justify-content: center; border: 1px solid color-mix(in srgb, var(--ink) 20%, transparent); background: color-mix(in srgb, var(--paper) 94%, transparent); color: var(--ink); width: 3.125cqw; height: 2.812cqw; border-radius: .703cqw; font-size: 1.406cqw; cursor: pointer; user-select: none; }
+    .controls .nav-btn:hover { background: var(--accent-soft); }
+    .controls .nav-ph { visibility: hidden; }
+    .counter { min-width: 3.906cqw; text-align: center; color: var(--muted); font-size: 1.016cqw; font-variant-numeric: tabular-nums; background: color-mix(in srgb, var(--paper) 94%, transparent); border: 1px solid color-mix(in srgb, var(--ink) 20%, transparent); border-radius: .703cqw; padding: .625cqw .469cqw; }
+    .progress { position: absolute; z-index: 6; bottom: 0; left: 0; height: .312cqw; width: 100%; background: color-mix(in srgb, var(--ink) 9%, transparent); }
+    .progress span { display: block; height: 100%; background: var(--accent); }
+
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+    @media print {
+      @page { size: 13.333in 7.5in; margin: 0; }
+      html, body { width: auto; height: auto; background: white; overflow: visible; display: block; }
+      .deck { width: 13.333in; height: auto; overflow: visible; box-shadow: none; }
+      .slide { display: flex !important; position: relative; width: 13.333in; height: 7.5in; overflow: hidden; break-after: page; }
+      .controls, .progress { display: none !important; }
+    }
+  </style>
+  <!-- PPTD style block: this deck's layout and type. The meta above names it. Every size is in
+       cqw (1cqw = 12.8px at 1280×720) and every colour comes from the brand tokens, so any brand
+       works with any style. Replace this block (and the meta) to restyle the deck. -->
+  <style id="pptd-style">
+{{STYLE_CSS}}
+  </style>
+  <!-- PPTD brand block: this deck's brand. The meta names it; the style holds its tokens and,
+       in the comment, its rules. Replace both to rebrand the deck. -->
+  <style id="pptd-brand">
+    /* Brand: PPTD neutral.
+       Rules: no logo. Title and closing slides on --title-bg; content slides on --paper. */
+    :root {
+      --ink: #1c2230;        /* headings, body text, primary marks */
+      --ink-2: #434b5c;      /* secondary text */
+      --muted: #6b7385;      /* captions, footers, axis labels */
+      --paper: #f7f7f5;      /* slide background */
+      --accent: #4361ee;     /* accents, arrows, the one highlighted element */
+      --accent-soft: #eef1fe;/* tints: callouts, the winning column */
+      --highlight: #f25c3b;  /* markers: "now", step numbers, deadlines. Sparingly */
+      --title-bg: linear-gradient(125deg, #12151d 0%, #1c2230 58%, #2b3a8c 100%);
+      --title-eyebrow: #b9c4ff;
+      --title-soft: #e3e6ee; /* lead text on title slides */
+      --title-footer: #a9b0c0;
+      --font: Inter, "Segoe UI", system-ui, Arial, sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <main class="deck">
+    <!-- One radio per slide, all BEFORE the sections (the ~ selector needs that). r1 is checked + autofocus. -->
+    <input type="radio" name="slide" id="r1" class="slide-radio" checked autofocus aria-label="Slide 1">
+    <input type="radio" name="slide" id="r2" class="slide-radio" aria-label="Slide 2">
+    <input type="radio" name="slide" id="r3" class="slide-radio" aria-label="Slide 3">
+    <input type="radio" name="slide" id="r4" class="slide-radio" aria-label="Slide 4">
+    <input type="radio" name="slide" id="r5" class="slide-radio" aria-label="Slide 5">
+    <input type="radio" name="slide" id="r6" class="slide-radio" aria-label="Slide 6">
+    <input type="radio" name="slide" id="r7" class="slide-radio" aria-label="Slide 7">
+    <input type="radio" name="slide" id="r8" class="slide-radio" aria-label="Slide 8">
+    <input type="radio" name="slide" id="r9" class="slide-radio" aria-label="Slide 9">
+    <input type="radio" name="slide" id="r10" class="slide-radio" aria-label="Slide 10">
+    <input type="radio" name="slide" id="r11" class="slide-radio" aria-label="Slide 11">
+    <input type="radio" name="slide" id="r12" class="slide-radio" aria-label="Slide 12">
+    <input type="radio" name="slide" id="r13" class="slide-radio" aria-label="Slide 13">
+
+    <!-- 1 · Title: .title-slide. The eyebrow names the organisation and occasion; the footer the presenters. -->
+    <section id="s1" class="slide title-slide" aria-label="Slide 1: Title">
+      <div class="eyebrow">Organisation · Quarterly review · Q3 2026</div>
+      <div class="content">
+        <h1>The one-line message of the whole deck</h1>
+        <div class="title-mark"></div>
+        <p class="lead">A sentence of context: what this session is for and who it is for.</p>
+      </div>
+      <div class="footer"><span>Presenter, role · Presenter, role · 14 October 2026</span><span></span></div>
+      <nav class="controls" aria-label="Slide controls"><span class="nav-ph"></span><span class="counter">1 / 13</span><label for="r2" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 7.7%"></span></div>
+    </section>
+
+    <!-- 2 · Section divider: .section-slide. A number, the section's name and one line on what it covers. -->
+    <section id="s2" class="slide section-slide" aria-label="Slide 2: Section">
+      <div class="content">
+        <div class="section-num">02</div>
+        <div class="section-text">
+          <div class="eyebrow">Section</div>
+          <h2>Platform architecture</h2>
+          <p class="lead">How the system scales from 40 to 4,000 sites</p>
+        </div>
+      </div>
+      <div class="footer"><span>Deck title · Q3 2026</span><span>02</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r1" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">2 / 13</span><label for="r3" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 15.4%"></span></div>
+    </section>
+
+    <!-- 3 · Statement: one sentence, large. Mark the words that matter with .key (one phrase). -->
+    <section id="s3" class="slide" aria-label="Slide 3: Statement">
+      <div class="eyebrow">The quarter in one line</div>
+      <div class="content">
+        <p class="statement">Median planning time fell from 4 hours to <span class="key">11 minutes</span> across all 212 sites.</p>
+      </div>
+      <div class="footer"><span>Source: session logs, Jul–Sep 2026, n = 48,310</span><span>03</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r2" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">3 / 13</span><label for="r4" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 23.1%"></span></div>
+    </section>
+
+    <!-- 4 · Three points: .cards of .card (2–4). Same structure in every card; .hl on at most one. -->
+    <section id="s4" class="slide" aria-label="Slide 4: Three points">
+      <div class="eyebrow">Customer research · 38 interviews</div>
+      <h2>Why customers switch to us</h2>
+      <div class="content">
+        <div class="cards">
+          <div class="card hl"><span class="num">01</span><h3>Plans that react in real time</h3><p>Closures and late deliveries re-plan the whole network in under 30 seconds.</p></div>
+          <div class="card"><span class="num">02</span><h3>One partner network</h3><p>640 partners connected through a single booking flow, not phone and email.</p></div>
+          <div class="card"><span class="num">03</span><h3>Open by default</h3><p>Everything is in the public API, so IT teams extend it instead of working around it.</p></div>
+        </div>
+      </div>
+      <div class="footer"><span>Source: customer interviews, n = 38</span><span>04</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r3" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">4 / 13</span><label for="r5" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 30.8%"></span></div>
+    </section>
+
+    <!-- 5 · Process: .steps of .step (3–5). .hl marks the step this slide is about. -->
+    <section id="s5" class="slide" aria-label="Slide 5: Process">
+      <div class="eyebrow">Architecture · request path</div>
+      <h2>From order to reconciled invoice in five stages</h2>
+      <div class="content">
+        <ol class="steps">
+          <li class="step"><span class="num">1</span><h3>Ingest</h3><p>Orders arrive by API or file and are de-duplicated.</p></li>
+          <li class="step"><span class="num">2</span><h3>Normalise</h3><p>Addresses geocoded, loads mapped to one unit.</p></li>
+          <li class="step hl"><span class="num">3</span><h3>Plan</h3><p>Routes built against live capacity. New in Q3.</p></li>
+          <li class="step"><span class="num">4</span><h3>Dispatch</h3><p>Partners booked, drivers notified.</p></li>
+          <li class="step"><span class="num">5</span><h3>Reconcile</h3><p>Proof of delivery matched to each invoice line.</p></li>
+        </ol>
+      </div>
+      <div class="footer"><span>Architecture as of October 2026</span><span>05</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r4" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">5 / 13</span><label for="r6" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 38.5%"></span></div>
+    </section>
+
+    <!-- 6 · Big numbers: .stats of .stat (2–4). Every stat has the same parts: .value, .label, .delta. -->
+    <section id="s6" class="slide" aria-label="Slide 6: Big numbers">
+      <div class="eyebrow">Q3 2026 · vs Q2</div>
+      <h2>Our strongest quarter on every core metric</h2>
+      <div class="content">
+        <div class="stats">
+          <div class="stat hl"><div class="value">$18.4M</div><div class="label">Annual recurring revenue</div><div class="delta">+18% QoQ</div></div>
+          <div class="stat"><div class="value">132%</div><div class="label">Net revenue retention</div><div class="delta">+6 pts QoQ</div></div>
+          <div class="stat"><div class="value">99.97%</div><div class="label">Uptime</div><div class="delta">SLA 99.9%</div></div>
+          <div class="stat"><div class="value">41<span class="unit"> days</span></div><div class="label">Median time to go-live</div><div class="delta">−23 days QoQ</div></div>
+        </div>
+      </div>
+      <div class="footer"><span>Source: finance and operations dashboards, 30 Sep 2026</span><span>06</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r5" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">6 / 13</span><label for="r7" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 46.2%"></span></div>
+    </section>
+
+    <!-- 7 · Comparison: table.compare. The first column names the rows; .win marks our column's cells. -->
+    <section id="s7" class="slide" aria-label="Slide 7: Comparison">
+      <div class="eyebrow">Competitive position</div>
+      <h2>How we compare for a 50-site customer</h2>
+      <div class="content">
+        <table class="compare">
+          <thead><tr><th></th><th class="win">Us</th><th>Legacy system</th><th>Spreadsheets</th></tr></thead>
+          <tbody>
+            <tr><td>Daily planning time</td><td class="win">11 min</td><td>1.5 h</td><td>4 h</td></tr>
+            <tr><td>Live re-planning</td><td class="win">Yes, under 30 s</td><td>Nightly batch</td><td>No</td></tr>
+            <tr><td>Partner integrations</td><td class="win">640</td><td>~120</td><td>None</td></tr>
+            <tr><td>Time to go-live</td><td class="win">6 weeks</td><td>9–14 months</td><td>Immediate</td></tr>
+            <tr><td>Cost per site per month</td><td class="win">$390</td><td>$1,100</td><td>Staff time</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="footer"><span>Source: published price lists and customer references, 2026</span><span>07</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r6" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">7 / 13</span><label for="r8" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 53.8%"></span></div>
+    </section>
+
+    <!-- 8 · Chart + takeaway: .split (chart left, .takeaway right). Bars: --v is the bar's height, 0–1 of the tallest. -->
+    <section id="s8" class="slide" aria-label="Slide 8: Chart and takeaway">
+      <div class="eyebrow">Recurring revenue by quarter · $M</div>
+      <h2>Growth is accelerating, not levelling off</h2>
+      <div class="content">
+        <div class="split">
+          <div class="bars" role="img" aria-label="Recurring revenue by quarter: 11.2, 13.0, 15.6, 18.4, and 21.0 estimated">
+            <div class="bar" style="--v: .53"><span class="val">11.2</span><span class="fill"></span><span class="cat">Q4 ’25</span></div>
+            <div class="bar" style="--v: .62"><span class="val">13.0</span><span class="fill"></span><span class="cat">Q1 ’26</span></div>
+            <div class="bar" style="--v: .74"><span class="val">15.6</span><span class="fill"></span><span class="cat">Q2 ’26</span></div>
+            <div class="bar hl" style="--v: .88"><span class="val">18.4</span><span class="fill"></span><span class="cat">Q3 ’26</span></div>
+            <div class="bar est" style="--v: 1"><span class="val">21.0 est.</span><span class="fill"></span><span class="cat">Q4 ’26</span></div>
+          </div>
+          <div class="takeaway">
+            <div class="eyebrow">Takeaway</div>
+            <h3>Up 64% in three quarters; Q3 added more than Q1 and Q2 combined.</h3>
+            <p>Expansion drove 58% of net new revenue.</p>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>Source: finance, 30 Sep 2026. Q4 is the board-approved forecast.</span><span>08</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r7" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">8 / 13</span><label for="r9" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 61.5%"></span></div>
+    </section>
+
+    <!-- 9 · Status: table.matrix with .status cells. Status colours mean the same on every slide:
+         green = signed off / ready, ink (.blue) = proven / proof of concept, amber = in progress. -->
+    <section id="s9" class="slide" aria-label="Slide 9: Status">
+      <div class="eyebrow">Delivery status</div>
+      <h2>Two workstreams are ready; one needs a decision</h2>
+      <div class="content">
+        <table class="matrix">
+          <thead><tr><th>Workstream</th><th>Status</th><th>Detail</th></tr></thead>
+          <tbody>
+            <tr><td>Data processing</td><td class="status green">Signed off</td><td>Signed off by the operations lead on 2 October.</td></tr>
+            <tr><td>Live re-planning</td><td class="status blue">Pilot proven</td><td>Three-site pilot, 6 weeks, no incidents.</td></tr>
+            <tr><td>Partner billing</td><td class="status amber">In progress</td><td>Forecast 15 December; deadline 1 December.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="footer"><span>Status as of 14 October 2026</span><span>09</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r8" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">9 / 13</span><label for="r10" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 69.2%"></span></div>
+    </section>
+
+    <!-- 10 · Worked example: inline SVG in .diagram, styled by the dg-* classes. -->
+    <section id="s10" class="slide" aria-label="Slide 10: Worked example">
+      <div class="eyebrow">How it works</div>
+      <h2>One order, followed through the planner</h2>
+      <div class="content">
+        <div class="diagram">
+          <svg viewBox="0 0 900 260" role="img" aria-labelledby="dg10-title dg10-desc">
+            <title id="dg10-title">One order through the planner</title>
+            <desc id="dg10-desc">Step 1, an order for 12 pallets arrives. Step 2, the planner places it on the truck with spare capacity. Step 3, the driver's route updates in 20 seconds.</desc>
+            <defs><marker id="dg10-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="dg-arrowhead" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+            <rect class="dg-box" x="10" y="30" width="240" height="210" rx="14"/>
+            <circle class="dg-step" cx="38" cy="30" r="16"/><text class="dg-step-text" x="38" y="35" text-anchor="middle">1</text>
+            <text class="dg-label" x="130" y="120" text-anchor="middle">Order arrives</text>
+            <text class="dg-sub" x="130" y="146" text-anchor="middle">12 pallets, Leeds → York</text>
+            <path class="dg-arrow" d="M255 135 H325" marker-end="url(#dg10-arr)"/>
+            <rect class="dg-box hl" x="330" y="30" width="240" height="210" rx="14"/>
+            <circle class="dg-step" cx="358" cy="30" r="16"/><text class="dg-step-text" x="358" y="35" text-anchor="middle">2</text>
+            <text class="dg-label" x="450" y="120" text-anchor="middle">Planner places it</text>
+            <text class="dg-sub" x="450" y="146" text-anchor="middle">Truck 7 has 14 pallets free</text>
+            <path class="dg-arrow" d="M575 135 H645" marker-end="url(#dg10-arr)"/>
+            <rect class="dg-box" x="650" y="30" width="240" height="210" rx="14"/>
+            <circle class="dg-step" cx="678" cy="30" r="16"/><text class="dg-step-text" x="678" y="35" text-anchor="middle">3</text>
+            <text class="dg-label" x="770" y="120" text-anchor="middle">Route updates</text>
+            <text class="dg-sub" x="770" y="146" text-anchor="middle">Driver notified in 20 s</text>
+          </svg>
+        </div>
+      </div>
+      <div class="footer"><span>Illustrative example</span><span>10</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r9" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">10 / 13</span><label for="r11" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 76.9%"></span></div>
+    </section>
+
+    <!-- 11 · Quote: figure.quote, the person and their role in the figcaption. -->
+    <section id="s11" class="slide" aria-label="Slide 11: Quote">
+      <div class="content">
+        <figure class="quote">
+          <blockquote>We used to plan Monday’s routes on Friday. Now we plan at 6 a.m. and <span class="key">re-plan whenever the road tells us to.</span></blockquote>
+          <figcaption><b>Name Surname</b> <span>VP Operations, Customer Ltd · 64 sites</span></figcaption>
+        </figure>
+      </div>
+      <div class="footer"><span>Customer interview, September 2026</span><span>11</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r10" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">11 / 13</span><label for="r12" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 84.6%"></span></div>
+    </section>
+
+    <!-- 12 · Timeline: ol.timeline (3–5 items). .now marks today, .goal the target. -->
+    <section id="s12" class="slide" aria-label="Slide 12: Timeline">
+      <div class="eyebrow">Roadmap · next 12 months</div>
+      <h2>Next year: from planning tool to network</h2>
+      <div class="content">
+        <ol class="timeline">
+          <li class="now"><span class="when">Now · Q4 2026</span><h3>Multi-site planning</h3><p>Shared capacity across sites, for all customers.</p></li>
+          <li><span class="when">Q1 2027</span><h3>Partner marketplace</h3><p>Spare capacity bookable inside the plan.</p></li>
+          <li><span class="when">Q2 2027</span><h3>EU region</h3><p>EU data residency, three pilot customers.</p></li>
+          <li class="goal"><span class="when">Q3 2027 · Target</span><h3>$40M ARR</h3><p>500 sites live; break-even on contribution.</p></li>
+        </ol>
+      </div>
+      <div class="footer"><span>Plan approved by the leadership team, October 2026</span><span>12</span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r11" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">12 / 13</span><label for="r13" class="nav-btn" aria-label="Next slide">›</label></nav>
+      <div class="progress"><span style="width: 92.3%"></span></div>
+    </section>
+
+    <!-- 13 · Closing: .title-slide with a .split of headline and ol.asks (or just a headline). -->
+    <section id="s13" class="slide title-slide" aria-label="Slide 13: Closing">
+      <div class="eyebrow">Decisions requested today</div>
+      <div class="content">
+        <div class="split">
+          <h2>Three decisions for the board</h2>
+          <ol class="asks">
+            <li>Approve next year’s hiring plan: 34 roles</li>
+            <li>Release $2.1M for the EU region</li>
+            <li>Endorse the marketplace pricing model</li>
+          </ol>
+        </div>
+      </div>
+      <div class="footer"><span>Contact name · team@example.com</span><span></span></div>
+      <nav class="controls" aria-label="Slide controls"><label for="r12" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">13 / 13</span><span class="nav-ph"></span></nav>
+      <div class="progress"><span style="width: 100%"></span></div>
+    </section>
+  </main>
+</body>
+</html>

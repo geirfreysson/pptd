@@ -1,0 +1,165 @@
+    /* Style: bold. Warm, confident, high contrast. Heavy headlines, rounded tinted surfaces,
+       no borders or shadows. One solid accent surface per slide (the hero card, the current
+       step, the winning column); the highlight is a marker stroke under a few key words. */
+    :root {
+      --tint: color-mix(in srgb, var(--ink) 6%, var(--paper));   /* neutral surface */
+      --r-card: 1.563cqw;          /* 20px: cards and panels */
+      --r-item: 1.25cqw;           /* 16px: table and list items */
+      --r-bar: .938cqw;            /* 12px: bars */
+      --marker: color-mix(in srgb, var(--highlight) 65%, transparent);   /* the .key stroke; a brand with a dark highlight sets a light one */
+    }
+    /* 64 top, 72 sides; content ends at y 660, the footer band is the bottom 30px. */
+    .slide { padding: 5cqw 5.625cqw 4.688cqw; gap: 1.25cqw; color: var(--ink); }
+    h1, h2, h3, p, figure, blockquote { margin: 0; }
+
+    /* ---------- Type scale: cqw = 1% of deck width (12.8px at 1280×720) ---------- */
+    .eyebrow { align-self: flex-start; padding: .469cqw 1.094cqw; border-radius: 999px; background: var(--accent-soft); color: var(--accent-text); font-size: 1.094cqw; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+    h1 { font-size: 6.875cqw; line-height: .98; font-weight: 800; letter-spacing: -.035em; max-width: 76cqw; text-wrap: balance; }
+    h2 { font-size: 3.438cqw; line-height: 1.08; font-weight: 800; letter-spacing: -.025em; max-width: 76cqw; text-wrap: balance; }
+    h3 { font-size: 2.031cqw; line-height: 1.15; font-weight: 700; letter-spacing: -.01em; }
+    p, li { font-size: 1.563cqw; line-height: 1.4; color: var(--ink-2); }
+    .lead { font-size: 2.031cqw; line-height: 1.35; color: var(--ink-2); max-width: 66cqw; }
+    .footer { position: absolute; left: 5.625cqw; width: 77.5cqw; bottom: 0; height: 2.344cqw; display: flex; align-items: center; gap: 1.25cqw; font-size: 1.016cqw; font-weight: 500; color: var(--muted); }
+    .footer::before { content: ""; flex: none; width: .469cqw; height: .469cqw; border-radius: 50%; background: var(--accent); }
+    .footer span:last-child { margin-left: auto; }
+    /* The main block of a slide: takes the height between the headline and the footer. */
+    .content { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; margin-top: 1.875cqw; }
+    .statement { font-size: 5cqw; line-height: 1.05; font-weight: 800; letter-spacing: -.03em; color: var(--ink); max-width: 80cqw; text-wrap: balance; }
+    /* The marker stroke: one phrase per slide. */
+    .key { background: linear-gradient(to top, transparent 6%, var(--marker) 6%, var(--marker) 38%, transparent 38%); -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+
+    /* ---------- Title / closing slide ---------- */
+    .title-slide { background: var(--title-bg); color: var(--paper); }
+    .title-slide .eyebrow { background: color-mix(in srgb, var(--title-eyebrow) 18%, transparent); color: var(--title-eyebrow); }
+    .title-slide .content { justify-content: center; gap: 1.875cqw; margin: 0; }
+    .title-slide h1, .title-slide h2 { color: var(--paper); }
+    .title-slide .lead, .title-slide p { color: var(--title-soft); }
+    .title-slide .footer { color: var(--title-footer); }
+    .title-slide .footer::before { display: none; }
+    .title-slide .split { align-items: center; grid-template-columns: 1fr 1fr; gap: 3.125cqw; }
+    .title-slide .split h2 { font-size: 5cqw; line-height: 1; letter-spacing: -.035em; }
+    .title-mark { display: none; }
+    /* ---------- Section divider: the accent is the whole slide ---------- */
+    .section-slide { background: var(--accent); }
+    .section-slide .content { justify-content: flex-end; gap: 1.875cqw; margin: 0 0 1.25cqw; }
+    .section-num { align-self: flex-start; padding: .469cqw 1.094cqw; border-radius: 999px; background: var(--on-accent); color: var(--accent); font-size: 1.094cqw; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+    .section-num::before { content: "Part "; }
+    .section-text { display: flex; flex-direction: column; gap: 1.563cqw; }
+    .section-text .eyebrow { display: none; }
+    .section-text h2 { font-size: 7.5cqw; line-height: .95; letter-spacing: -.04em; color: var(--on-accent); }
+    .section-text .lead { color: color-mix(in srgb, var(--on-accent) 85%, transparent); }
+    .section-slide .footer { color: color-mix(in srgb, var(--on-accent) 75%, transparent); }
+    .section-slide .footer::before { background: var(--on-accent); }
+
+    /* ---------- Cards: tinted, stretched to fill; .hl is the one solid card ---------- */
+    .cards { flex: 1; max-height: 26cqw; min-height: 17cqw; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1.875cqw; }
+    .card { position: relative; background: var(--accent-soft); border-radius: var(--r-card); padding: 2.188cqw; display: flex; flex-direction: column; justify-content: flex-end; gap: .938cqw; }
+    .card .num { position: absolute; top: 2.188cqw; left: 2.188cqw; display: grid; place-items: center; width: 2.813cqw; height: 2.813cqw; border-radius: 50%; background: var(--paper); color: var(--accent-text); font-size: 1.094cqw; font-weight: 800; }
+    .card.hl { background: var(--accent); }
+    .card.hl h3, .card.hl p { color: var(--on-accent); }
+    .num { font-weight: 700; }
+    /* ---------- Process steps: tinted tiles; the current one solid and raised ---------- */
+    .steps { flex: 1; max-height: 22cqw; min-height: 14cqw; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1.25cqw; align-items: stretch; list-style: none; margin: 0; padding: 0; }
+    .step { background: var(--tint); border-radius: var(--r-item); padding: 1.563cqw; display: flex; flex-direction: column; gap: .625cqw; }
+    .step .num { font-size: 1.016cqw; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: .313cqw; }
+    .step .num::before { content: "Step "; }
+    .step h3 { font-size: 1.875cqw; }
+    .step p { font-size: 1.406cqw; }
+    .step.hl { background: var(--accent); margin: -.625cqw 0; padding-top: 2.188cqw; }
+    .step.hl .num, .step.hl h3, .step.hl p { color: var(--on-accent); }
+    /* ---------- Big numbers: tinted tiles, 2 × 2 when there are four ---------- */
+    .stats { flex: 1; max-height: 30cqw; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1.25cqw; }
+    .stats:has(> .stat:nth-child(4)) { grid-auto-flow: row; grid-template-columns: 1fr 1fr; }
+    .stat { background: var(--tint); border-radius: var(--r-card); padding: 1.875cqw 2.188cqw; display: grid; grid-template-columns: 1fr auto; grid-template-rows: 1fr auto; column-gap: 1.25cqw; row-gap: .938cqw; }
+    .value { grid-column: 1 / -1; font-size: 5.625cqw; line-height: 1; font-weight: 800; letter-spacing: -.035em; color: var(--ink); white-space: nowrap; }
+    .unit { font-size: .6em; letter-spacing: -.02em; }
+    .stat .label { align-self: end; font-size: 1.25cqw; font-weight: 700; color: var(--ink); }
+    .delta { align-self: end; text-align: right; font-size: 1.25cqw; color: var(--ink-2); }
+    .stat.hl { background: var(--accent-soft); }
+    .stat.hl .value { color: var(--accent-text); }
+    /* ---------- Comparison table: our column is a solid header over a tinted column ---------- */
+    .compare { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 1.406cqw; }
+    .compare th, .compare td { text-align: left; padding: 1.016cqw 1.25cqw; border-bottom: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); color: var(--ink-2); }
+    .compare th { font-weight: 700; color: var(--ink); border-bottom: 0; }
+    .compare th:first-child, .compare td:first-child { padding-left: 0; font-weight: 700; color: var(--ink); }
+    .compare .win { background: var(--accent-soft); color: var(--ink); font-weight: 700; border-bottom-color: color-mix(in srgb, var(--accent) 12%, transparent); }
+    .compare th.win { background: var(--accent); color: var(--on-accent); border-radius: var(--r-item) var(--r-item) 0 0; }
+    .compare tr:last-child td { border-bottom: 0; }
+    .compare tr:last-child td.win { border-radius: 0 0 var(--r-item) var(--r-item); }
+    /* ---------- Two columns, main and side ---------- */
+    .split { display: grid; grid-template-columns: 2fr 1fr; gap: 3.125cqw; align-items: stretch; }
+    /* ---------- Bar chart in HTML: --v on each .bar is its height, 0–1 ---------- */
+    .bars { align-self: end; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; column-gap: 1.25cqw; align-items: end; margin-bottom: 2.5cqw; }
+    .bar { position: relative; display: flex; flex-direction: column; gap: .625cqw; }
+    .bar .val { text-align: center; font-size: 1.25cqw; font-weight: 700; color: var(--ink); }
+    .bar .fill { display: block; height: calc(var(--v, .5) * 24cqw); background: color-mix(in srgb, var(--ink) 12%, var(--paper)); border-radius: var(--r-bar) var(--r-bar) 0 0; }
+    .bar .cat { position: absolute; top: 100%; left: 0; right: 0; margin-top: .625cqw; text-align: center; font-size: 1.094cqw; color: var(--muted); }
+    .bar.hl .fill { background: var(--accent); }
+    .bar.hl .val, .bar.hl .cat { color: var(--accent-text); font-weight: 700; }
+    .bar.est .fill { background: repeating-linear-gradient(135deg, var(--accent-soft) 0 .469cqw, transparent .469cqw .938cqw); }
+    .takeaway { background: var(--accent-soft); border-radius: var(--r-card); padding: 2.188cqw; display: flex; flex-direction: column; justify-content: flex-end; gap: .938cqw; }
+    .takeaway .eyebrow { padding: 0; background: none; }
+    .takeaway h3 { font-size: 2.031cqw; }
+    /* ---------- Quote: the slide turns soft accent ---------- */
+    .slide:has(.quote) { background: var(--accent-soft); }
+    .quote { display: flex; flex-direction: column; gap: 2.5cqw; }
+    .quote::before { content: "\201C"; height: 3.75cqw; font-size: 8.75cqw; line-height: .9; font-weight: 800; color: var(--accent-text); }
+    .quote blockquote { font-size: 3.75cqw; line-height: 1.12; font-weight: 800; letter-spacing: -.025em; color: var(--ink); max-width: 80cqw; text-wrap: pretty; }
+    .quote figcaption { display: flex; flex-direction: column; gap: .156cqw; font-size: 1.25cqw; color: var(--ink-2); }
+    .quote figcaption b { font-weight: 700; color: var(--ink); }
+    /* ---------- Timeline: a track with round markers and pill dates ---------- */
+    .timeline { list-style: none; margin: 0; padding: 0; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1.25cqw; }
+    .timeline li { position: relative; padding-top: 2.813cqw; display: flex; flex-direction: column; gap: .938cqw; }
+    .timeline li::before { content: ""; position: absolute; z-index: 1; top: 0; left: 0; width: 1.25cqw; height: 1.25cqw; border-radius: 50%; background: var(--paper); border: .156cqw solid color-mix(in srgb, var(--ink) 30%, transparent); box-sizing: border-box; }
+    .timeline li::after { content: ""; position: absolute; top: .547cqw; left: 0; right: -1.25cqw; height: .156cqw; border-radius: 999px; background: color-mix(in srgb, var(--ink) 15%, transparent); }
+    .timeline li:last-child::after { right: 0; }
+    .timeline li.now::before { background: var(--accent); border-color: var(--accent-text); }
+    .timeline li.now::after { background: linear-gradient(90deg, var(--accent) 45%, color-mix(in srgb, var(--ink) 15%, transparent) 45%); }
+    .when { align-self: flex-start; padding: .313cqw .781cqw; border-radius: 999px; background: var(--tint); font-size: 1.016cqw; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); }
+    .now .when { background: var(--highlight); color: var(--on-highlight); }
+    .goal .when { background: var(--accent); color: var(--on-accent); }
+    /* ---------- Numbered asks, e.g. on a closing slide ---------- */
+    .asks { list-style: none; margin: 0; padding: 0; counter-reset: ask; display: flex; flex-direction: column; gap: .938cqw; }
+    .asks li { counter-increment: ask; display: flex; gap: 1.25cqw; align-items: center; padding: 1.25cqw 1.563cqw; border-radius: var(--r-item); background: color-mix(in srgb, currentColor 9%, transparent); font-size: 1.563cqw; font-weight: 700; line-height: 1.3; color: inherit; }
+    .asks li::before { content: counter(ask); font-weight: 800; color: var(--accent-text); }
+    .title-slide .asks li::before { color: var(--title-eyebrow); }
+
+    /* ---------- Older components, drawn in this style ---------- */
+    .grid { display: grid; gap: 1.875cqw; }
+    .grid.two { grid-template-columns: repeat(2, 1fr); }
+    .grid.three { grid-template-columns: repeat(3, 1fr); }
+    .grid.four { grid-template-columns: repeat(4, 1fr); }
+    .panel { background: var(--tint); border-radius: var(--r-card); padding: 2.188cqw; display: flex; flex-direction: column; gap: .938cqw; align-items: flex-start; }
+    /* Tags are for status only: pills in the status colours. */
+    .tag { display: inline-flex; padding: .391cqw .938cqw; border-radius: 999px; font-size: 1.016cqw; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+    .tag.ready { color: var(--green-ink); background: var(--green-soft); }
+    .tag.proven { color: var(--blue-ink); background: var(--blue-soft); }
+    .tag.build { color: var(--amber-ink); background: var(--amber-soft); }
+    .callout { background: var(--accent-soft); border-radius: var(--r-item); padding: 1.25cqw 1.563cqw; font-size: 1.563cqw; line-height: 1.4; color: var(--ink); }
+    .callout.amber { background: var(--amber-soft); }
+    .path { display: flex; align-items: stretch; gap: .938cqw; }
+    .node { flex: 1; display: flex; flex-direction: column; gap: .469cqw; background: var(--tint); border-radius: var(--r-item); padding: 1.563cqw; }
+    .node strong { font-size: 1.875cqw; font-weight: 700; }
+    .node span { font-size: 1.406cqw; color: var(--ink-2); line-height: 1.35; }
+    .node.hl { background: var(--accent); }
+    .node.hl strong, .node.hl span { color: var(--on-accent); }
+    .arrow { align-self: center; color: var(--accent-text); font-size: 2.188cqw; font-weight: 800; }
+    .matrix { width: 100%; border-collapse: separate; border-spacing: 0 .469cqw; font-size: 1.406cqw; }
+    .matrix th, .matrix td { text-align: left; padding: 1.094cqw 1.563cqw; vertical-align: top; color: var(--ink-2); }
+    .matrix th { padding-top: 0; padding-bottom: 0; font-size: 1.016cqw; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    .matrix td { background: var(--tint); }
+    .matrix td:first-child { border-radius: var(--r-item) 0 0 var(--r-item); font-weight: 700; color: var(--ink); }
+    .matrix td:last-child { border-radius: 0 var(--r-item) var(--r-item) 0; }
+    .status { font-weight: 800; white-space: nowrap; }
+    .status.green { color: var(--green); } .status.blue { color: var(--ink); } .status.amber { color: var(--amber); }
+    /* Inline SVG diagrams: tinted rounded boxes, the accent box solid. */
+    .diagram { width: 100%; }
+    .diagram svg { width: 100%; height: auto; display: block; }
+    .dg-box { fill: var(--tint); stroke: none; rx: 20px; }
+    .dg-box.hl { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 3; }
+    .dg-label { fill: var(--ink); font: 800 20px var(--font); letter-spacing: -.01em; }
+    .dg-sub { fill: var(--ink-2); font: 16px var(--font); }
+    .dg-arrow { stroke: var(--accent); stroke-width: 3; fill: none; }
+    .dg-arrowhead { fill: var(--accent); }
+    .dg-step { fill: var(--paper); stroke: var(--accent); stroke-width: 2; }
+    .dg-step-text { fill: var(--accent-text); font: 800 14px var(--font); }

@@ -105,7 +105,7 @@ npm run build      # static site in site/build
 - `site/src/pages/index.js` is the home page; `site/docs/*.md` are the doc pages (order in
   `site/sidebars.js`).
 - `site/static/demo/pptd-demo.pptd.html` is the live deck embedded in the home page. It is a
-  real deck made from the skill template, without `autofocus` so it doesn't take focus from
+  real deck made from a skill template, without `autofocus` so it doesn't take focus from
   the page; check it with `npm run check -- site/static/demo/pptd-demo.pptd.html`.
 - `.github/workflows/site-pages.yml` builds and deploys on every push to `main` that touches
   `site/`, and can be run by hand. Once, in the repository settings, set Pages › Source to
@@ -123,13 +123,36 @@ the plugin `agent/plugin`; for pi, with `--skill`). It is brand-neutral and main
 
 - `SKILL.md`: slide structure, layout, diagrams, writing, checks.
 - `PPTD.md`: working inside the app (current slide, new decks, branding, media).
-- `template.html`: the starting deck. Its brand is one `<style id="pptd-brand">` block.
+- `DESIGN.md`: the design principles every style follows, and how to borrow from the styles.
+  When a style teaches something new, add the principle here, not only to its `STYLE.md`.
+- `styles/<name>/` (`grid`, `bold`, `folio`, `signal`, `atelier`, `classic`): one folder per style. `STYLE.md` is its
+  design rules, `style.css` its layout CSS (edit this), and `template.html` the starting deck
+  in that style, **generated** from `tools/style-deck.html` (the frame and the example slides,
+  shared by every style) plus `style.css`. Never edit a `template.html` by hand.
 - `brand-template.md`: the shape of the default brand file.
 - `pptd-deck.mjs`: adds, removes and reorders slides, so the agent only writes content.
 - `pptd-app.mjs`: asks the running app for slide screenshots and the keyboard test, so no
   browser is launched.
 - `pptd-spec.md`, `pptd-check.mjs`, `pptd-deck.mjs`: copied from `docs/` and `tools/` by
   `npm run sync-skill`, which also runs before every build.
+
+`npm run sync-skill` also runs `tools/build-styles.mjs`, which writes each style's
+`template.html` and fails if a style hard-codes a colour (hex, `rgb()`, `white`: styles must
+take every colour from the brand tokens), uses px for anything but 1px hairlines and 999px
+pill radii (SVG `.dg-*` rules excepted), or doesn't draw one of the shared layout classes
+(listed in the script and in SKILL.md §1). The template is checked with `pptd-check.mjs`.
+The release workflow runs it with `--check`.
+
+**Adding a style:** make `styles/<name>/style.css` (start from a copy of `grid`'s, keep every
+class) and `STYLE.md` (look, when to use it, rules, type scale, brand notes, its own
+palette), add it to the tables in `SKILL.md` §1 and `brand-template.md`, and to the list in
+`tools/verify-release-bundle.mjs`, then run `npm run sync-skill`. Check it with three
+brands, including one with a light accent (screenshots through `pptd-app.mjs shot`). A
+design from Claude Design or elsewhere is a reference, not something to paste: translate it
+into the shared classes, cqw sizes and brand tokens. A style may draw a shared class quite
+differently (folio's hero stat, signal's horizontal bars) as long as the markup is the same.
+Its display and label fonts are style tokens (`--font-serif`, `--font-mono`); colours always
+come from the brand.
 
 Pi needs nothing installed: the app ships it (`@earendil-works/pi-coding-agent`, pinned in
 `vendor/pi`) and runs it on its own Electron runtime. Claude Code must be installed (`claude` on
