@@ -5,31 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="What PPTD is, as a PPTD deck.">
   <meta name="pptd" content="1">
+  <meta name="pptd-style" content="classic">
   <meta name="pptd-brand" content="PPTD site">
   <title>PPTD | Presentations you make by asking</title>
   <style>
-    /* Non-brand tokens. The brand's own tokens (colours, font) are in <style id="pptd-brand">
-       below, which comes last so it wins. */
+    /* ---------- Frame: the same in every style. Navigation, sizing and the Teams fixes. ---------- */
     :root {
       --white: #fff;
-      /* Status colours: the same meaning on every slide, whatever the brand. */
-      --green: #16856c;  --green-soft: #e5f4ef;   /* ready / signed off */
-      --amber: #b66a12;  --amber-soft: #fff1da;   /* in progress / to agree */
-      --blue-soft: #e5f1fa;                       /* proven / proof of concept */
-      --line: #dfe2e8;
+      /* Status colours: the same meaning on every slide, whatever the brand or style. */
+      --green: #16856c;  --green-soft: #e5f4ef;  --green-ink: #12664f;   /* ready / signed off */
+      --amber: #b66a12;  --amber-soft: #fff1da;  --amber-ink: #89510e;   /* in progress / to agree */
+      --blue-soft: #e5f1fa;                      --blue-ink: #135a90;    /* proven / proof of concept */
       --shadow: 0 24px 70px rgba(20, 28, 48, .14);
+      /* Readable pairings, derived from the brand. A brand whose accent or highlight is light
+         (yellow, say) overrides them in its own block. */
+      --on-accent: var(--paper);      /* text on an accent fill */
+      --accent-text: var(--accent);   /* the accent as text on --paper or --accent-soft */
+      --on-highlight: var(--ink);     /* text on a highlight fill */
+      --on-title: var(--paper);       /* headlines on --title-bg; a dark brand whose --paper is dark sets it light */
     }
-
-    /* ---------- Frame: 16:9, top-anchored (Teams preview fix) ---------- */
+    /* 16:9, top-anchored (Teams preview fix) */
     * { box-sizing: border-box; }
     html, body { margin: 0; width: 100%; height: 100%; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; background: #e9edf2; color: var(--ink); font-family: var(--font); }
     body { display: grid; place-items: start center; overflow: hidden; }   /* start, NOT center */
     .deck { width: min(100vw, 177.78vh); height: min(100vh, 56.25vw); container-type: inline-size; position: relative; background: var(--paper); overflow: hidden; box-shadow: var(--shadow); }
 
-    /* ---------- Script-free navigation ---------- */
-    /* Radios are invisible but focusable: arrow keys move between them natively. */
+    /* Script-free navigation. Radios are invisible but focusable: arrow keys move between them natively. */
     .slide-radio { position: fixed; top: 0; left: 0; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
-    .slide { display: none; position: absolute; inset: 0; padding: 5% 7.2% 7.4%; background: var(--paper); overflow: auto; }
+    .slide { display: none; flex-direction: column; position: absolute; inset: 0; background: var(--paper); overflow: auto; }
     /* ONE ENTRY PER SLIDE: extend this list whenever you add a slide. */
     #r1:checked ~ #s1, #r2:checked ~ #s2, #r3:checked ~ #s3, #r4:checked ~ #s4, #r5:checked ~ #s5, #r6:checked ~ #s6 { display: flex; flex-direction: column; }
 
@@ -44,16 +47,107 @@
     .controls label[aria-label="Next slide"]::before { left: 33.33%; right: 0; }
     .controls .nav-ph ~ label[aria-label="Next slide"]::before { left: 0; }
     .slide a { position: relative; z-index: 6; }   /* links stay clickable above the zones */
-    .controls .nav-btn, .controls .nav-ph { display: inline-flex; align-items: center; justify-content: center; border: 1px solid #cbd5df; background: rgba(255,255,255,.94); color: var(--ink); width: 3.125cqw; height: 2.812cqw; border-radius: .703cqw; font-size: 1.406cqw; cursor: pointer; user-select: none; }
+    .controls .nav-btn, .controls .nav-ph { display: inline-flex; align-items: center; justify-content: center; border: 1px solid color-mix(in srgb, var(--ink) 20%, transparent); background: color-mix(in srgb, var(--paper) 94%, transparent); color: var(--ink); width: 3.125cqw; height: 2.812cqw; border-radius: .703cqw; font-size: 1.406cqw; cursor: pointer; user-select: none; }
     .controls .nav-btn:hover { background: var(--accent-soft); }
     .controls .nav-ph { visibility: hidden; }
-    .counter { min-width: 3.906cqw; text-align: center; color: var(--muted); font-size: 1.016cqw; font-variant-numeric: tabular-nums; background: rgba(255,255,255,.94); border: 1px solid #cbd5df; border-radius: .703cqw; padding: .625cqw .469cqw; }
-    .progress { position: absolute; z-index: 6; bottom: 0; left: 0; height: .312cqw; width: 100%; background: rgba(20,43,67,.09); }
+    .counter { min-width: 3.906cqw; text-align: center; color: var(--muted); font-size: 1.016cqw; font-variant-numeric: tabular-nums; background: color-mix(in srgb, var(--paper) 94%, transparent); border: 1px solid color-mix(in srgb, var(--ink) 20%, transparent); border-radius: .703cqw; padding: .625cqw .469cqw; }
+    .progress { position: absolute; z-index: 6; bottom: 0; left: 0; height: .312cqw; width: 100%; background: color-mix(in srgb, var(--ink) 9%, transparent); }
     .progress span { display: block; height: 100%; background: var(--accent); }
 
-    /* ---------- Type scale: cqw = 1% of deck width (12.8px at 1280×720). Every size is in cqw,
-       with no px floors or caps and no phone layout, so a small screen shows a miniature of
-       the same slide. Only hairlines (1px borders) stay in px. ---------- */
+    /* ---------- Base layouts: the same in every style. Photos, people, agenda, pricing tiers,
+       architecture layers, data tables, two-column text and references. They take the style's
+       voice from its variables (set in the pptd-style block's :root, all optional):
+       --font-display (headings), --font-label (labels), --label-case, --label-track,
+       --head-weight, --radius (cards), --photo-radius, --hair (1px dividers), --rule (2px rules).
+       A style may also restyle any of these classes. ---------- */
+    .photo { position: relative; margin: 0; min-height: 8cqw; overflow: hidden; border-radius: var(--photo-radius, 0); background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--ink) 8%, var(--paper)) 0 .703cqw, color-mix(in srgb, var(--ink) 13%, var(--paper)) .703cqw 1.406cqw); }
+    .photo:not(:has(img))::after { content: attr(data-brief); position: absolute; left: 1.25cqw; right: 1.25cqw; bottom: 1.25cqw; font-size: .938cqw; line-height: 1.35; color: var(--ink-2); }
+    .photo > img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .photo > figcaption { position: absolute; z-index: 1; left: 1.25cqw; top: 1.25cqw; padding: .313cqw .703cqw; background: var(--paper); color: var(--ink); font-family: var(--font-label, var(--font)); font-size: .938cqw; font-weight: 700; letter-spacing: var(--label-track, .08em); text-transform: var(--label-case, uppercase); }
+    .photo.hl > figcaption { background: var(--accent); color: var(--on-accent); }
+    /* A photo slide: the photo takes the right two-thirds (.full: all of it), joined to the text
+       side by a scrim, so text never sits on the raw photo. */
+    .photo-slide > .photo { position: absolute; top: 0; right: 0; bottom: 0; width: 64%; min-height: 0; }
+    .photo-slide.full > .photo { width: 100%; }
+    .photo-slide > .photo::before { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(90deg, var(--paper) 0, color-mix(in srgb, var(--paper) 55%, transparent) 14%, transparent 34%); }
+    .photo-slide.full > .photo::before { background: linear-gradient(90deg, color-mix(in srgb, var(--paper) 88%, transparent) 0, color-mix(in srgb, var(--paper) 60%, transparent) 30%, transparent 58%); }
+    .photo-slide > .photo:not(:has(img))::after { top: 1.25cqw; bottom: auto; left: auto; max-width: 30cqw; text-align: right; }
+    .photo-slide > :not(.photo) { z-index: 2; }
+    .photo-slide > .eyebrow, .photo-slide > h1, .photo-slide > h2, .photo-slide > .lead, .photo-slide > .content { max-width: 34cqw; }
+    .photo-slide .footer { z-index: 2; }
+    .photos { flex: 1; min-height: 18cqw; max-height: 34cqw; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: .313cqw; }
+    .photos > .photo { min-height: 0; }
+    /* People: a portrait, a name and a role each */
+    .people { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1.875cqw; }
+    .person { display: flex; flex-direction: column; gap: .313cqw; margin: 0; }
+    .person > .photo { aspect-ratio: 4 / 5; min-height: 0; margin-bottom: .938cqw; }
+    .person > b { font-family: var(--font-display, var(--font)); font-size: 1.406cqw; font-weight: var(--head-weight, 700); color: var(--ink); }
+    .person > span { font-size: 1.094cqw; line-height: 1.35; color: var(--muted); }
+    .person.hl > .photo { outline: .234cqw solid var(--accent); outline-offset: .313cqw; }
+    /* Agenda: time and duration, item, detail; .now marks where we are */
+    .agenda { list-style: none; margin: 0; padding: 0; border-top: var(--rule, .156cqw) solid var(--ink); }
+    .agenda > li { display: grid; grid-template-columns: 14cqw 1fr; column-gap: 2.5cqw; align-items: baseline; padding: 1.094cqw 1.25cqw; border-bottom: 1px solid var(--hair, color-mix(in srgb, var(--ink) 15%, transparent)); }
+    .agenda > li > .when { grid-column: 1; grid-row: 1 / span 2; align-self: start; }
+    .agenda > li > :not(.when) { grid-column: 2; margin: 0; }
+    .agenda > li > h3 { font-size: 1.563cqw; }
+    .agenda > li > p { font-size: 1.172cqw; }
+    .agenda > li.now { background: var(--accent-soft); }
+    /* Pricing or option tiers: .hl is the recommended one */
+    .tiers { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1.25cqw; }
+    .tier { display: flex; flex-direction: column; gap: .938cqw; padding: 2.188cqw 1.875cqw; border: 1px solid var(--hair, color-mix(in srgb, var(--ink) 15%, transparent)); border-radius: var(--radius, 0); background: var(--paper); }
+    .tier > .name { font-family: var(--font-label, var(--font)); font-size: .938cqw; font-weight: 700; letter-spacing: var(--label-track, .08em); text-transform: var(--label-case, uppercase); color: var(--muted); }
+    .tier > .price { font-family: var(--font-display, var(--font)); font-size: 4.063cqw; line-height: 1; font-weight: var(--head-weight, 700); letter-spacing: -.02em; color: var(--ink); }
+    .tier > .price .unit { font-size: .3em; letter-spacing: 0; font-weight: 400; color: var(--muted); }
+    .tier > ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .469cqw; }
+    .tier > ul > li { font-size: 1.172cqw; }
+    .tier.hl { background: var(--accent); border-color: var(--accent); }
+    .tier.hl > .name, .tier.hl > .price, .tier.hl > .price .unit, .tier.hl > ul > li { color: var(--on-accent); }
+    /* Architecture as layers: a label, then boxes; flow is top to bottom */
+    .layers { display: flex; flex-direction: column; }
+    .layer { display: grid; grid-template-columns: 12.5cqw 1fr; column-gap: 2.5cqw; align-items: center; padding: 1.094cqw 0; border-bottom: 1px solid var(--hair, color-mix(in srgb, var(--ink) 15%, transparent)); }
+    .layer > .name { font-family: var(--font-label, var(--font)); font-size: .938cqw; font-weight: 600; letter-spacing: var(--label-track, .08em); text-transform: var(--label-case, uppercase); color: var(--muted); }
+    .boxes { display: flex; gap: .938cqw; }
+    .box { flex: 1; padding: .938cqw 1.094cqw; border: 1px solid var(--ink); border-radius: var(--radius, 0); background: var(--paper); font-size: 1.172cqw; color: var(--ink); }
+    .box.wide { flex: 3; }
+    .box.read { border-style: dashed; }
+    .box.hl { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+    /* Dense numbers: right-aligned tabular figures, units in the header, one tinted row */
+    .data { width: 100%; border-collapse: collapse; font-size: 1.094cqw; font-variant-numeric: tabular-nums; }
+    .data th, .data td { padding: .625cqw .938cqw; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--hair, color-mix(in srgb, var(--ink) 15%, transparent)); color: var(--ink-2); }
+    .data th:first-child, .data td:first-child { text-align: left; padding-left: 0; color: var(--ink); }
+    .data th { font-family: var(--font-label, var(--font)); font-size: .859cqw; font-weight: 600; letter-spacing: var(--label-track, .08em); text-transform: var(--label-case, uppercase); color: var(--muted); border-bottom: 1px solid var(--ink); }
+    .data tr.hl td { background: var(--accent-soft); color: var(--ink); }
+    .data td.hl { color: var(--accent-text); font-weight: 700; }
+    .data tfoot td { font-weight: 700; color: var(--ink); border-top: var(--rule, .156cqw) solid var(--ink); border-bottom: 0; }
+    /* Explanation: two columns of prose */
+    .columns { columns: 2; column-gap: 3.75cqw; }
+    .columns > p { margin: 0 0 1.094cqw; }
+    /* References and appendix items: a number, the item, a page */
+    .refs { list-style: none; margin: 0; padding: 0; border-top: var(--rule, .156cqw) solid var(--ink); }
+    .refs > li { display: grid; grid-template-columns: 4.375cqw 1fr auto; column-gap: 1.563cqw; align-items: baseline; padding: .938cqw 0; border-bottom: 1px solid var(--hair, color-mix(in srgb, var(--ink) 15%, transparent)); font-size: 1.172cqw; color: var(--ink); }
+    .refs .page { color: var(--muted); }
+
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+    @media print {
+      @page { size: 13.333in 7.5in; margin: 0; }
+      html, body { width: auto; height: auto; background: white; overflow: visible; display: block; }
+      .deck { width: 13.333in; height: auto; overflow: visible; box-shadow: none; }
+      .slide { display: flex !important; position: relative; width: 13.333in; height: 7.5in; overflow: hidden; break-after: page; }
+      .controls, .progress { display: none !important; }
+    }
+  </style>
+  <style id="pptd-style">
+    /* Style: classic. PPTD's original look: white cards with hairline borders and rounded
+       corners, a gradient bar along the top of content slides, centred flow nodes. */
+    :root {
+      /* Style variables for the base layouts (see the frame). */
+      --hair: var(--line); --radius: 1.25cqw; --head-weight: 700;
+      --line: color-mix(in srgb, var(--ink) 12%, var(--paper));
+      --head-bg: color-mix(in srgb, var(--ink) 5%, var(--white));
+    }
+    .slide { padding: 5% 7.2% 7.4%; }
+
+    /* ---------- Type scale: cqw = 1% of deck width (12.8px at 1280×720) ---------- */
     .slide::before { content: ""; position: absolute; top: 0; left: 0; height: .625cqw; width: 100%; background: linear-gradient(90deg, var(--ink), var(--accent)); }
     h1, h2, h3, p { margin-top: 0; }
     .eyebrow { color: var(--ink); text-transform: uppercase; letter-spacing: .16em; font-size: 1cqw; font-weight: 700; margin-bottom: 1.15em; }
@@ -63,38 +157,42 @@
     p, li { font-size: 1.3cqw; line-height: 1.45; }
     .lead { color: var(--ink-2); font-size: 1.75cqw; line-height: 1.34; }
     .footer { position: absolute; left: 7.2%; right: 22%; bottom: 2.8%; display: flex; justify-content: space-between; gap: .938cqw; color: var(--muted); font-size: .9cqw; letter-spacing: .03em; }
+    /* The main block of a slide: takes the height between the headline and the footer. */
+    .content { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
+    .content > :last-child { margin-bottom: 0; }
+    .statement { font-size: 4cqw; line-height: 1.12; letter-spacing: -.035em; font-weight: 700; color: var(--ink); max-width: 80cqw; margin: 0; }
+    .key { color: var(--accent-text); }
 
     /* ---------- Components ---------- */
     .grid { display: grid; gap: 1.406cqw; }
     .grid.two { grid-template-columns: repeat(2, 1fr); }
     .grid.three { grid-template-columns: repeat(3, 1fr); }
+    .grid.four { grid-template-columns: repeat(4, 1fr); }
     .panel { background: var(--white); border: 1px solid var(--line); border-radius: 1.25cqw; padding: 1.7cqw; }
     .panel p:last-child { margin-bottom: 0; }
+    /* Tags are for status only (the status colours). */
     .tag { display: inline-flex; padding: .469cqw .781cqw; border-radius: 999px; font-size: .9cqw; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin-bottom: .6em; }
-    .tag.ready { color: #12664f; background: var(--green-soft); }
-    .tag.proven { color: #135a90; background: var(--blue-soft); }
-    .tag.build { color: #89510e; background: var(--amber-soft); }
+    .tag.ready { color: var(--green-ink); background: var(--green-soft); }
+    .tag.proven { color: var(--blue-ink); background: var(--blue-soft); }
+    .tag.build { color: var(--amber-ink); background: var(--amber-soft); }
     .callout { border-left: .312cqw solid var(--accent); padding: .781cqw 1.25cqw; background: var(--accent-soft); border-radius: 0 .781cqw .781cqw 0; color: var(--ink-2); font-size: 1.25cqw; line-height: 1.45; }
     .callout.amber { border-color: var(--amber); background: var(--amber-soft); }
-
     /* Flow diagram in HTML: node → node → node */
     .path { display: flex; align-items: stretch; gap: .781cqw; margin: .8em 0; }
     .node { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 6.094cqw; padding: .938cqw; background: var(--white); border: 1px solid var(--line); border-radius: 1.094cqw; text-align: center; }
     .node strong { font-size: 1.3cqw; }
     .node span { color: var(--muted); font-size: .95cqw; margin-top: .469cqw; line-height: 1.35; }
-    .node.hl { border-color: var(--accent); box-shadow: 0 0 0 .156cqw color-mix(in srgb, var(--accent) 22%, transparent); }
-    .arrow { align-self: center; color: var(--accent); font-size: 2.1cqw; }
-
+    .node.hl { border-color: var(--accent-text); box-shadow: 0 0 0 .156cqw color-mix(in srgb, var(--accent) 22%, transparent); }
+    .arrow { align-self: center; color: var(--accent-text); font-size: 2.1cqw; }
     /* Status matrix */
     .matrix { width: 100%; border-collapse: collapse; background: var(--white); border-radius: .938cqw; overflow: hidden; font-size: 1.1cqw; }
     .matrix th, .matrix td { text-align: left; padding: .781cqw 1.094cqw; border-bottom: 1px solid var(--line); vertical-align: top; }
-    .matrix th { color: var(--muted); font-size: .86em; text-transform: uppercase; letter-spacing: .07em; background: #eef2f6; }
+    .matrix th { color: var(--muted); font-size: .86em; text-transform: uppercase; letter-spacing: .07em; background: var(--head-bg); }
     .matrix tr:last-child td { border-bottom: 0; }
     .matrix tbody tr { transition: background-color .12s ease; }
     .matrix tbody tr:hover { background: var(--accent-soft); }   /* CSS hover: no script */
     .status { font-weight: 700; white-space: nowrap; }
     .status.green { color: var(--green); } .status.blue { color: var(--ink); } .status.amber { color: var(--amber); }
-
     /* Inline SVG diagrams: style with classes, size with the slide */
     .diagram { width: min(100%, 78cqw); margin: .4em auto 0; }
     .diagram svg { width: 100%; height: auto; display: block; }
@@ -105,24 +203,123 @@
     .dg-arrow { stroke: var(--accent); stroke-width: 2.5; fill: none; }
     .dg-arrowhead { fill: var(--accent); }
     .dg-step { fill: var(--highlight); }
-    .dg-step-text { fill: #fff; font: 700 13px var(--font); }
+    .dg-step-text { fill: var(--white); font: 700 13px var(--font); }
 
-    /* Title / closing slide */
-    .title-slide { background: var(--title-bg); color: white; }
+    /* Cards: 2–4 parallel points */
+    .cards { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1.406cqw; }
+    .card { background: var(--white); border: 1px solid var(--line); border-radius: 1.25cqw; padding: 2cqw 1.9cqw; display: flex; flex-direction: column; gap: .8cqw; min-height: 17cqw; }
+    .card h3, .card p { margin: 0; }
+    .card h3 { font-size: 1.9cqw; }
+    .card p { font-size: 1.45cqw; color: var(--ink-2); }
+    .card.hl { border-color: var(--accent-text); box-shadow: 0 0 0 .156cqw color-mix(in srgb, var(--accent) 22%, transparent); }
+    .num { color: var(--accent-text); font-size: 1.1cqw; font-weight: 700; letter-spacing: .08em; }
+    /* Process steps */
+    .steps { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: .781cqw; list-style: none; margin: 0; padding: 0; counter-reset: none; }
+    .step { position: relative; background: var(--white); border: 1px solid var(--line); border-radius: 1.094cqw; padding: 1.6cqw 1.3cqw; display: flex; flex-direction: column; gap: .6cqw; min-height: 14cqw; }
+    .step h3, .step p { margin: 0; }
+    .step h3 { font-size: 1.55cqw; }
+    .step p { font-size: 1.25cqw; color: var(--ink-2); }
+    .step .num { display: grid; place-items: center; width: 2.4cqw; height: 2.4cqw; border-radius: 50%; background: var(--line); color: var(--ink); font-size: 1.1cqw; letter-spacing: 0; margin-bottom: .4cqw; }
+    .step.hl { border-color: var(--accent-text); box-shadow: 0 0 0 .156cqw color-mix(in srgb, var(--accent) 22%, transparent); }
+    .step.hl .num { background: var(--highlight); color: var(--on-highlight); }
+    /* Big numbers */
+    .stats { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1.406cqw; }
+    .stat { background: var(--white); border: 1px solid var(--line); border-radius: 1.25cqw; padding: 2.2cqw 1.9cqw; display: flex; flex-direction: column; gap: .5cqw; }
+    .value { font-size: 4.6cqw; line-height: 1; font-weight: 700; letter-spacing: -.04em; color: var(--ink); white-space: nowrap; margin-bottom: .6cqw; }
+    .unit { font-size: .45em; letter-spacing: 0; }
+    .stat .label { font-size: 1.35cqw; font-weight: 600; color: var(--ink); }
+    .delta { font-size: 1.15cqw; color: var(--muted); }
+    .stat.hl { border-color: var(--accent-text); box-shadow: 0 0 0 .156cqw color-mix(in srgb, var(--accent) 22%, transparent); }
+    .stat.hl .value { color: var(--accent-text); }
+    /* Comparison table: .win marks the column that wins */
+    .compare { width: 100%; border-collapse: collapse; background: var(--white); border-radius: .938cqw; overflow: hidden; font-size: 1.35cqw; }
+    .compare th, .compare td { text-align: left; padding: 1cqw 1.25cqw; border-bottom: 1px solid var(--line); color: var(--ink-2); }
+    .compare th { color: var(--ink); font-weight: 700; background: var(--head-bg); }
+    .compare td:first-child { color: var(--ink); }
+    .compare .win { background: var(--accent-soft); color: var(--ink); font-weight: 700; }
+    .compare th.win { background: var(--accent); color: var(--on-accent); }
+    .compare tr:last-child td { border-bottom: 0; }
+    /* Two columns: main and side (2 : 1) */
+    .split { display: grid; grid-template-columns: 2fr 1fr; gap: 2.5cqw; align-items: end; }
+    /* Bar chart in HTML: --v on each .bar is its height, 0–1 */
+    .bars { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; column-gap: 1.406cqw; align-items: end; border-bottom: 1px solid var(--line); margin-bottom: 2.6cqw; }
+    .bar { position: relative; display: flex; flex-direction: column; gap: .5cqw; }
+    .bar .val { font-size: 1.15cqw; font-weight: 700; color: var(--ink-2); text-align: center; }
+    .bar .fill { display: block; height: calc(var(--v, .5) * 22cqw); background: color-mix(in srgb, var(--accent) 28%, var(--white)); border-radius: .5cqw .5cqw 0 0; }
+    .bar .cat { position: absolute; top: 100%; left: 0; right: 0; margin-top: .6cqw; text-align: center; font-size: 1.05cqw; color: var(--muted); }
+    .bar.hl .fill { background: var(--accent); }
+    .bar.hl .val, .bar.hl .cat { color: var(--accent-text); }
+    .bar.est .fill { background: transparent; border: 1px dashed var(--muted); border-bottom: 0; }
+    .takeaway { background: var(--accent-soft); border-left: .312cqw solid var(--accent); border-radius: 0 1.094cqw 1.094cqw 0; padding: 1.9cqw; display: flex; flex-direction: column; gap: .8cqw; }
+    .takeaway .eyebrow { margin: 0; color: var(--accent-text); }
+    .takeaway h3, .takeaway p { margin: 0; }
+    .takeaway h3 { font-size: 1.9cqw; line-height: 1.2; }
+    .takeaway p { color: var(--ink-2); }
+    /* Quote */
+    .quote { margin: 0; display: flex; flex-direction: column; gap: 2cqw; padding-left: 2.2cqw; border-left: .468cqw solid var(--accent); }
+    .quote blockquote { margin: 0; font-size: 3.2cqw; line-height: 1.2; letter-spacing: -.025em; font-weight: 600; color: var(--ink); max-width: 76cqw; }
+    .quote figcaption { font-size: 1.35cqw; color: var(--ink-2); }
+    .quote figcaption b { color: var(--ink); margin-right: .6cqw; }
+    /* Timeline */
+    .timeline { list-style: none; margin: 0; padding: 0; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1.406cqw; }
+    .timeline li { position: relative; padding-top: 2.6cqw; display: flex; flex-direction: column; gap: .6cqw; }
+    .timeline li::before { content: ""; position: absolute; z-index: 1; top: 0; left: 0; width: 1.4cqw; height: 1.4cqw; border-radius: 50%; background: var(--white); border: .234cqw solid var(--accent); }
+    .timeline li::after { content: ""; position: absolute; top: .6cqw; left: 0; right: -1.406cqw; height: .234cqw; background: var(--line); }
+    .timeline li:last-child::after { right: 0; }
+    .timeline li.now::before { background: var(--highlight); border-color: var(--highlight); }
+    .timeline li.goal::before { background: var(--accent); }
+    .timeline h3, .timeline p { margin: 0; }
+    .when { font-size: 1cqw; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+    .now .when { color: var(--highlight); }
+    .goal .when, .goal h3 { color: var(--accent-text); }
+    /* Numbered asks, e.g. on a closing slide */
+    .asks { list-style: none; margin: 0; padding: 0; counter-reset: ask; display: flex; flex-direction: column; gap: 1.2cqw; }
+    .asks li { counter-increment: ask; display: flex; gap: 1.2cqw; align-items: baseline; padding-top: 1.2cqw; border-top: 1px solid color-mix(in srgb, currentColor 22%, transparent); font-size: 1.55cqw; line-height: 1.35; }
+    .asks li::before { content: counter(ask); color: var(--highlight); font-weight: 700; }
+
+    /* ---------- Title / closing slide ---------- */
+    .title-slide { background: var(--title-bg); color: var(--white); }
     .title-slide::before { background: var(--highlight); }
     .title-slide .eyebrow { color: var(--title-eyebrow); }
     .title-slide .lead { color: var(--title-soft); }
     .title-slide .footer { color: var(--title-footer); }
+    .title-slide .content { justify-content: flex-start; }
+    .title-slide .split { align-items: center; grid-template-columns: 7fr 5fr; }
+    .title-slide .split h2 { font-size: 4.6cqw; margin: 0; }
     .title-mark { width: 5.625cqw; height: .391cqw; background: var(--highlight); margin: 1.6em 0; border-radius: .391cqw; }
+    /* ---------- Section divider ---------- */
+    .section-slide .content { flex-direction: row; align-items: center; justify-content: flex-start; gap: 3cqw; }
+    .section-num { font-size: 11cqw; line-height: 1; font-weight: 800; letter-spacing: -.05em; color: var(--accent); }
+    .section-text { padding-left: 3cqw; border-left: 1px solid var(--line); }
+    .section-text h2 { font-size: 4.4cqw; }
+    .section-text .lead { margin-bottom: 0; }
 
-    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
-    @media print {
-      @page { size: 13.333in 7.5in; margin: 0; }
-      html, body { width: auto; height: auto; background: white; overflow: visible; display: block; }
-      .deck { width: 13.333in; height: auto; overflow: visible; box-shadow: none; }
-      .slide { display: flex !important; position: relative; width: 13.333in; height: 7.5in; overflow: hidden; break-after: page; }
-      .controls, .progress { display: none !important; }
-    }
+    /* Demo compositions: generous cards, centred flows and a focused closing prompt. */
+    .title-slide .content { justify-content: center; }
+    .title-slide h1 { max-width: 72cqw; }
+    .title-slide .lead { max-width: 58cqw; }
+    .title-mark { margin: 1.2cqw 0 2.4cqw; }
+    .cards .card { min-height: 21cqw; padding: 2.5cqw 2.2cqw; }
+    .card .num { color: var(--muted); margin-bottom: 2cqw; }
+    .card.hl .num { color: var(--accent-text); }
+    .demo-flow .node { min-height: 18cqw; padding: 2cqw 1.4cqw; gap: 1.2cqw; }
+    .demo-flow .node strong { font-size: 1.9cqw; }
+    .demo-flow .node span { font-size: 1.3cqw; line-height: 1.45; margin: 0; }
+    .support { color: var(--muted); margin: 1.8cqw 0 0; }
+    .file-proof { display: grid; grid-template-columns: 1fr 1.55fr; align-items: center; gap: 4cqw; }
+    .file-proof .value { font-size: 13cqw; color: var(--accent-text); margin: 0; }
+    .file-proof .label { font-size: 1.75cqw; color: var(--ink-2); }
+    .file-proof .steps { grid-auto-flow: row; gap: 1cqw; }
+    .file-proof .step { min-height: 0; display: grid; grid-template-columns: 3cqw 1fr; gap: .3cqw 1.2cqw; padding: 1.4cqw 1.6cqw; }
+    .file-proof .step .num { grid-row: 1 / 3; margin: 0; }
+    .file-proof .step p { grid-column: 2; }
+    .compare th, .compare td { padding: 1.7cqw 1.5cqw; }
+    .compare th:first-child { width: 25%; }
+    .closing-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 4cqw; align-items: center; }
+    .closing-grid h1 { font-size: 5.6cqw; }
+    .prompt { border: 1px solid var(--title-footer); border-radius: 1.25cqw; padding: 2.8cqw; }
+    .prompt .eyebrow { margin-bottom: 2cqw; }
+    .prompt p { font-size: 2.2cqw; line-height: 1.35; margin: 0; }
   </style>
   <!-- PPTD brand block: this deck's brand. The meta names it; the style holds its tokens and,
        in the comment, its rules. Replace both to rebrand the deck. -->
@@ -144,10 +341,15 @@
       --font: Inter, "Segoe UI", system-ui, Arial, sans-serif;
     }
   </style>
+  <template id="pptd-prompts">
+    <ol>
+      <li data-id="c6a0006b" data-at="2026-11-22T00:39:49.841Z" data-hash="d64bc8e26f91c66822f05e79749f1726" data-before="111bc02ea53a0dc67dcf31f76254235d">redesign this whole deck to make it look better, use the classic design</li>
+    </ol>
+  </template>
 </head>
 <body>
   <main class="deck">
-    <input type="radio" name="slide" id="r1" class="slide-radio" checked aria-label="Slide 1">
+    <input type="radio" name="slide" id="r1" class="slide-radio" checked autofocus aria-label="Slide 1">
     <input type="radio" name="slide" id="r2" class="slide-radio" aria-label="Slide 2">
     <input type="radio" name="slide" id="r3" class="slide-radio" aria-label="Slide 3">
     <input type="radio" name="slide" id="r4" class="slide-radio" aria-label="Slide 4">
@@ -156,21 +358,26 @@
 
     <section id="s1" class="slide title-slide" aria-label="Slide 1: Title">
       <div class="eyebrow">PPTD · PowerPoint is dead</div>
-      <h1>Presentations you make by asking.</h1>
-      <div class="title-mark"></div>
-      <p class="lead">This is a PPTD deck. Click or tap the slide, or use the arrow keys, to see how it works.</p>
-      <div class="footer"><span>Made in PPTD</span><span></span></div>
+      <div class="content">
+        <h1>Presentations<br>you make by asking.</h1>
+        <div class="title-mark"></div>
+        <p class="lead">Describe your idea. Refine it in conversation.<br>Share a deck anyone can open.</p>
+      </div>
+      <div class="footer"><span>Made in PPTD</span><span>Click or use arrow keys to explore</span></div>
       <nav class="controls" aria-label="Slide controls"><span class="nav-ph"></span><span class="counter">1 / 6</span><label for="r2" class="nav-btn" aria-label="Next slide">›</label></nav>
       <div class="progress"><span style="width: 16.7%"></span></div>
     </section>
 
     <section id="s2" class="slide" aria-label="Slide 2: What you get">
       <div class="eyebrow">01 · What you get</div>
-      <h2>Say what you want. Watch the slides appear.</h2>
-      <div class="grid three">
-        <div class="panel"><span class="tag ready">Ask</span><h3>An agent writes the deck</h3><p>"Make a 6-slide deck about our Q3 results." PPTD opens it the moment it is saved.</p></div>
-        <div class="panel"><span class="tag proven">Refine</span><h3>Talk about what you see</h3><p>"Make this shorter" means the slide on screen. Changes appear in place.</p></div>
-        <div class="panel"><span class="tag build">Share</span><h3>One HTML file</h3><p>Opens in any browser and previews in Teams. Send it like a PDF.</p></div>
+      <h2>Ask. Refine. Share.</h2>
+      <p class="lead">From your first idea to a file you can send.</p>
+      <div class="content">
+        <div class="cards">
+          <div class="card"><span class="num">01</span><h3>Describe your deck</h3><p>Tell the agent what you need. Your slides appear as it writes.</p></div>
+          <div class="card hl"><span class="num">02</span><h3>Make it yours</h3><p>Ask for changes to the slide on screen. See them in place.</p></div>
+          <div class="card"><span class="num">03</span><h3>Send one file</h3><p>Opens in any browser. Previews in Teams.</p></div>
+        </div>
       </div>
       <div class="footer"><span>PPTD</span><span></span></div>
       <nav class="controls" aria-label="Slide controls"><label for="r1" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">2 / 6</span><label for="r3" class="nav-btn" aria-label="Next slide">›</label></nav>
@@ -179,14 +386,16 @@
 
     <section id="s3" class="slide" aria-label="Slide 3: How it works">
       <div class="eyebrow">02 · How it works</div>
-      <h2>From a sentence to a slideshow.</h2>
-      <p class="lead">Every message carries the slide you are looking at.</p>
-      <div class="path">
-        <div class="node"><strong>You ask</strong><span>"Turn this into a chart"</span></div><div class="arrow">→</div>
-        <div class="node hl"><strong>The agent edits</strong><span>Writes the deck file and checks it</span></div><div class="arrow">→</div>
-        <div class="node"><strong>PPTD updates</strong><span>In place, on the same slide</span></div>
+      <h2>The slide you see is the slide you change.</h2>
+      <p class="lead">Every message tells the agent where you are.</p>
+      <div class="content">
+        <div class="path demo-flow">
+          <div class="node"><strong>You ask</strong><span>“Turn this into a chart.”</span></div><div class="arrow">→</div>
+          <div class="node hl"><strong>The agent edits</strong><span>Updates the file.<br>Checks the result.</span></div><div class="arrow">→</div>
+          <div class="node"><strong>PPTD refreshes</strong><span>Same slide.<br>No interruption.</span></div>
+        </div>
+        <p class="support">Prefer hands-on? Drag slides to reorder. Drop in photos and video.</p>
       </div>
-      <div class="callout">You can keep typing while it works, and edit by hand too: drag slides, drop in photos and video.</div>
       <div class="footer"><span>PPTD</span><span></span></div>
       <nav class="controls" aria-label="Slide controls"><label for="r2" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">3 / 6</span><label for="r4" class="nav-btn" aria-label="Next slide">›</label></nav>
       <div class="progress"><span style="width: 50%"></span></div>
@@ -194,44 +403,37 @@
 
     <section id="s4" class="slide" aria-label="Slide 4: No scripts">
       <div class="eyebrow">03 · The file</div>
-      <h2>This deck has no JavaScript.</h2>
-      <div class="diagram">
-        <svg viewBox="0 0 900 300" role="img" aria-labelledby="dg4-title dg4-desc">
-          <title id="dg4-title">How a deck changes slide without scripts</title>
-          <desc id="dg4-desc">One hidden radio button per slide; the arrows are labels that tick the next radio; CSS shows the slide whose radio is ticked.</desc>
-          <defs><marker id="dg4-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="dg-arrowhead" d="M0,0 L10,5 L0,10 z"/></marker></defs>
-          <rect class="dg-box" x="10" y="40" width="240" height="220" rx="14"/>
-          <circle class="dg-step" cx="38" cy="40" r="16"/><text class="dg-step-text" x="38" y="45" text-anchor="middle">1</text>
-          <text class="dg-label" x="130" y="90" text-anchor="middle">You click ›</text>
-          <text class="dg-sub" x="130" y="115" text-anchor="middle">It is a label for the next radio</text>
-          <path class="dg-arrow" d="M255 150 H325" marker-end="url(#dg4-arr)"/>
-          <rect class="dg-box hl" x="330" y="40" width="240" height="220" rx="14"/>
-          <circle class="dg-step" cx="358" cy="40" r="16"/><text class="dg-step-text" x="358" y="45" text-anchor="middle">2</text>
-          <text class="dg-label" x="450" y="90" text-anchor="middle">A radio is ticked</text>
-          <text class="dg-sub" x="450" y="115" text-anchor="middle">One hidden radio per slide</text>
-          <path class="dg-arrow" d="M575 150 H645" marker-end="url(#dg4-arr)"/>
-          <rect class="dg-box" x="650" y="40" width="240" height="220" rx="14"/>
-          <circle class="dg-step" cx="678" cy="40" r="16"/><text class="dg-step-text" x="678" y="45" text-anchor="middle">3</text>
-          <text class="dg-label" x="770" y="90" text-anchor="middle">CSS shows it</text>
-          <text class="dg-sub" x="770" y="115" text-anchor="middle">#r4:checked ~ #s4</text>
-        </svg>
+      <h2>A slideshow, without the scripts.</h2>
+      <p class="lead">The navigation is built into the HTML and CSS.</p>
+      <div class="content">
+        <div class="file-proof">
+          <div><div class="value">0</div><div class="label">JavaScript in this deck</div></div>
+          <ol class="steps">
+            <li class="step"><span class="num">01</span><h3>You click an arrow</h3><p>A label selects the next radio button.</p></li>
+            <li class="step"><span class="num">02</span><h3>A radio is selected</h3><p>One hidden button for each slide.</p></li>
+            <li class="step"><span class="num">03</span><h3>CSS reveals the slide</h3><p>No script needs to run.</p></li>
+          </ol>
+        </div>
       </div>
-      <div class="footer"><span>Safe to open anywhere</span><span></span></div>
+      <div class="footer"><span>Self-contained HTML · Script-free navigation</span><span></span></div>
       <nav class="controls" aria-label="Slide controls"><label for="r3" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">4 / 6</span><label for="r5" class="nav-btn" aria-label="Next slide">›</label></nav>
       <div class="progress"><span style="width: 66.7%"></span></div>
     </section>
 
     <section id="s5" class="slide" aria-label="Slide 5: Compared">
       <div class="eyebrow">04 · Compared</div>
-      <h2>What you send, and what they need.</h2>
-      <table class="matrix">
-        <thead><tr><th>Format</th><th>To view it</th><th>Detail</th></tr></thead>
-        <tbody>
-          <tr><td>.pptd.html</td><td class="status green">Any browser</td><td>Images and video inside the file. Previews in Teams.</td></tr>
-          <tr><td>.pdf</td><td class="status blue">Any viewer</td><td>No video, no hover, no live layout.</td></tr>
-          <tr><td>.pptx</td><td class="status amber">An office suite</td><td>Looks different depending on who opens it.</td></tr>
-        </tbody>
-      </table>
+      <h2>Send the deck. Not a software requirement.</h2>
+      <p class="lead">Your audience only needs a browser.</p>
+      <div class="content">
+        <table class="compare">
+          <thead><tr><th>To share</th><th class="win">PPTD · HTML</th><th>PDF</th><th>PowerPoint</th></tr></thead>
+          <tbody>
+            <tr><td>Opens in</td><td class="win">Any browser</td><td>Any PDF viewer</td><td>An office suite</td></tr>
+            <tr><td>Video</td><td class="win">Inside the file</td><td>Not supported</td><td>Supported</td></tr>
+            <tr><td>Viewing</td><td class="win">Browser-ready</td><td>Fixed pages</td><td>May vary by viewer</td></tr>
+          </tbody>
+        </table>
+      </div>
       <div class="footer"><span>PPTD</span><span></span></div>
       <nav class="controls" aria-label="Slide controls"><label for="r4" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">5 / 6</span><label for="r6" class="nav-btn" aria-label="Next slide">›</label></nav>
       <div class="progress"><span style="width: 83.3%"></span></div>
@@ -239,9 +441,19 @@
 
     <section id="s6" class="slide title-slide" aria-label="Slide 6: Get PPTD">
       <div class="eyebrow">Free and open source</div>
-      <h1>Make your next deck by asking.</h1>
-      <div class="title-mark"></div>
-      <p class="lead">For macOS, Windows and Linux.</p>
+      <div class="content">
+        <div class="closing-grid">
+          <div>
+            <h1>Make your next<br>deck by asking.</h1>
+            <div class="title-mark"></div>
+            <p class="lead">Get PPTD for macOS,<br>Windows and Linux.</p>
+          </div>
+          <div class="prompt">
+            <div class="eyebrow">Start with one sentence</div>
+            <p>“Make a 6-slide deck<br>about our Q3 results.”</p>
+          </div>
+        </div>
+      </div>
       <div class="footer"><span>GPL-3.0-or-later</span><span></span></div>
       <nav class="controls" aria-label="Slide controls"><label for="r5" class="nav-btn" aria-label="Previous slide">‹</label><span class="counter">6 / 6</span><span class="nav-ph"></span></nav>
       <div class="progress"><span style="width: 100%"></span></div>
