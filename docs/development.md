@@ -139,7 +139,8 @@ the plugin `agent/plugin`; for pi, with `--skill`). It is brand-neutral and main
   shared by every style) plus `style.css`. Never edit a `template.html` by hand.
 - `brand-template.md`: the shape of the default brand file.
 - `pptd-deck.mjs`: adds, removes and reorders slides, so the agent only writes content.
-- `pptd-app.mjs`: asks the running app for slide screenshots and the keyboard test, so no
+- `pptd-app.mjs`: asks the running app to make a new deck from a style (`new`, which
+  shows it), show a deck (`open`), take slide screenshots and run the keyboard test, so no
   browser is launched.
 - `pptd-spec.md`, `pptd-check.mjs`, `pptd-deck.mjs`: copied from `docs/` and `tools/` by
   `npm run sync-skill`, which also runs before every build.
@@ -226,7 +227,9 @@ applied with `nativeTheme.themeSource`, so `index.html` switches its colour toke
 - `lib/shot.js`: full-size slide screenshots and the keyboard-navigation test, in a hidden
   offscreen window (Copy Slide as Image, Export Slides as Images, and the agent's tool).
 - `lib/app-socket.js`: a local socket (`PPTD_SOCKET`, owner-only) through which the skill's
-  `pptd-app.mjs` asks the running app for screenshots and the key test.
+  `pptd-app.mjs` asks the running app to open a deck, for screenshots and the key test, and
+  (end of a run) whether to remind the agent. Requests carry `PPTD_SESSION`, so main knows
+  which window's agent is asking.
 - `lib/styles.js`: the user's own styles folder; lists them and resolves a style name.
 - `lib/extract.js`: turns a dropped .docx/.xlsx/.pptx/.txt/.md/.csv/.tsv/.json into Markdown
   (with the pictures copied out) in the agent session's drops folder, for `handleDocuments`
@@ -243,14 +246,16 @@ applied with `nativeTheme.themeSource`, so `index.html` switches its colour toke
   drawer's drag-to-reorder uses it too. Checks the result and refuses rather than break a deck.
 - `lib/agent.js`: starts the chosen agent in a pty (node-pty) with the skill and a system
   prompt. Each message gets the deck, slide and brand added; files it writes are reported, and
-  the app opens decks it creates (`*.pptd.html`, or `.html` with the PPTD meta). The app
-  also watches the agent's folder for new decks, and when a run ends with no deck on screen it
-  opens the newest deck the run wrote in that folder or two levels below.
-  It also reports each prompt and the end of each run, for the prompt history. Claude Code
-  does this with `UserPromptSubmit`/`PostToolUse`/`Stop` hooks; pi with the extension below.
+  the app shows decks it writes (`*.pptd.html`, or `.html` with the PPTD meta), opens with
+  `pptd-app.mjs open`/`new`, or checks with `shot`/`keys`, always in that agent's own window
+  and never by watching a folder. A run that wrote files but left no deck on screen gets one
+  reminder before it ends. It also reports each prompt and the end of each run, for the
+  prompt history. Claude Code does this with `UserPromptSubmit`/`PostToolUse`/`Stop` hooks;
+  pi with the extension below.
 - `agent/pi/pptd-extension.js`: the pi extension that adds the slide note to each prompt,
-  reports written files, prompts, messages sent mid-run and run ends, draws PPTD's startup
-  header and shows the slide on screen in pi's footer.
+  reports written files, bash runs, prompts, messages sent mid-run and run ends, asks the app
+  before a run settles whether to remind the agent (`agent_before_settle`), draws PPTD's
+  startup header and shows the slide on screen in pi's footer.
 - `agent/pi/login.mjs` / `lib/pi-login.js`: model sign-in for pi. The helper runs pi's own login
   code and credential store; main relays its prompts to the sign-in panel and opens the browser.
 - `vendor/pi`: the bundled pi, pinned by its own lockfile, with its MIT notice in `vendor/pi/LICENSE` (pi's npm packages have none), shipped as `pi/LICENSE`. `vendor/tools/<os>-<arch>`: pinned

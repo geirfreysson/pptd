@@ -53,10 +53,16 @@ the deck next to this terminal.
 - The user creates presentations by asking you ("make a 6-slide deck about our Q3 results").
   There's no New button.
 - Pick a style (SKILL.md §1: the one the user names, else the default style in the brand
-  file, else the one that suits the deck's purpose) and start from `styles/<style>/template.html`
-  in this folder. Read `DESIGN.md` and that style's `STYLE.md` first. Save as `<name>.pptd.html` in the folder
-  the `<pptd-current-slide>` note gives (or one the user names). PPTD opens it as soon as you
-  save, so write the file once with all slides, then refine it with edits.
+  file, else the one that suits the deck's purpose). Read `DESIGN.md` and that style's
+  `STYLE.md` first. Then make the deck with
+  `node <this skill folder>/pptd-app.mjs new <folder>/<name>.pptd.html --style <style> --slides <N>`,
+  in the folder the `<pptd-current-slide>` note gives (or one the user names). PPTD writes
+  it from the style's template, with the brand, and shows it in the user's window at once:
+  the template's title slide, N-2 empty slides, and its closing slide. Fill those in; you may
+  write the whole file in one go. Never write a new deck from scratch or by a script: PPTD
+  only shows decks it is told about (`new`, `open`, your Write/Edit tools, `shot`).
+- To show the user another deck (one you made earlier, or one in another folder), run
+  `node <this skill folder>/pptd-app.mjs open <deck>`.
 - Give it the brand first (below), then the content. Plan the deck from the content (the
   argument, slide by slide), then design each slide: use a template layout where it fits,
   and compose your own where it doesn't (SKILL.md §1, "You have design freedom"). Don't leave
@@ -82,8 +88,10 @@ the user can change either without the other ("use our colours", "make this bold
   holds the brand's `:root` tokens, plus its rules in a leading CSS comment (the template
   shows the shape). It comes after the main `<style>`, so its tokens win.
 - **The default brand** is a Markdown file (its path is in the `<pptd-brand>` note). Every
-  new deck copies it in: its name into the meta, its tokens and a one-line summary of its
-  rules into the brand block. Its rules on logos, wording and layout apply when designing.
+  new deck copies it in: `pptd-app.mjs new` puts its name in the meta and its tokens in the
+  brand block; add a one-line summary of its rules to that block's comment. Its rules on
+  logos and wording apply when designing; its colours and font never override the style's
+  layout or type (SKILL.md §1).
 - **A different brand for one deck:** if the user asks ("use Google colours for this one"),
   change only that deck's meta and brand block. The default stays as it is.
 - **Change the default:** only when the user asks ("make this my default brand"). Rewrite

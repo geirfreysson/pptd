@@ -19,8 +19,7 @@ unless the user asks.
 ## Files in this skill
 
 - `DESIGN.md`: the design principles behind every style (one point per slide, one focal
-  element, colour roles, type scale, the repeating frame, density, data, words). Read it
-  before designing.
+  element, colour roles, type scale, the repeating frame, density, data, words).
 - `styles/<name>/`: one folder per style (§1): `STYLE.md` (its rules and when to use it),
   `style.css` (its layout CSS), `template.html` (a starting deck in that style, with an
   example of every layout) and `preview.jpg` (nine slides in the style's own palette: look at
@@ -28,6 +27,10 @@ unless the user asks.
   `mono`, `sticker`, `playful`, `classic`. The user may also have styles of their own, listed in
   the `<pptd-brand>` note; they work exactly like these.
 - `pptd-app.mjs`: asks the running PPTD app (which renders decks itself, no browser needed):
+  - `node pptd-app.mjs new deck.pptd.html --style NAME [--slides N] [--brand default|style|FILE]`
+    makes a new deck from the style's template, with the brand, and shows it in the user's
+    PPTD window (§1).
+  - `node pptd-app.mjs open deck.pptd.html` shows that deck in the user's PPTD window.
   - `node pptd-app.mjs shot deck.pptd.html [3|2,5|1-4|all] [--size WxH] [--out DIR]`
     screenshots slides (default: all, 1280×720) and prints one PNG path per slide. Read the
     PNGs to see the slides.
@@ -74,15 +77,24 @@ A deck's look has three independent layers, each in its own block in `<head>`:
 - **Read the deck's `styles/<name>/STYLE.md` before designing slides for it,** and follow its
   rules (how much of the slide to fill, where the accent goes, what never to do).
 - **A new deck:** use the style the user names; else the default style in their brand file,
-  if it names one; else choose from the table by the deck's purpose and say which in one line
-  ("I used the grid style; say 'bold style' for a warmer look"). Start from that style's
-  `template.html`: keep its `<head>` (frame, style and brand blocks), and use its example
-  slides as references for markup, not as the deck's outline. The deck's outline comes from
-  the content.
+  if it names one; else choose from the table by the deck's purpose. Use the default brand
+  unless the user names another. Make it with `pptd-app.mjs new` (`PPTD.md`, "New
+  presentations"): it builds the `<head>` (frame, style and brand blocks) from the style's
+  `template.html` and shows the deck at once. Use the template's example slides as
+  references for markup, not as the deck's outline. The deck's outline comes from the
+  content. Say the style and brand
+  in one line, because the style's preview shows its own palette, not the user's brand ("Grid
+  style with your Ipsos brand; say 'bold style' for a warmer look, or 'grid's own colours'
+  for the look in its preview").
+- **The style's own colours:** when the user asks for the style's own look ("its own
+  colours", "black and white" for mono), use the palette from the style's `STYLE.md` ("With a
+  brand"): `new … --brand style` does it for a new deck; for a deck that exists, put it in
+  the brand block and name the brand after the style. Don't make up a palette of your own.
 - **Restyle a deck** ("make this bold"): replace the `pptd-style` block with the new style's
   `style.css` and change the meta. Slides need no rewrite, because every style draws the same
-  layouts. Then screenshot every slide and fix what the new style's rules ask for (e.g. bold
-  wants one solid accent surface and a `.key` phrase; grid wants an eyebrow on every slide).
+  layouts. Remove rules of the deck's own that only suited the old style. Then screenshot
+  every slide and fix what the new style's rules ask for (e.g. bold wants one solid accent
+  surface and a `.key` phrase; grid wants an eyebrow on every slide).
 - **A deck with no `pptd-style` block** (made before styles existed) has its look in its first
   `<style>`. Keep it unless the user asks to restyle; then rebuild its `<head>` styles from a
   style's `template.html` (frame, style block, and the deck's own brand block) and keep any
@@ -90,11 +102,26 @@ A deck's look has three independent layers, each in its own block in `<head>`:
 - **You have design freedom.** Styles and layouts are a guide and a vocabulary, not a set of
   forms to fill in. Compose slides from the content: combine layouts, design a layout no class
   covers, draw a custom diagram, build a slide around one photo or one number. Build new things
-  from the style's tokens, type sizes and spacing (a per-slide rule, `#s4 …`, or a class added
-  to the deck's style block), so they belong. What is not optional: the principles in
-  `DESIGN.md`, the style's voice (`STYLE.md`), the brand's colours, and the checks in §7.
-  `DESIGN.md` ("Using the styles for inspiration") says how to borrow another style's device
-  without mixing voices.
+  from the style's tokens, type sizes and spacing, so they belong. Put the deck's own CSS
+  (per-slide rules such as `#s4 …`, and new classes) in a `<style>` block after the brand
+  block, never in the `pptd-style` block, which a restyle replaces. What is not optional: the
+  principles in `DESIGN.md`, the style's voice (`STYLE.md`), the brand's colours, and the
+  checks in §7.
+- **Apply the style correctly first; then the user can override it.** The first version in
+  a style is that style: its type (font, weights, letter-spacing, case), its chrome (bars,
+  rules, corners, shadows) and its rules in `STYLE.md`. The deck's own CSS adds to the style.
+  Unless the user asks, it doesn't change the style's type, show what the style hides (mono
+  hides `.title-mark`), or copy another style's chrome (classic's gradient bar in a mono
+  deck). To borrow a device from another style, rebuild it in this style's voice (`DESIGN.md`,
+  "Using the styles for inspiration"). When the user asks to change something ("bigger
+  title", "a red bar on top"), do that, and only that:
+  - Change the role, not its voice. A bigger title is a bigger `font-size`; keep the style's
+    weight, font and letter-spacing. Never tighten tracking past the style's value: at
+    display sizes, the space between letters shrinks with it and letters touch.
+  - Everything else stays as the style draws it. The next change starts from the style plus
+    the user's earlier overrides, not from your own additions.
+  - If the override clashes with a style rule (a huge drawing in a style that wants a quiet
+    cover), make the rest give way: e.g. keep the title clear of the drawing.
 - **Each style draws the same markup its own way** (folio sets a `.stat.hl` as a hero figure
   beside the others, signal draws `.bars` horizontally and the timeline as a vertical log,
   atelier puts each stat inside a shape and turns the chart's `.takeaway` into an edge panel),
@@ -282,7 +309,8 @@ If a slide needs more than two sentences to explain how something works, draw it
 
 - The headline states the conclusion ("Processing is ready. Tables are in progress."),
   not the topic ("Processing status").
-- At most about 40 words of body text per slide. Cards: a tag, an `h3`, and one or two sentences.
+- At most about 40 words of body text per slide. Cards: a `.num`, an `h3`, and one or two
+  sentences.
 - Put sources and caveats in the `.footer`, not the body.
 - No presenter-facing instructions on slides ("update before presenting", "TBC").
 - Don't overstate: keep "signed off", "pilot proven", "proof of concept" and "agreed"
@@ -301,7 +329,7 @@ than any one element fitting perfectly.
   → `.bars` beside a `.takeaway`. Don't put a process in cards or numbers in prose.
 
 - **One type scale, set in the stylesheet.** Font sizes come from the classes in the
-  `<style>` block (`h2`, `.lead`, `h3`, `p`, `.tag`, `.footer`, …). Never put `font-size`,
+  `pptd-style` block (`h2`, `.lead`, `h3`, `p`, `.tag`, `.footer`, …). Never put `font-size`,
   `line-height`, `letter-spacing` or `white-space: nowrap` in a `style=""` attribute.
 - **Same role, same size, on every slide.** All card headings match, all big numbers
   match, all body text matches, within a slide and across the deck. If one element needs a
@@ -314,18 +342,19 @@ than any one element fitting perfectly.
   2. Restructure: e.g. a big number with its unit as a smaller label underneath, used the
      same way in every sibling card ("171" / "tickets", "3" / "developers").
   3. Re-layout: fewer columns, a wider box, or split the slide.
-  4. Only then change a size, for the whole role (the class in the stylesheet), so every
-     element of that kind changes together, and check every slide that uses it.
-- **Parallel things are built alike.** Sibling cards have the same structure (tag, heading,
-  one sentence), similar text length, equal height and aligned tops. A row of stats uses the
+  4. Only then change a size, for the whole role (one rule for the class in the deck's own
+     `<style>` block), so every element of that kind changes together, and check every slide
+     that uses it.
+- **Parallel things are built alike.** Sibling cards have the same structure (number,
+  heading, sentence), similar text length, equal height and aligned tops. A row of stats uses the
   same form in every cell: all numbers, or all words.
 - **Align to the grid.** Use the style's layout classes (§1) and their gaps. No one-off
   `margin`/`padding` nudges in `style=""`. Text is left-aligned unless the style centres it.
   Edges line up across a slide.
 - **Spacing follows the style.** Keep the same distance between eyebrow, headline, lead and
   content on every slide.
-- If the user's request can only be met by breaking these rules, say so, propose the
-  alternatives above and let them choose.
+- These rules hold when the user overrides the style (§1) too. If a request can only be met
+  by breaking them, say so, propose the alternatives above and let them choose.
 
 ## 7. Check before handing over
 
@@ -336,9 +365,16 @@ than any one element fitting perfectly.
    siblings don't, matching sizes and alignment for elements of the same kind, no slide whose
    content ends in the top half with the rest empty, and one focal point per slide (§6).
    Then go through the checklist at the end of `DESIGN.md`.
-   `grep -n 'style="[^"]*font-size' deck.pptd.html` should find nothing. After a change to one
-   slide, shoot that slide and its neighbours (`shot deck 2-4`) rather than the whole deck.
-3. Spot-check a couple of slides with `--size 1920x1080` and `--size 1000x1000` (Teams-like frame).
-4. PDF: the `@media print` block lets any browser print the deck; the user does that themselves.
-5. `node pptd-check.mjs deck.pptd.html` → CONFORMING.
-6. Tell the user the file path. Commit only if asked.
+   `grep -nE 'style="[^"]*(font-size|line-height|letter-spacing|nowrap)' deck.pptd.html`
+   should find nothing (§6). After a change to one slide, shoot that slide and its neighbours
+   (`shot deck 2-4`) rather than the whole deck.
+3. For a new deck or a restyle, Read the style's `preview.jpg` and compare: each difference
+   should come from the content, the brand or something the user asked for. Read every rule
+   in the deck's own CSS that sets `font-family`, `font-weight`, `letter-spacing` or
+   `text-transform` on a style's class, or draws a bar or rule, and remove those the user
+   didn't ask for (§1).
+4. Spot-check a couple of slides with `--size 1920x1080`, `--size 1000x1000` (Teams-like
+   frame) and `--size 390x844` (a phone: the same slide, shrunk; §2).
+5. PDF: the `@media print` block lets any browser print the deck; the user does that themselves.
+6. `node pptd-check.mjs deck.pptd.html` → CONFORMING.
+7. Tell the user the file path. Commit only if asked.

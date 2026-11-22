@@ -11,12 +11,17 @@
 //   `"file_path": "…"`, so the app opens a deck the agent creates (Claude: PostToolUse).
 //   The prompt history's JSON lines go there too: {"type":"prompt","text"} when a run
 //   starts, {"type":"steer","text"} for messages sent while it runs, {"type":"end"} when it
-//   ends (Claude: UserPromptSubmit and Stop hooks; Claude has no steering).
+//   ends (Claude: UserPromptSubmit and Stop hooks; Claude has no steering). After each bash
+//   command, {"type":"tool"}: the run may have written files (Claude: PostToolUse on Bash).
+// - PPTD_SOCKET and PPTD_SESSION: before a run settles, the extension asks the app
+//   ({"cmd":"end-check"}) whether a run that wrote files left no deck on screen; if so, the
+//   app's reminder goes to the model once and the run continues (Claude: the Stop hook).
 //
 // The startup header is PPTD's (pi's logo, a slides prompt); pi's list of loaded skills and
 // extensions is off via quietStartup in PPTD's pi settings (lib/agent.js).
 
 import fs from 'node:fs';
+import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { Text, backgroundAnsi, foregroundAnsi, rgbColor, isAppleTerminalSession } from '@earendil-works/pi-tui';
@@ -49,6 +54,23 @@ function slideStatus(file) {
   if (!s.deck) return 'PPTD · no deck open: ask for a new one';
   if (!s.total) return `PPTD · ${s.deck}`;
   return `PPTD · ${s.deck} · slide ${s.index + 1} of ${s.total}${s.label ? ` (${s.label})` : ''}`;
+}
+
+// One request to the app's socket (lib/app-socket.js); null on any failure or after 3 s.
+function askApp(req) {
+  const sock = process.env.PPTD_SOCKET;
+  if (!sock) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    let buf = '';
+    const conn = net.createConnection(sock);
+    const done = (v) => { clearTimeout(timer); conn.destroy(); resolve(v); };
+    const timer = setTimeout(() => done(null), 3000);
+    conn.setEncoding('utf8');
+    conn.on('connect', () => conn.write(`${JSON.stringify({ ...req, session: process.env.PPTD_SESSION || null })}\n`));
+    conn.on('data', (d) => { buf += d; });
+    conn.on('error', () => done(null));
+    conn.on('end', () => { try { done(JSON.parse(buf)); } catch { done(null); } });
+  });
 }
 
 export default function pptd(pi) {
@@ -117,6 +139,15 @@ export default function pptd(pi) {
   pi.on('input', (event) => {
     if (running && event.streamingBehavior && typeof event.text === 'string') logEvent({ type: 'steer', text: event.text });
   });
+  // A run that wrote files and left no deck on screen: the app may ask the model, once, to
+  // show the deck it made (main.js, endCheck). The run goes on, so its end isn't logged yet.
+  pi.on('agent_before_settle', async (event) => {
+    if (!running || event.outcome !== 'completed') return;
+    const res = await askApp({ cmd: 'end-check' });
+    if (!res?.remind) return;
+    return { entries: [...(event.entries || []), { type: 'custom_message', customType: 'pptd', content: res.remind, display: false }], continue: true };
+  });
+
   // Settled: after any automatic retry and queued follow-ups (agent_end can come earlier).
   pi.on('agent_settled', (event) => {
     if (!running) return;
@@ -125,6 +156,7 @@ export default function pptd(pi) {
   });
 
   pi.on('tool_result', (event, ctx) => {
+    if (eventsFile && event.toolName === 'bash') logEvent({ type: 'tool' });
     if (!eventsFile || event.isError || (event.toolName !== 'write' && event.toolName !== 'edit')) return;
     let p = event.input?.path;
     if (typeof p !== 'string' || !p) return;

@@ -28,7 +28,7 @@ const deckOps = () => import(require('url').pathToFileURL(
 const { createThumbs } = require('./lib/thumbs');
 const { captureSlides } = require('./lib/shot');
 const { startAppSocket } = require('./lib/app-socket');
-const { AgentSession, AGENTS } = require('./lib/agent');
+const { AgentSession, AGENTS, SKILL_DIR } = require('./lib/agent');
 const piLogin = require('./lib/pi-login');
 const brand = require('./lib/brand');
 const history = require('./lib/history');
@@ -97,10 +97,7 @@ function newWindowState() {
     restartAgent: null,          // {cols, rows} when a restart is pending
     eventsWatcher: null,
     eventsOffset: 0,
-    cwdWatcher: null,
-    cwdTimers: new Map(),
-    agentCwd: null,              // the folder the agent runs in
-    runStarted: 0,               // when the agent's current run began (0: none)
+    run: null,                   // the agent run under way: { started, wrote, linked, reminded }
     turn: null,                  // the agent run under way, for the prompt history
   };
 }
@@ -247,8 +244,6 @@ function disposeWindow(w) {
   unwatch(w);
   clearTimeout(w.settleTimer);
   w.eventsWatcher?.close();
-  w.cwdWatcher?.close();
-  for (const t of w.cwdTimers.values()) clearTimeout(t);
   w.login?.cancel();
   if (w.agent) {
     w.agent.stop();
@@ -850,45 +845,73 @@ function watchAgentEvents(w, file) {
   fs.writeFileSync(file, '');
   w.eventsOffset = 0;
   w.eventsWatcher?.close();
-  w.eventsWatcher = fs.watch(file, () => {
-    let text = '';
-    try {
-      const buf = fs.readFileSync(file);
-      text = buf.subarray(w.eventsOffset).toString('utf8');
-      w.eventsOffset = buf.length;
-    } catch { return; }
-    for (const line of text.split('\n')) {
-      if (line.startsWith('{')) {
-        try { agentEvent(w, JSON.parse(line)); } catch {}
-        continue;
-      }
-      let p;
-      try { p = JSON.parse(`{${line}}`).file_path; } catch { continue; }
-      if (typeof p !== 'string' || !path.isAbsolute(p) || !isDeckFile(p)) continue;
-      if (w.turn) noteTurnDeck(w, p, false);
-      if (p !== w.currentFile && fs.existsSync(p)) openFile(w, p, { focus: false });
-    }
-  });
+  w.eventsWatcher = fs.watch(file, () => readAgentEvents(w, file));
 }
 
-// Decks written in the agent's folder by any means (it often uses shell commands, which
-// the hook can't see): open the one it touched, if it isn't already on screen.
-function watchAgentFolder(w, dir) {
-  w.cwdWatcher?.close();
-  const since = Date.now() - 1000;
+// What the agent appended since the last read: JSON event lines, and `"file_path": "…"` for
+// each file its Write/Edit tools wrote. Also called before an end-check, so events written
+// just before it count.
+function readAgentEvents(w, file) {
+  // Only whole lines: a hook may write one in several pieces (Claude's prompt line is three
+  // printf/tr writes), and a watch event can fire between them.
+  let text = '';
   try {
-    w.cwdWatcher = fs.watch(dir, (_e, name) => {
-      if (!name || !/\.html?$/i.test(name) || name.startsWith('.')) return;
-      const file = path.join(dir, name);
-      clearTimeout(w.cwdTimers.get(file));
-      w.cwdTimers.set(file, setTimeout(() => {
-        w.cwdTimers.delete(file);
-        // Another window showing it already reloads it; don't steal it.
-        if (file === w.currentFile || windowShowing(file) || !isDeckFile(file)) return;
-        try { if (fs.statSync(file).mtimeMs >= since) openFile(w, file, { focus: false }); } catch {}
-      }, 400));
-    });
-  } catch { w.cwdWatcher = null; }
+    const buf = fs.readFileSync(file);
+    const end = buf.lastIndexOf(0x0a) + 1;
+    if (end <= w.eventsOffset) return;
+    text = buf.subarray(w.eventsOffset, end).toString('utf8');
+    w.eventsOffset = end;
+  } catch { return; }
+  for (const line of text.split('\n')) {
+    if (line.startsWith('{')) {
+      try { agentEvent(w, JSON.parse(line)); } catch {}
+      continue;
+    }
+    let p;
+    try { p = JSON.parse(`{${line}}`).file_path; } catch { continue; }
+    if (typeof p !== 'string' || !path.isAbsolute(p)) continue;
+    if (w.run) w.run.wrote = true;
+    if (isDeckFile(p) && fs.existsSync(p)) agentShowsDeck(w, p);
+  }
+}
+
+// Which deck a window shows comes only from its own agent, by exact path: the files its
+// Write/Edit tools write (events file), `pptd-app.mjs open` and `new`, and the decks its
+// `shot`/`keys` checks name (socket requests carry the agent's PPTD_SESSION). Nothing is
+// guessed from a folder, so a deck can't open in another window, and any folder works.
+const sessionWindow = (session) => (session && [...windows].find((w) => w.win && w.agent?.session === session)) || null;
+
+// The agent named this deck as the one it is working on: show it in its window, unless
+// another window has it open. → a line for the agent.
+function agentShowsDeck(w, file) {
+  if (w.run) w.run.linked = true;
+  if (w.turn) noteTurnDeck(w, file, false);
+  if (file === w.currentFile) return 'PPTD is showing it.';
+  if (windowShowing(file)) return 'It is open in another PPTD window, so it stays there; this window is unchanged.';
+  openFile(w, file, { focus: false });
+  return 'PPTD is showing it.';
+}
+
+// A shot or key test of a deck. Show it when the window has no deck, or when the agent wrote
+// it during this run (made by a shell command, say); not a deck it only looks at.
+function agentUsedDeck(w, file) {
+  if (file === w.currentFile) { if (w.run) w.run.linked = true; return; }
+  if (windowShowing(file) || !isDeckFile(file)) return;
+  let m = 0;
+  try { m = fs.statSync(file).mtimeMs; } catch { return; }
+  if (!w.currentFile || (w.run && m >= w.run.started - 1000)) agentShowsDeck(w, file);
+}
+
+// The end of a run that wrote files (Write/Edit/Bash) with no deck on screen and no deck
+// named: the agent may have made one we can't see (a shell command, then no open/shot).
+// Ask it once, in the same run (pi: agent_before_settle; Claude: the Stop hook).
+function endCheck(w) {
+  if (w.agent?.eventsFile) readAgentEvents(w, w.agent.eventsFile);
+  const r = w.run;
+  if (!r || r.reminded || !r.wrote || r.linked || w.currentFile) return null;
+  r.reminded = true;
+  const tool = path.join(SKILL_DIR, 'pptd-app.mjs');
+  return `PPTD check: this run wrote files, but no deck is on screen in the user's PPTD window. If you created or changed a deck in this run, show it now: node ${JSON.stringify(tool)} open <deck path>. If you didn't, say so in one short line.`;
 }
 
 // A deck by name (`*.pptd.html`), or an `.html` file that is one by content (the agent may
@@ -905,31 +928,6 @@ function isDeckFile(file) {
   } catch { return false; }
 }
 
-// End of a run with no deck on screen: the agent may have made one where neither the write
-// events nor the folder watcher see it (a shell command, in a subfolder). Open the newest
-// deck written during the run in its folder or two levels below.
-function openDeckFromRun(w) {
-  const since = w.runStarted;
-  w.runStarted = 0;
-  if (!since || w.currentFile || !w.agentCwd || !w.win) return;
-  let best = null;
-  const scan = (dir, depth) => {
-    let entries;
-    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
-    for (const e of entries) {
-      if (e.name.startsWith('.') || e.name === 'node_modules') continue;
-      const f = path.join(dir, e.name);
-      if (e.isDirectory()) { if (depth < 2) scan(f, depth + 1); continue; }
-      if (!e.isFile() || !/\.html?$/i.test(e.name)) continue;
-      let m;
-      try { m = fs.statSync(f).mtimeMs; } catch { continue; }
-      if (m >= since - 1000 && (!best || m > best.m) && isDeckFile(f)) best = { f, m };
-    }
-  };
-  scan(w.agentCwd, 0);
-  if (best && !windowShowing(best.f)) openFile(w, best.f, { focus: false });
-}
-
 // The agent's tools reach the app through this socket (lib/app-socket.js).
 let appSocket = null;
 
@@ -940,6 +938,7 @@ function ensureAgent(w) {
   fs.mkdirSync(dir, { recursive: true });
   const tag = `${process.pid}-${++agentSeq}`;
   w.agent = new AgentSession({
+    session: tag,
     stateFile: path.join(dir, `current-slide-${tag}.txt`),
     eventsFile: path.join(dir, `events-${tag}.txt`),
     dropsDir: path.join(dir, `drops-${tag}`),
@@ -979,8 +978,6 @@ async function startAgent(w, { cols, rows } = {}) {
   try { fs.mkdirSync(cwd, { recursive: true }); } catch {}
   a.lastState = { deck: w.currentFile, ...w.state };
   send(w, 'pty-start', { deck: w.currentFile ? displayName(w.currentFile) : null, agent: AGENTS[kind] });
-  w.agentCwd = cwd;
-  watchAgentFolder(w, cwd);
   await a.start(cwd, cols, rows, kind);
 }
 
@@ -1040,11 +1037,8 @@ function toggleSavePrompts() {
 // run is still open (Claude Code sends no end when interrupted) closes that run first.
 function agentEvent(w, ev) {
   if (ev?.type === 'prompt') {
-    if (!w.runStarted) w.runStarted = Date.now();
+    if (!w.run) w.run = { started: Date.now(), wrote: false, linked: false, reminded: false };
     setBusy(w, true);
-    // The folder watcher can fail when the agent starts (on a fresh install macOS may not
-    // have allowed access to Documents yet); try again now.
-    if (!w.cwdWatcher && w.agentCwd) watchAgentFolder(w, w.agentCwd);
     const text = typeof ev.text === 'string' ? ev.text : ev.hook?.prompt;
     if (w.turn) endTurn(w, 'interrupted');
     if (typeof text === 'string' && text.trim() && savePrompts()) {
@@ -1053,9 +1047,11 @@ function agentEvent(w, ev) {
     }
   } else if (ev?.type === 'steer') {
     if (w.turn && typeof ev.text === 'string' && ev.text.trim()) w.turn.steers.push(ev.text.trim());
+  } else if (ev?.type === 'tool') {
+    if (w.run) w.run.wrote = true;
   } else if (ev?.type === 'end') {
     setBusy(w, false);
-    openDeckFromRun(w);
+    w.run = null;
     endTurn(w, ev.outcome === 'aborted' || ev.outcome === 'error' ? ev.outcome : '');
   }
 }
@@ -1547,7 +1543,16 @@ app.whenReady().then(() => {
   if (!app.isPackaged && process.platform === 'darwin') {
     try { app.dock.setIcon(path.join(__dirname, 'build', 'icon.png')); } catch {}
   }
-  appSocket = startAppSocket(app.getPath('userData'));
+  appSocket = startAppSocket(app.getPath('userData'), {
+    open(session, deck) {
+      const w = sessionWindow(session);
+      if (!w) throw new Error('No PPTD window belongs to this agent: run it from the agent terminal in PPTD.');
+      if (!isDeckFile(deck)) throw new Error(`${deck} is not a PPTD deck (no <meta name="pptd">).`);
+      return { ok: true, message: agentShowsDeck(w, deck) };
+    },
+    used(session, deck) { const w = sessionWindow(session); if (w) agentUsedDeck(w, deck); },
+    endCheck(session) { const w = sessionWindow(session); return w ? endCheck(w) : null; },
+  });
   nativeTheme.themeSource = appearance();
   nativeTheme.on('updated', () => { for (const w of windows) applyAppearance(w); });
   buildMenu();

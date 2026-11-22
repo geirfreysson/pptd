@@ -30,7 +30,11 @@ says what you need from the audience.
 ## The styles
 
 Each picture shows the style in the colours it was designed with. With your brand, the
-layout stays and the colours are yours.
+layout stays and the colours are yours; the agent says which brand it used. For the look in
+the picture, ask for the style's own colours: *"use mono in its own colours"*.
+
+A new deck starts as the style draws it. Then change what you like (*"make the title
+bigger"*): the agent changes that, and keeps the rest of the style as it is.
 
 ### Grid
 

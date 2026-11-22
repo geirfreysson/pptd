@@ -199,7 +199,8 @@ rounded tinted cards in a grid deck).
 When the user asks for a look none of them has ("like a newspaper", "playful", "like our
 annual report"), start from the closest style and change its style block by these
 principles: one voice, one structural device, one numbering system, clear colour roles.
-Say what you changed.
+The deck then has a style of its own: set its `pptd-style` meta to `custom`. Say what you
+changed.
 
 ## Before you hand over
 

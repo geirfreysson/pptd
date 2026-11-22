@@ -110,11 +110,32 @@ export function templateFor(dir) {
 }
 
 // The :root tokens of a brand: a .css file, or the ```css block of a brand.md.
-function brandCss(file) {
+export function brandCss(file) {
   const text = fs.readFileSync(file, 'utf8');
   const css = /\.md$/i.test(file) ? (text.match(/```css\s*([\s\S]*?)```/) || [])[1] : text;
   if (!css || !/:root\s*\{/.test(css)) throw new Error(`No :root { … } brand tokens in ${file}`);
   return css.trim();
+}
+
+// The brand's name: the "Name:" line of a brand.md (else the file's name).
+export function brandName(file) {
+  try {
+    const m = fs.readFileSync(file, 'utf8').match(/^Name:\s*(.+?)\s*$/m);
+    if (m && !/^\(/.test(m[1])) return m[1];
+  } catch {}
+  return path.basename(file).replace(/\.(md|css)$/i, '');
+}
+
+// The palette a style was designed with, from its STYLE.md ("The palette it was designed
+// with …": "--ink #12171d · --paper #f5f6f7 · …", font `…`), as a :root block; null if none.
+export function designPalette(md) {
+  const para = md.split(/\n\s*\n/).find((p) => /palette it was designed with/i.test(p));
+  if (!para) return null;
+  const flat = para.replace(/\s+/g, ' ');
+  const tokens = [...flat.matchAll(/(--[a-z][a-z0-9-]*)\s+((?:linear-gradient\([^)]*\)\)?|#[0-9a-f]{3,8}))/gi)].map((m) => `${m[1]}: ${m[2]};`);
+  const font = flat.match(/font\s+`([^`]+)`/i)?.[1];
+  if (tokens.length < 8) return null;
+  return `:root { ${tokens.join(' ')}${font ? ` --font: ${font};` : ''} }`;
 }
 
 function preview(dir, { brand, slides, out }) {

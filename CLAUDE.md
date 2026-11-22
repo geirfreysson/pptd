@@ -39,7 +39,8 @@ When a change alters behaviour, update the docs in the same change:
   documents as Markdown (`lib/extract.js`, kept dependency-free). Those are removed when its
   window closes or the app quits. Both agents get the same skill, system prompt, per-prompt note
   and written-file events. Claude gets them through `--settings` hooks, pi through
-  `agent/pi/pptd-extension.js` (env `PPTD_STATE_FILE`/`PPTD_EVENTS_FILE`). Change both together.
+  `agent/pi/pptd-extension.js` (env `PPTD_STATE_FILE`/`PPTD_EVENTS_FILE`; both get
+  `PPTD_SOCKET`, `PPTD_SESSION` and `PPTD_BRAND_FILE`). Change both together.
 - **pi is vendored** in `vendor/pi` (own `package.json` + lockfile; `node_modules` is not in
   git). It runs on the app's Electron binary with `ELECTRON_RUN_AS_NODE=1`, so it needs
   Node >= the version pi's `engines` asks for; check `process.versions.node` when bumping
@@ -69,11 +70,15 @@ When a change alters behaviour, update the docs in the same change:
   *before* the run, so an agent that drops it can't lose it. Hashes exclude the block.
   Snapshots are content-addressed in `userData/history`; a row can revert only if its
   snapshot is there. A revert never truncates the list.
-- **Opening the agent's new decks** has three paths in `main.js`: write events
-  (`watchAgentEvents`), the agent-folder watcher (`watchAgentFolder`, top level only), and
-  `openDeckFromRun` at the end of a run with no deck on screen (scans two levels down, for
-  shell-written decks in subfolders). A deck is `*.pptd.html` or an `.html` with the PPTD
-  meta (`isDeckFile`).
+- **Which deck a window shows** comes only from its own agent, by exact path, never from a
+  folder: the files its Write/Edit tools write (events file), `pptd-app.mjs open`/`new`, and
+  the deck its `shot`/`keys` names (opened only if the window has none or the run wrote it).
+  Socket requests carry the agent's `PPTD_SESSION` (its tag); `sessionWindow` finds the
+  window. A run that wrote files (Write/Edit, or Bash via a `{"type":"tool"}` event) and ends
+  with no deck on screen and none named gets one reminder from `endCheck`, inside the same
+  run: pi's `agent_before_settle`, Claude's Stop hook (`pptd-app.mjs end-check`, which then
+  doesn't log the end). Don't bring back a folder watcher: it opened one window's deck in
+  another. A deck is `*.pptd.html` or an `.html` with the PPTD meta (`isDeckFile`).
 - **Structural edits** (`tools/pptd-deck.mjs`: list, add, move, delete) move slide content
   and leave positional parts in place (ids, aria-label numbers, `.controls`, `.progress`,
   switching CSS); see the spec section on reordering. Agents run it from the skill folder;

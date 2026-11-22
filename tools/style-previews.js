@@ -17,17 +17,6 @@ const stylesDir = path.join(root, 'agent', 'plugin', 'skills', 'pptd-slides', 's
 const siteDir = path.join(root, 'site', 'static', 'img', 'styles');
 const SLIDES = [1, 4, 5, 7, 9, 12, 14, 16, 21];   // title, statement, cards, stats, chart, layers, photo, people, closing
 
-// "--ink #12171d · --paper #f5f6f7 · …", font `…` → a :root block.
-function designPalette(md) {
-  const para = md.split(/\n\s*\n/).find((p) => /palette it was designed with/i.test(p));
-  if (!para) return null;
-  const flat = para.replace(/\s+/g, ' ');
-  const tokens = [...flat.matchAll(/(--[a-z-]+)\s+((?:linear-gradient\([^)]*\)\)?|#[0-9a-f]{3,8}))/gi)].map((m) => `${m[1]}: ${m[2]};`);
-  const font = flat.match(/font\s+`([^`]+)`/i)?.[1];
-  if (tokens.length < 8) return null;
-  return `:root { ${tokens.join(' ')}${font ? ` --font: ${font};` : ''} }`;
-}
-
 async function shoot(file, n) {
   const win = new BrowserWindow({ show: false, width: 1280, height: 720, useContentSize: true, webPreferences: { offscreen: true } });
   await win.loadFile(file);
@@ -57,6 +46,7 @@ async function sheet(images, file) {
 }
 
 app.whenReady().then(async () => {
+  const { designPalette } = await import('./pptd-style.mjs');
   fs.mkdirSync(siteDir, { recursive: true });
   for (const name of fs.readdirSync(stylesDir).filter((n) => fs.existsSync(path.join(stylesDir, n, 'template.html'))).sort()) {
     const dir = path.join(stylesDir, name);
