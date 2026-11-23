@@ -85,7 +85,8 @@ The agent picks one to suit the deck and tells you which, or you can ask: *"use 
 style"*, *"make this deck bold"*. Switching style keeps your slides and your brand; only the
 layout changes. For the colours in a style's picture, ask for its own colours: *"use mono in
 its own colours"*. Whatever the style, the agent designs by the same principles: one point per
-slide, one thing to look at first, a headline that states the conclusion. The styles guide
+slide, one thing to look at first, a headline that states the conclusion, and a layout
+chosen for each slide's content rather than the same cards on every slide. The styles guide
 it; they don't box it in, so a slide can look however its content needs.
 
 **Your own styles.** Give the agent a design you like (a Claude Design export, a deck,

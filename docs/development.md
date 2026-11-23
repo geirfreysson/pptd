@@ -244,6 +244,8 @@ applied with `nativeTheme.themeSource`, so `index.html` switches its colour toke
 - `tools/pptd-deck.mjs`: adds, removes and reorders slides with all the numbering done
   (`list`, `add --after N [--count K]`, `move FROM TO`, `delete N`). Agents use it from the skill; the
   drawer's drag-to-reorder uses it too. Checks the result and refuses rather than break a deck.
+  `list` also names each slide's layout (its first layout class from the skill's table) and
+  flags a layout the deck leans on (`layoutRepeats`), which the skill asks agents to fix.
 - `lib/agent.js`: starts the chosen agent in a pty (node-pty) with the skill and a system
   prompt. Each message gets the deck, slide and brand added; files it writes are reported, and
   the app shows decks it writes (`*.pptd.html`, or `.html` with the PPTD meta), opens with

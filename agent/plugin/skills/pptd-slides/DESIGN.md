@@ -69,6 +69,10 @@ Title, section and closing slides break the frame on purpose (a full-bleed colou
 numeral), which gives the deck its rhythm. A flooded slide (atelier's yellow quote slide,
 bold's accent section slide) is a pause; one per section is enough.
 
+Inside the frame, the slides vary. The chrome repeats; the layout follows each slide's
+content (a number, a sequence, a comparison, a voice, a claim), so neighbouring slides look
+different. A deck of the same three cards, slide after slide, reads as one slide repeated.
+
 ## 5. One structural device
 
 Pick one way to separate things and use it everywhere in the deck:
@@ -212,4 +216,5 @@ Look at every screenshot and ask:
 4. Is the space used on purpose, at the style's density?
 5. Is anything a one-off: a size, a colour, a box, a number format?
 6. Is the numbering the same everywhere?
-7. Does the closing slide ask for something?
+7. Do neighbouring slides differ in layout, each chosen for its content?
+8. Does the closing slide ask for something?

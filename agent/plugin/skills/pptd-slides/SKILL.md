@@ -258,7 +258,7 @@ Teams opens shared HTML in a sandboxed preview. Learned the hard way:
 with `node` and its absolute path, from the deck's folder):
 
 ```sh
-node pptd-deck.mjs list   deck.pptd.html          # outline: number, id, title, words
+node pptd-deck.mjs list   deck.pptd.html          # outline: number, id, title, layout, words
 node pptd-deck.mjs add    deck.pptd.html --after 3   # empty slide at position 4 (0 = first)
 node pptd-deck.mjs add    deck.pptd.html --after 5 --count 2   # two empty slides, positions 6–7
 node pptd-deck.mjs move   deck.pptd.html 5 2      # slide 5 to position 2
@@ -327,6 +327,14 @@ than any one element fitting perfectly.
 - **Pick the layout from the content's shape:** parallel points → `.cards`; an order →
   `.steps`; numbers → `.stats`; us vs others → `.compare`; one claim → `.statement`; a trend
   → `.bars` beside a `.takeaway`. Don't put a process in cards or numbers in prose.
+- **Cards are the last resort, not the default.** Before you write "three points", look for
+  the sharper shape: points that carry numbers are `.stats`; points in an order are `.steps`
+  or a `.timeline`; one point that matters more is a `.statement` (or a hero number) with
+  the rest in the footer; options are `.compare` or `.tiers`; a voice is a `.quote`. Plan
+  the layout of every slide with the outline, and vary it: no layout on more than about a
+  third of the content slides, and not the same one on two neighbouring slides.
+  `node pptd-deck.mjs list deck.pptd.html` prints each slide's layout and says when the
+  deck repeats one.
 
 - **One type scale, set in the stylesheet.** Font sizes come from the classes in the
   `pptd-style` block (`h2`, `.lead`, `h3`, `p`, `.tag`, `.footer`, …). Never put `font-size`,
@@ -376,5 +384,6 @@ than any one element fitting perfectly.
 4. Spot-check a couple of slides with `--size 1920x1080`, `--size 1000x1000` (Teams-like
    frame) and `--size 390x844` (a phone: the same slide, shrunk; §2).
 5. PDF: the `@media print` block lets any browser print the deck; the user does that themselves.
-6. `node pptd-check.mjs deck.pptd.html` → CONFORMING.
+6. `node pptd-check.mjs deck.pptd.html` → CONFORMING, and `node pptd-deck.mjs list
+   deck.pptd.html` reports no repeated layouts (§6).
 7. Tell the user the file path. Commit only if asked.

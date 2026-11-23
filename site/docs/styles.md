@@ -24,8 +24,9 @@ the layout changes.
 
 The styles are a guide, not a set of templates to fill in. Whatever the style, the agent
 designs each slide for its content by the same principles: each slide makes one point, its
-headline states the conclusion, there's one thing to look at first, and the closing slide
-says what you need from the audience.
+headline states the conclusion, there's one thing to look at first, the layout fits what
+the slide says (numbers as numbers, a process as steps, a quote as a quote) instead of the
+same cards on every slide, and the closing slide says what you need from the audience.
 
 ## The styles
 

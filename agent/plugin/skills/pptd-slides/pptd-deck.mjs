@@ -3,7 +3,8 @@
 // content, never the numbering. Used by agents (from the pptd-slides skill folder) and by
 // the app (dragging a slide in the drawer).
 //
-//   node pptd-deck.mjs list   <deck>              outline: number, id, title, words
+//   node pptd-deck.mjs list   <deck>              outline: number, id, title, layout, words;
+//                                                 then a note on layouts the deck repeats
 //   node pptd-deck.mjs move   <deck> <from> <to>  move a slide (1-based positions)
 //   node pptd-deck.mjs add    <deck> --after <n> [--count <k>]
 //                                                 insert k empty slides (default 1) after n (0 = first)
@@ -129,8 +130,42 @@ export function listSlides(html) {
   return slides.map((s, i) => {
     const text = stripTags(s.body.replace(MARK_RE, ''));
     const media = (s.body.match(/<(img|video)\b/gi) || []).length;
-    return { n: i + 1, id: `s${i + 1}`, title: slideTitle(s), words: text ? text.split(' ').length : 0, media, isNew: /<!--\s*pptd:new-slide\b/.test(s.body) };
+    return { n: i + 1, id: `s${i + 1}`, title: slideTitle(s), layout: slideLayout(s), words: text ? text.split(' ').length : 0, media, isNew: /<!--\s*pptd:new-slide\b/.test(s.body) };
   });
+}
+
+// The slide's main layout: its section class (title, section, photo), else the first of the
+// skill's layout classes in its body, else "own" (markup of the deck's own).
+const SECTION_LAYOUTS = { 'title-slide': 'title', 'section-slide': 'section', 'photo-slide': 'photo' };
+const BODY_LAYOUTS = new Set(['cards', 'steps', 'stats', 'compare', 'bars', 'matrix', 'diagram', 'quote', 'statement', 'timeline',
+  'agenda', 'photos', 'people', 'tiers', 'layers', 'data', 'columns', 'refs', 'asks', 'grid', 'path']);
+function slideLayout(slide) {
+  const own = (/\sclass\s*=\s*["']([^"']*)["']/i.exec(slide.openTag)?.[1] || '').split(/\s+/);
+  for (const c of own) if (SECTION_LAYOUTS[c]) return SECTION_LAYOUTS[c];
+  for (const m of slide.body.matchAll(/\sclass\s*=\s*["']([^"']*)["']/gi)) {
+    for (const c of m[1].split(/\s+/)) if (BODY_LAYOUTS.has(c)) return c;
+  }
+  return 'own';
+}
+
+// Layouts a deck leans on: one on more than a third of its content slides (at least three
+// of them), or the same one on neighbouring content slides. Title, section, closing and
+// slides of the deck's own markup don't count.
+export function layoutRepeats(rows) {
+  const content = rows.filter((r) => !['title', 'section', 'own'].includes(r.layout) && !r.isNew);
+  const notes = [];
+  const count = {};
+  for (const r of content) count[r.layout] = (count[r.layout] || 0) + 1;
+  for (const [layout, k] of Object.entries(count)) {
+    if (k >= 3 && k > content.length / 3) notes.push(`${layout} on ${k} of ${content.length} content slides`);
+  }
+  for (let i = 0; i < rows.length; ) {
+    let j = i;
+    while (j + 1 < rows.length && content.includes(rows[i]) && content.includes(rows[j + 1]) && rows[j + 1].layout === rows[i].layout) j++;
+    if (j > i) notes.push(`${rows[i].layout} on slides ${rows[i].n}${j > i + 1 ? '–' : ' and '}${rows[j].n} in a row`);
+    i = j + 1;
+  }
+  return notes;
 }
 
 // ---------------------------------------------------------------- writing
@@ -361,8 +396,10 @@ function main(argv) {
       const rows = listSlides(html);
       console.log(`${path.basename(file)}: ${rows.length} slides`);
       for (const r of rows) {
-        console.log(`${String(r.n).padStart(3)}  ${`s${r.n}`.padEnd(4)} ${r.title || '(no title)'}  · ${r.words} words${r.media ? ` · ${r.media} media` : ''}${r.isNew ? ' · NEW, still empty' : ''}`);
+        console.log(`${String(r.n).padStart(3)}  ${`s${r.n}`.padEnd(4)} ${r.title || '(no title)'}  · ${r.isNew ? 'NEW, still empty' : r.layout} · ${r.words} words${r.media ? ` · ${r.media} media` : ''}`);
       }
+      const notes = layoutRepeats(rows);
+      if (notes.length) console.log(`Layouts repeated: ${notes.join('; ')}. Give those slides the layout their content's shape asks for (SKILL.md §6).`);
       return 0;
     }
     let res;

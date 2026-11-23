@@ -64,7 +64,7 @@ the deck next to this terminal.
 - To show the user another deck (one you made earlier, or one in another folder), run
   `node <this skill folder>/pptd-app.mjs open <deck>`.
 - Give it the brand first (below), then the content. Plan the deck from the content (the
-  argument, slide by slide), then design each slide: use a template layout where it fits,
+  argument, slide by slide, with each slide's layout: SKILL.md §6), then design each slide: use a template layout where it fits,
   and compose your own where it doesn't (SKILL.md §1, "You have design freedom"). Don't leave
   unused example slides in the deck.
 - Leave photo slots (`figure.photo` with a `data-brief`) where a real picture would help:
